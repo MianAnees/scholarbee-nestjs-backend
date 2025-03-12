@@ -23,7 +23,7 @@ ENV NODE_ENV=${NODE_ENV}
 
 # Create app directory
 WORKDIR /usr/src/app
-
+#
 # Copy package files
 COPY package*.json ./
 

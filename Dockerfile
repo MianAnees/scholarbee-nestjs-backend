@@ -34,7 +34,7 @@ RUN npm install --omit=dev --legacy-peer-deps
 COPY --from=development /usr/src/app/dist ./dist
 
 # Expose API port (handles both HTTP and WebSockets)
-EXPOSE 3000
+EXPOSE 3010
 
 # Start the server
 CMD ["node", "dist/main"] 

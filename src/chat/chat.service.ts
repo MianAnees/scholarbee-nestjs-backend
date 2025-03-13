@@ -87,7 +87,14 @@ export class ChatService {
         return this.conversationModel.find({
             user_id: new Types.ObjectId(userId),
             is_active: true
-        }).exec();
+        })
+            .populate({
+                path: 'user_id',
+                select: '_id first_name last_name email user_type'
+            })
+            .populate('campus_id')
+            .sort({ last_message_time: -1 })
+            .exec();
     }
 
     async findAllConversationsForCampus(campusId: string) {
@@ -98,7 +105,14 @@ export class ChatService {
         return this.conversationModel.find({
             campus_id: new Types.ObjectId(campusId),
             is_active: true
-        }).exec();
+        })
+            .populate({
+                path: 'user_id',
+                select: '_id first_name last_name email user_type'
+            })
+            .populate('campus_id')
+            .sort({ last_message_time: -1 })
+            .exec();
     }
 
     async findConversation(id: string) {

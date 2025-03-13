@@ -1,23 +1,38 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PopulateInterceptor } from './common/interceptors/populate.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import * as dotenv from 'dotenv';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import { Logger } from '@nestjs/common';
+import { ServerOptions } from 'socket.io';
+import { Server } from 'socket.io';
 
 // Load environment variables at the very beginning
 dotenv.config();
+
+class CustomIoAdapter extends IoAdapter {
+  createIOServer(port: number, options?: Partial<ServerOptions>): any {
+    const server = new Server({
+      cors: {
+        origin: ['https://api-dev.scholarbee.pk', 'https://ws.api-dev.scholarbee.pk'],
+        methods: ['GET', 'POST'],
+        credentials: true,
+      },
+      transports: ['websocket'], // Ensures WebSocket-only connections
+    });
+    return server;
+  }
+}
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   logger.log('Starting application...');
 
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'], // Enable all log levels
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   // Get config service
@@ -25,14 +40,14 @@ async function bootstrap() {
 
   // Enable CORS with explicit configuration
   app.enableCors({
-    origin: '*', // In production, replace with your frontend URL
+    origin: ['https://api-dev.scholarbee.pk', 'https://ws.api-dev.scholarbee.pk'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });
 
-  // Use WebSockets with explicit adapter
+  // Use custom WebSocket adapter for proper handling
   logger.log('Configuring WebSocket adapter...');
-  app.useWebSocketAdapter(new IoAdapter(app));
+  app.useWebSocketAdapter(new CustomIoAdapter(app));
 
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({
@@ -51,8 +66,8 @@ async function bootstrap() {
 
   // Setup Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('ScolarBee API')
-    .setDescription('The ScolarBee API documentation')
+    .setTitle('ScholarBee API')
+    .setDescription('The ScholarBee API documentation')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -65,6 +80,6 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}`);
   logger.log(`Swagger documentation is available at: http://localhost:${port}/api/docs`);
-  logger.log(`WebSocket server is available at: ws://localhost:${port}/chat`);
+  logger.log(`WebSocket server is available at: ws://localhost:${port}/socket.io`);
 }
 bootstrap();

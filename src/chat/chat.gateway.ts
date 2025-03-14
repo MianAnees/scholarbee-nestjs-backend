@@ -12,12 +12,12 @@ import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
     cors: {
-        origin: ['https://api-dev.scholarbee.pk', 'https://ws.api-dev.scholarbee.pk'],
+        origin: '*', // For development, use '*' to allow all origins
         methods: ['GET', 'POST'],
         credentials: true,
     },
     namespace: '/chat',
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer()
@@ -69,8 +69,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     // Method to emit events from outside the gateway
     emitToConversation(conversationId: string, event: string, data: any) {
-        this.logger.log(`Broadcasting ${event} event for conversation: ${conversationId}`);
-        this.server.to(conversationId).emit(event, data);
+        this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
+        console.log('Emitting event:', event, 'to conversation:', conversationId);
+
+        // Broadcast to all clients
+        this.server.emit(event, {
+            ...data,
+            conversationId
+        });
     }
 
     @SubscribeMessage('message')

@@ -15,14 +15,17 @@ dotenv.config();
 
 class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: Partial<ServerOptions>): any {
-    const server = new Server({
+    const server = super.createIOServer(port, {
       cors: {
-        origin: ['https://api-dev.scholarbee.pk', 'https://ws.api-dev.scholarbee.pk'],
+        origin: '*', // For development, use '*' to allow all origins
         methods: ['GET', 'POST'],
         credentials: true,
       },
-      transports: ['websocket'], // Ensures WebSocket-only connections
+      transports: ['websocket', 'polling'], // Allow both WebSocket and polling
+      path: '/socket.io', // Default Socket.IO path
     });
+    console.log(`WebSocket server created on port ${port}`);
+    // this.logger.log(`WebSocket server created on port ${port}`);
     return server;
   }
 }

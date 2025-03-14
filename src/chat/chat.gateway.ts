@@ -12,9 +12,17 @@ import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
     cors: {
-        origin: '*', // For development, use '*' to allow all origins
-        methods: ['GET', 'POST'],
+        origin: [
+            'https://api-dev.scholarbee.pk',
+            'https://ws.api-dev.scholarbee.pk',
+            'https://scholarbee.pk',
+            'https://www.scholarbee.pk',
+            'http://localhost:3000',
+            'http://localhost:3001'
+        ],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true,
+        allowedHeaders: ['Authorization', 'Content-Type']
     },
     namespace: '/chat',
     transports: ['websocket', 'polling'], // Allow both WebSocket and polling

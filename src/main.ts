@@ -17,15 +17,23 @@ class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: Partial<ServerOptions>): any {
     const server = super.createIOServer(port, {
       cors: {
-        origin: '*', // For development, use '*' to allow all origins
-        methods: ['GET', 'POST'],
+        origin: [
+          'https://api-dev.scholarbee.pk',
+          'https://ws.api-dev.scholarbee.pk',
+          'https://scholarbee.pk',
+          'https://www.scholarbee.pk',
+          'http://localhost:3000',
+          'http://localhost:3001'
+        ],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true,
+        allowedHeaders: ['Authorization', 'Content-Type']
       },
-      transports: ['websocket', 'polling'], // Allow both WebSocket and polling
-      path: '/socket.io', // Default Socket.IO path
+      transports: ['websocket', 'polling'],
+      path: '/socket.io',
     });
+
     console.log(`WebSocket server created on port ${port}`);
-    // this.logger.log(`WebSocket server created on port ${port}`);
     return server;
   }
 }
@@ -43,9 +51,17 @@ async function bootstrap() {
 
   // Enable CORS with explicit configuration
   app.enableCors({
-    origin: ['https://api-dev.scholarbee.pk', 'https://ws.api-dev.scholarbee.pk'],
+    origin: [
+      'https://api-dev.scholarbee.pk',
+      'https://ws.api-dev.scholarbee.pk',
+      'https://scholarbee.pk',
+      'https://www.scholarbee.pk',
+      'http://localhost:3000',
+      'http://localhost:3001'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type']
   });
 
   // Use custom WebSocket adapter for proper handling

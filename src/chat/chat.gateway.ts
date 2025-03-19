@@ -81,15 +81,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         console.log('Emitting event:', event, 'to conversation:', conversationId);
 
         // Broadcast to all clients
-        this.server.emit(event, {
-            ...data,
-            conversationId
+        this.server.emit(conversationId, {
+            ...data
         });
     }
 
-    @SubscribeMessage('message')
-    handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
-        this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
-        this.server.to(payload.conversationId).emit('message', payload.message);
-    }
+    // @SubscribeMessage('message')
+    // handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
+    //     this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
+    //     this.server.to(payload.conversationId).emit('message', payload.message);
+    // }
 }

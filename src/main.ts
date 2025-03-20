@@ -49,19 +49,11 @@ async function bootstrap() {
   // Get config service
   const configService = app.get(ConfigService);
 
-  // Enable CORS with explicit configuration
+  // Enable CORS
   app.enableCors({
-    origin: [
-      'https://api-dev.scholarbee.pk',
-      'https://ws.api-dev.scholarbee.pk',
-      'https://scholarbee.pk',
-      'https://www.scholarbee.pk',
-      'http://localhost:3000',
-      'http://localhost:3001'
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    origin: '*', // For development - change to specific origins in production
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: ['Authorization', 'Content-Type']
   });
 
   // Use custom WebSocket adapter for proper handling

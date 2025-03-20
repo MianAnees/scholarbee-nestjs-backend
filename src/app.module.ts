@@ -22,6 +22,7 @@ import { ProgramTemplatesModule } from './program-templates/program-templates.mo
 import { RegionsModule } from './regions/regions.module';
 import { StudentScholarshipsModule } from './student-scholarships/student-scholarships.module';
 import { ProgramsModule } from './programs/programs.module';
+import { BlogPostsModule } from './blog-posts/blog-posts.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { ProgramsModule } from './programs/programs.module';
     RegionsModule,
     StudentScholarshipsModule,
     ProgramsModule,
+    BlogPostsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

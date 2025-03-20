@@ -9,31 +9,27 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ChatService } from './chat.service';
 
 @WebSocketGateway({
     cors: {
-        origin: [
-            'https://api-dev.scholarbee.pk',
-            'https://ws.api-dev.scholarbee.pk',
-            'https://scholarbee.pk',
-            'https://www.scholarbee.pk',
-            'http://localhost:3000',
-            'http://localhost:3001'
-        ],
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        origin: '*', // For development - change to specific origins in production
+        methods: ['GET', 'POST'],
         credentials: true,
-        allowedHeaders: ['Authorization', 'Content-Type']
     },
-    namespace: '/chat',
+    namespace: 'chat',
     transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer()
     server: Server;
 
-    private readonly logger = new Logger('ChatGateway');
+    private readonly logger = new Logger(ChatGateway.name);
 
-    constructor(private readonly jwtService: JwtService) {
+    constructor(
+        private readonly chatService: ChatService,
+        private readonly jwtService: JwtService,
+    ) {
         this.logger.log('ChatGateway created');
     }
 
@@ -43,30 +39,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     async handleConnection(client: Socket) {
         try {
-            console.log('Client connected:', client.id);
-            this.logger.log(`Client connected: ${client.id}`);
-
-            // Extract JWT token from handshake query
-            const token = client.handshake.auth?.token || client.handshake.query?.token;
-
+            const token = client.handshake.query.token as string;
             if (!token) {
-                this.logger.warn(`Client ${client.id} connected without token`);
-                client.disconnect(); // Disconnect unauthorized clients
+                this.logger.error('No token provided');
+                client.disconnect();
                 return;
             }
 
-            // Verify JWT Token
-            try {
-                const decoded = this.jwtService.verify(token);
-                this.logger.log(`User ${decoded.sub} authenticated via WebSocket`);
-                client.join(decoded.sub); // Allow user to join their own room
-            } catch (error) {
-                this.logger.error(`Invalid token: ${error.message}`);
-                client.disconnect(); // Disconnect if token is invalid
-            }
+            // Verify the token
+            const payload = this.jwtService.verify(token);
+            const userId = payload.id;
+
+            // Store the user ID with the socket
+            client.data.userId = userId;
+
+            this.logger.log(`Client connected: ${client.id}, User: ${userId}`);
+
+            // Join a room specific to this user
+            client.join(`user_${userId}`);
+
+            // Notify the client of successful connection
+            client.emit('connection_established', {
+                message: 'Successfully connected to chat server',
+                userId: userId
+            });
 
         } catch (error) {
-            this.logger.error(`Error handling connection: ${error.message}`, error.stack);
+            this.logger.error(`Connection error: ${error.message}`);
             client.disconnect();
         }
     }

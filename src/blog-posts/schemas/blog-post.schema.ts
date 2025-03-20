@@ -13,7 +13,7 @@ export enum BlogCategory {
     OTHER = 'other'
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'blog_posts' })
 export class BlogPost {
     @Prop({ type: String, required: true })
     title: string;

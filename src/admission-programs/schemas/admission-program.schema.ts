@@ -24,7 +24,7 @@ interface AdmissionRequirement {
     value: AdmissionRequirementValue[];
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'admission_programs' })
 export class AdmissionProgram {
     @Prop({ type: String, ref: 'Admission' })
     admission: string;

@@ -119,7 +119,7 @@ export class AdmissionProgramsService {
         let query = this.admissionProgramModel.findById(id);
 
         if (populate) {
-            query = query.populate('admission').populate('program').populate('createdBy');
+            query = query.populate('admission').populate('program');
         }
 
         const admissionProgram = await query.exec();
@@ -240,7 +240,7 @@ export class AdmissionProgramsService {
             page = 1,
             limit = 10
         } = queryParams;
-
+        console.log(queryParams);
         const pageNum = parseInt(page as string, 10) || 1;
         const limitNum = parseInt(limit as string, 10) || 10;
         const skip = (pageNum - 1) * limitNum;

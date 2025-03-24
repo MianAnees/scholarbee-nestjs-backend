@@ -33,7 +33,7 @@ export class AdmissionProgramsController {
         return this.admissionProgramsService.findAll(queryDto);
     }
 
-    @Get(':id')
+    @Get('by-id/:id')
     findOne(@Param('id') id: string, @Query('populate') populate: boolean = true) {
         return this.admissionProgramsService.findOne(id, populate);
     }
@@ -70,6 +70,7 @@ export class AdmissionProgramsController {
 
     @Get('with-filters')
     findWithFilters(@Query() filterDto: FilterAdmissionProgramDto) {
+        console.log(filterDto);
         return this.admissionProgramsService.findWithFilters(filterDto);
     }
 } 

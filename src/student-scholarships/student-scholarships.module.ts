@@ -7,7 +7,7 @@ import { StudentScholarship, StudentScholarshipSchema } from './schemas/student-
 @Module({
     imports: [
         MongooseModule.forFeature([
-            { name: StudentScholarship.name, schema: StudentScholarshipSchema }
+            { name: 'student_scholarships', schema: StudentScholarshipSchema }
         ])
     ],
     controllers: [StudentScholarshipsController],

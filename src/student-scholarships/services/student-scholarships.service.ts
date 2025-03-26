@@ -9,7 +9,7 @@ import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto
 @Injectable()
 export class StudentScholarshipsService {
     constructor(
-        @InjectModel(StudentScholarship.name) private studentScholarshipModel: Model<StudentScholarshipDocument>
+        @InjectModel('student_scholarships') private studentScholarshipModel: Model<StudentScholarshipDocument>
     ) { }
 
     async create(createStudentScholarshipDto: CreateStudentScholarshipDto): Promise<StudentScholarshipDocument> {
@@ -24,105 +24,141 @@ export class StudentScholarshipsService {
         }
     }
 
-    async findAll(queryDto: QueryStudentScholarshipDto): Promise<{ data: StudentScholarshipDocument[], meta: any }> {
-        const {
-            page = 1,
-            limit = 10,
-            sortBy = 'createdAt',
-            sortOrder = 'desc',
-            search,
-            scholarship_name,
-            scholarship_type,
-            university_id,
-            country,
-            region,
-            status,
-            deadlineFrom,
-            deadlineTo,
-            amountMin,
-            amountMax,
-            populate = true
-        } = queryDto;
-
-        const skip = (page - 1) * limit;
-        const sortOptions: { [key: string]: SortOrder } = {};
-        sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-        const filter: any = {};
-
-        if (scholarship_name) {
-            filter.scholarship_name = { $regex: new RegExp(scholarship_name, 'i') };
-        }
-
-        if (scholarship_type) {
-            filter.scholarship_type = scholarship_type;
-        }
-
-        if (university_id) {
-            filter.university_id = new Types.ObjectId(university_id);
-        }
-
-        if (country) {
-            filter.country = new Types.ObjectId(country);
-        }
-
-        if (region) {
-            filter.region = new Types.ObjectId(region);
-        }
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (deadlineFrom || deadlineTo) {
-            filter.application_deadline = {};
-            if (deadlineFrom) {
-                filter.application_deadline.$gte = new Date(deadlineFrom);
+    private async debugCollection() {
+        const pipeline = [
+            {
+                $group: {
+                    _id: null,
+                    studentIds: { $addToSet: '$student_id' }
+                }
             }
-            if (deadlineTo) {
-                filter.application_deadline.$lte = new Date(deadlineTo);
+        ];
+
+        const result = await this.studentScholarshipModel.aggregate(pipeline).exec();
+        console.log('Unique student_ids in collection:', result[0]?.studentIds);
+    }
+
+    async findAll(queryDto: QueryStudentScholarshipDto): Promise<{ data: StudentScholarshipDocument[]; meta: any }> {
+        try {
+            const {
+                search,
+                scholarship_name,
+                scholarship_type,
+                university_id,
+                country,
+                region,
+                status,
+                student_id,
+                scholarship_id,
+                page = 1,
+                limit = 10,
+                sortBy = 'created_at',
+                sortOrder = 'desc',
+                populate = true
+            } = queryDto;
+
+            const filter: any = {};
+
+            if (student_id) {
+                if (!Types.ObjectId.isValid(student_id)) {
+                    throw new BadRequestException('Invalid student_id format');
+                }
+                filter.student_id = student_id;
             }
-        }
 
-        if (amountMin !== undefined || amountMax !== undefined) {
-            filter.amount = {};
-            if (amountMin !== undefined) {
-                filter.amount.$gte = amountMin;
+            if (search) {
+                filter.$or = [
+                    { scholarship_name: { $regex: search, $options: 'i' } },
+                    { scholarship_description: { $regex: search, $options: 'i' } }
+                ];
             }
-            if (amountMax !== undefined) {
-                filter.amount.$lte = amountMax;
+
+            if (scholarship_name) {
+                filter.scholarship_name = { $regex: scholarship_name, $options: 'i' };
             }
+
+            if (scholarship_type) {
+                filter.scholarship_type = scholarship_type;
+            }
+
+            if (university_id) {
+                filter.university_id = new Types.ObjectId(university_id);
+            }
+
+            if (country) {
+                filter.country = new Types.ObjectId(country);
+            }
+
+            if (region) {
+                filter.region = new Types.ObjectId(region);
+            }
+
+            if (status) {
+                filter.status = status;
+            }
+
+            if (scholarship_id) {
+                filter.scholarship_id = new Types.ObjectId(scholarship_id);
+            }
+
+            const skip = (page - 1) * limit;
+            const sort: any = {};
+            sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+            let query = this.studentScholarshipModel.find(filter);
+
+            if (populate) {
+                query = query
+                    .populate({
+                        path: 'student_id',
+                        select: 'name email profile_image gender phone domicile nationality'
+                    })
+                    .populate({
+                        path: 'scholarship_id',
+                        select: 'scholarship_name scholarship_type amount application_deadline status'
+                    })
+                    .populate({
+                        path: 'university_id',
+                        select: 'name logo_url'
+                    })
+                    .populate({
+                        path: 'country',
+                        select: 'name'
+                    })
+                    .populate({
+                        path: 'region',
+                        select: 'name'
+                    });
+            }
+
+            const [scholarships, total] = await Promise.all([
+                query
+                    .sort(sort)
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.studentScholarshipModel.countDocuments(filter).exec(),
+            ]);
+
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                data: scholarships,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages
+                }
+            };
+        } catch (error) {
+            if (error.name === 'ValidationError') {
+                throw new BadRequestException(error.message);
+            }
+            console.error('Error in findAll:', error);
+            throw new Error('An error occurred while fetching scholarships');
         }
-
-        if (search) {
-            filter.$or = [
-                { scholarship_name: { $regex: new RegExp(search, 'i') } },
-                { scholarship_description: { $regex: new RegExp(search, 'i') } },
-                { eligibility_criteria: { $regex: new RegExp(search, 'i') } }
-            ];
-        }
-
-        let query = this.studentScholarshipModel.find(filter);
-
-        if (populate) {
-            query = query.populate('university_id').populate('country').populate('region');
-        }
-
-        const [data, total] = await Promise.all([
-            query.sort(sortOptions).skip(skip).limit(limit).exec(),
-            this.studentScholarshipModel.countDocuments(filter).exec()
-        ]);
-
-        const meta = {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-            hasNextPage: page < Math.ceil(total / limit),
-            hasPrevPage: page > 1
-        };
-
-        return { data, meta };
     }
 
     async findOne(id: string): Promise<StudentScholarshipDocument> {
@@ -132,9 +168,8 @@ export class StudentScholarshipsService {
 
         const scholarship = await this.studentScholarshipModel
             .findById(id)
-            .populate('university_id')
-            .populate('country')
-            .populate('region')
+            .populate('student_id', 'name email profile_image')
+            .populate('scholarship_id')
             .exec();
 
         if (!scholarship) {

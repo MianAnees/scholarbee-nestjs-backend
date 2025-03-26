@@ -23,6 +23,7 @@ import { RegionsModule } from './regions/regions.module';
 import { StudentScholarshipsModule } from './student-scholarships/student-scholarships.module';
 import { ProgramsModule } from './programs/programs.module';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
+import { ScholarshipsModule } from './scholarships/scholarships.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { BlogPostsModule } from './blog-posts/blog-posts.module';
     ProgramTemplatesModule,
     RegionsModule,
     StudentScholarshipsModule,
+    ScholarshipsModule,
     ProgramsModule,
     BlogPostsModule,
   ],

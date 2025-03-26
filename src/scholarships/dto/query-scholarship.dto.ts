@@ -1,15 +1,7 @@
-import { IsEnum, IsMongoId, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDate, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class QueryStudentScholarshipDto {
-    @IsOptional()
-    @IsMongoId()
-    student_id?: string;
-
-    @IsOptional()
-    @IsMongoId()
-    scholarship_id?: string;
-
+export class QueryScholarshipDto {
     @IsOptional()
     @IsString()
     search?: string;
@@ -19,19 +11,19 @@ export class QueryStudentScholarshipDto {
     scholarship_name?: string;
 
     @IsOptional()
-    @IsString()
+    @IsEnum(['merit', 'need', 'local', 'international'])
     scholarship_type?: string;
 
     @IsOptional()
-    @IsMongoId()
+    @IsString()
     university_id?: string;
 
     @IsOptional()
-    @IsMongoId()
+    @IsString()
     country?: string;
 
     @IsOptional()
-    @IsMongoId()
+    @IsString()
     region?: string;
 
     @IsOptional()

@@ -31,107 +31,75 @@ export class ApplicationsService {
         }
     }
 
-    async findAll(queryDto: QueryApplicationDto): Promise<{ data: ApplicationDocument[], meta: any }> {
-        const {
-            page = 1,
-            limit = 10,
-            sortBy = 'createdAt',
-            sortOrder = 'desc',
-            search,
-            applicant,
-            admission_program_id,
-            campus_id,
-            program,
-            status,
-            submissionDateFrom,
-            submissionDateTo,
-            populate = true
-        } = queryDto;
+    async findAll(queryDto: QueryApplicationDto): Promise<{ data: ApplicationDocument[]; meta: any }> {
+        try {
+            const {
+                student_id,
+                program_id,
+                admission_id,
+                applicant_id,
+                status,
+                page = 1,
+                limit = 10,
+                sortBy = 'createdAt',
+                sortOrder = 'desc'
+            } = queryDto;
 
-        const skip = (page - 1) * limit;
-        const sortOptions: Record<string, SortOrder> = { [sortBy]: sortOrder as SortOrder };
+            const filter: any = {};
 
-        // Build filter
-        const filter: any = {};
-
-        if (search) {
-            // Search in relevant fields
-            filter.$or = [
-                { 'applicant_snapshot.first_name': { $regex: search, $options: 'i' } },
-                { 'applicant_snapshot.last_name': { $regex: search, $options: 'i' } },
-                { 'applicant_snapshot.email': { $regex: search, $options: 'i' } },
-                { 'applicant_snapshot.phone_number': { $regex: search, $options: 'i' } },
-                { 'applicant_snapshot.city': { $regex: search, $options: 'i' } },
-                { 'applicant_snapshot.districtOfDomicile': { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (applicant) {
-            filter.applicant = applicant;
-        }
-
-        if (admission_program_id) {
-            filter.admission_program_id = admission_program_id;
-        }
-
-        if (campus_id) {
-            filter.campus_id = campus_id;
-        }
-
-        if (program) {
-            filter.program = program;
-        }
-
-        if (status) {
-            filter.status = status;
-        }
-
-        // Date range filter
-        if (submissionDateFrom || submissionDateTo) {
-            filter.submission_date = {};
-
-            if (submissionDateFrom) {
-                filter.submission_date.$gte = submissionDateFrom;
+            if (student_id) {
+                filter.student_id = student_id;
             }
 
-            if (submissionDateTo) {
-                filter.submission_date.$lte = submissionDateTo;
+            if (program_id) {
+                filter.program_id = program_id;
             }
+
+            if (admission_id) {
+                filter.admission_id = admission_id;
+            }
+
+            if (applicant_id) {
+                filter.applicant = applicant_id;
+            }
+
+            if (status) {
+                filter.status = status;
+            }
+
+            const skip = (page - 1) * limit;
+            const sort: any = {};
+            sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+            const [applications, total] = await Promise.all([
+                this.applicationModel
+                    .find(filter)
+                    .sort(sort)
+                    .skip(skip)
+                    .limit(limit)
+                    .populate('student_id', 'name email profile_image')
+                    .populate('program_id')
+                    .populate('admission_id')
+                    .lean()
+                    .exec(),
+                this.applicationModel.countDocuments(filter).exec(),
+            ]);
+
+            const totalPages = Math.ceil(total / limit);
+
+            return {
+                data: applications,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages
+                }
+            };
+        } catch (error) {
+            console.error('Error in findAll:', error);
+            throw new Error('An error occurred while fetching applications');
         }
-
-        // Execute query
-        let query = this.applicationModel.find(filter);
-
-        // Apply population if requested
-        if (populate) {
-            query = query
-                .populate('applicant')
-                .populate('admission_program_id')
-                .populate('campus_id')
-                .populate('program')
-                .populate('departments.department')
-                .populate('departments.preferences.program');
-        }
-
-        // Get total count for pagination
-        const total = await this.applicationModel.countDocuments(filter);
-
-        // Apply sorting and pagination
-        const data = await query
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(limit)
-            .exec();
-
-        return {
-            data,
-            meta: {
-                total,
-                page,
-                limit,
-                pages: Math.ceil(total / limit),
-            },
-        };
     }
 
     async findOne(id: string, populate: boolean = true): Promise<ApplicationDocument> {
@@ -167,7 +135,7 @@ export class ApplicationsService {
 
         return this.findAll({
             ...queryDto,
-            applicant: applicantId
+            applicant_id: applicantId
         });
     }
 

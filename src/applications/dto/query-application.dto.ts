@@ -23,7 +23,23 @@ export class QueryApplicationDto {
     program?: string;
 
     @IsOptional()
-    @IsEnum(['Pending', 'Approved', 'Rejected', 'Under Review'])
+    @IsMongoId()
+    student_id?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    program_id?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    admission_id?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    applicant_id?: string;
+
+    @IsOptional()
+    @IsEnum(['draft', 'submitted', 'under_review', 'approved', 'rejected'])
     status?: string;
 
     @IsOptional()

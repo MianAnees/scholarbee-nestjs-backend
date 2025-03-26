@@ -31,7 +31,7 @@ export class ApplicationsController {
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
+    // @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
     @Get()
     findAll(@Query() queryDto: QueryApplicationDto) {
         return this.applicationsService.findAll(queryDto);

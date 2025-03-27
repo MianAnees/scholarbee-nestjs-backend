@@ -73,12 +73,12 @@ export class ChatController {
     ) {
         // Here you would typically check if the user has admin rights for this campus
         // This is a placeholder for your authorization logic
-        const userId = req.user['sub'];
-        const userRole = req.user['role'];
+        // const userId = req.user['sub'];
+        // const userRole = req.user['role'];
 
-        if (userRole !== 'admin' && userRole !== 'campus_admin') {
-            throw new ForbiddenException('You do not have permission to access these conversations');
-        }
+        // if (userRole !== 'admin' && userRole !== 'campus_admin') {
+        //     throw new ForbiddenException('You do not have permission to access these conversations');
+        // }
 
         return this.chatService.findAllConversationsForCampus(campusId);
     }

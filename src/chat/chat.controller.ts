@@ -165,10 +165,10 @@ export class ChatController {
                 throw new BadRequestException('User ID not found in token');
             }
 
-            // Check if user has admin rights
-            if (userType !== 'Admin' && userType !== 'Student') {
-                throw new ForbiddenException('You do not have permission to send messages as campus');
-            }
+            // // Check if user has admin rights
+            // if (userType !== 'Admin' && userType !== 'Student') {
+            //     throw new ForbiddenException('You do not have permission to send messages as campus');
+            // }
 
             // Save message to database first
             const message = await this.chatService.createMessage(

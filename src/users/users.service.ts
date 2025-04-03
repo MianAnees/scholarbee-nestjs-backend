@@ -102,6 +102,7 @@ export class UsersService {
                     email: savedUser.email,
                     first_name: savedUser.first_name,
                     last_name: savedUser.last_name
+
                 }
             };
         } catch (error) {

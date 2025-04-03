@@ -25,4 +25,8 @@ export class SignupDto {
     @IsNotEmpty()
     @IsEnum(['Admin', 'Student', 'Campus_Admin'])
     user_type: string;
+
+    @IsOptional()
+    @IsString()
+    campus_id?: string;
 } 

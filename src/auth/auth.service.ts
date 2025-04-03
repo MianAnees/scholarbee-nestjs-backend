@@ -111,6 +111,7 @@ export class AuthService {
                 _verified: user._verified || false,
                 isProfileCompleted: user.isProfileCompleted || false,
                 createdBy,
+                campus_id: user?.campus_id,
                 email: user.email,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,

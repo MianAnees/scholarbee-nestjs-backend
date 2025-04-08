@@ -28,6 +28,7 @@ export class UsersService {
             if (existingUser) {
                 // If the user exists but is not verified, resend the verification link
                 if (!existingUser._verified) {
+                    // TODO: shouldn't we use the generateVerificationToken function here?
                     const newVerifyToken = crypto.randomBytes(20).toString('hex');
 
                     await this.updateUser(existingUser._id.toString(), {
@@ -181,6 +182,7 @@ export class UsersService {
         }
     }
 
+    // Review: This function is not used anywhere. Should we remove it?
     async generateVerificationToken(): Promise<string> {
         return crypto.randomBytes(20).toString('hex');
     }

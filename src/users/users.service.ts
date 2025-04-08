@@ -227,7 +227,7 @@ export class UsersService {
             throw new BadRequestException('Invalid or expired token');
         }
 
-        user.password = newPassword;
+        user.password = newPassword; // Review: should we hash the password here?
         user.resetPasswordToken = undefined;
         user.resetPasswordExpiration = undefined;
         return user.save();

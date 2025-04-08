@@ -32,7 +32,7 @@ import { ScholarshipsModule } from './scholarships/scholarships.module';
       envFilePath: '.env',
     }),
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule], // Specifying ConfigModule as an import here is necessary because during the module initialization, the ConfigService is not yet available as a Global Dependency Import
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),

@@ -108,7 +108,7 @@ export class ScholarshipsService {
         if (populate) {
             query = query
                 .populate('university_id')
-                .populate('country')
+                // .populate('country')
                 .populate('region');
         }
 
@@ -142,7 +142,7 @@ export class ScholarshipsService {
         const scholarship = await this.scholarshipModel
             .findById(id)
             .populate('university_id')
-            .populate('country')
+            //  .populate('country')
             .populate('region')
             .exec();
 
@@ -161,7 +161,7 @@ export class ScholarshipsService {
         const scholarship = await this.scholarshipModel
             .findByIdAndUpdate(id, updateScholarshipDto, { new: true })
             .populate('university_id')
-            .populate('country')
+            // .populate('country')
             .populate('region')
             .exec();
 

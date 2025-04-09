@@ -43,8 +43,8 @@ export class Scholarship {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', required: true })
     university_id: MongooseSchema.Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Country' })
-    country?: MongooseSchema.Types.ObjectId;
+    // @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Country' })
+    // country?: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Region' })
     region?: MongooseSchema.Types.ObjectId;

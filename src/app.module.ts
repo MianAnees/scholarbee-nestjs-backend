@@ -24,7 +24,7 @@ import { StudentScholarshipsModule } from './student-scholarships/student-schola
 import { ProgramsModule } from './programs/programs.module';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
 import { ScholarshipsModule } from './scholarships/scholarships.module';
-
+import { FileUploadModule } from './file-upload/file-upload.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -60,6 +60,7 @@ import { ScholarshipsModule } from './scholarships/scholarships.module';
     ScholarshipsModule,
     ProgramsModule,
     BlogPostsModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

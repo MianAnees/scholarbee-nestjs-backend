@@ -8,6 +8,18 @@ export class FileUploadController {
 
     constructor(private readonly fileUploadService: FileUploadService) { }
 
+    @Get('/')
+    async getFiles(
+        @Query('limit') limit?: number,
+        // @Query('page') page?: number,
+    ) {
+        const res = await this.fileUploadService.getFiles({
+            limit: limit ? Number(limit) : undefined,
+            // page: page ? Number(page) : 1,
+        });
+        return res;
+    }
+
     @Post('/')
     @UseInterceptors(FileInterceptor('file')) // Query: What if i don't use interceptor?
     async uploadFile(
@@ -24,15 +36,4 @@ export class FileUploadController {
         return res;
     }
 
-    @Get('/')
-    async getFiles(
-        @Query('limit') limit?: number,
-        // @Query('page') page?: number,
-    ) {
-        const res = await this.fileUploadService.getFiles({
-            limit: limit ? Number(limit) : undefined,
-            // page: page ? Number(page) : 1,
-        });
-        return res;
-    }
 }

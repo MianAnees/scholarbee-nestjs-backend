@@ -65,6 +65,7 @@ async function bootstrap() {
   );
 
   // API prefix
+  // REVIEW: We should setup api versioning as well
   app.setGlobalPrefix('api');
 
   // Get the PopulateInterceptor instance from the app context instead of creating a new one

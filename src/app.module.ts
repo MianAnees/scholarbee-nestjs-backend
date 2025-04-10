@@ -46,8 +46,6 @@ import { configuration, envValidationSchema } from 'src/config';
         // TODO: Use configuration() instead of configService.get<string>('MONGODB_URI')
         // uri: configuration().database.uri,
         uri: configService.get<string>('MONGODB_URI'),
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
       }),
     }),
     CommonModule,

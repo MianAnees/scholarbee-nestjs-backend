@@ -24,8 +24,9 @@ import { StudentScholarshipsModule } from './student-scholarships/student-schola
 import { ProgramsModule } from './programs/programs.module';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
 import { ScholarshipsModule } from './scholarships/scholarships.module';
-import { FileUploadModule } from './file-upload/file-upload.module';
+import { MediaManagementModule } from './media-management/media-management.module';
 import { configuration, envValidationSchema } from 'src/config';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -68,7 +69,7 @@ import { configuration, envValidationSchema } from 'src/config';
     ScholarshipsModule,
     ProgramsModule,
     BlogPostsModule,
-    FileUploadModule,
+    MediaManagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],

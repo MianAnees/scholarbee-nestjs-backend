@@ -76,32 +76,31 @@ export class MediaManagementService {
         }
     }
 
-    async uploadFile(file: Express.Multer.File, fileName?: string) {
+    async uploadFile(file: Express.Multer.File) {
+        /**
+         * This function generates a unique file key by appending a timestamp to the original file name.
+         * It ensures that the file name is unique by adding a timestamp to the file name.
+         * Input: 'image.123.jpg'
+         * Output: 'image.123-1718192000000.jpg'
+         * @param baseKey - The original file name.
+         * @returns A unique file key with a timestamp appended to the original file name.
+         */
+        const getUniqueFileKey = (baseKey: string): string => {
+            const timestamp = Date.now();
+            const nameParts = baseKey.split('.'); // e.g. ['image', '123', 'jpg']
+            const extension = nameParts.pop(); // e.g. 'jpg'
+            const baseName = nameParts.join('.'); // e.g. 'image.123'
+            return `${baseName}-${timestamp}.${extension}`; // e.g. 'image-123-1718192000000.jpg'
+        };
 
-        let fileKey = file.originalname;
-
-        // If fileName is provided, yse the extension of the file and add it to the fileName
-        if (fileName) {
-            const fileExtension = file.originalname.split('.').pop();
-            fileKey = `${fileName}.${fileExtension}`;
-        }
-
-        // Check if file already exists
-        const existingFiles = await this.s3Client.send(new ListObjectsV2Command({
-            Bucket: this.bucketName,
-            Prefix: fileKey,  // This will search for files starting with our filename
-            MaxKeys: 1,
-        }));
-
-        if (existingFiles.Contents && existingFiles.Contents.length > 0) {
-            throw new Error(`File with name "${fileKey}" already exists`);
-        }
+        let fileKey = getUniqueFileKey(file.originalname);
 
         const res = await this.s3Client.send(new PutObjectCommand({
             Bucket: this.bucketName,
             Key: fileKey,
             Body: file.buffer,
         }));
+
         const uploadedFile = {
             fileKey,
             etag: res.ETag,

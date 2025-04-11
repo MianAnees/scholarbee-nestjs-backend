@@ -40,10 +40,9 @@ export class MediaManagementController {
                 ],
             })
         ) file: Express.Multer.File, // Query: Where is this type coming from? Did i need to insteall the @types/multer for this?
-        @Query('fileName') fileName?: string,
     ) {
         try {
-            const res = await this.mediaManagementService.uploadFile(file, fileName);
+            const res = await this.mediaManagementService.uploadFile(file);
             return {
                 status: 'success',
                 message: 'File uploaded successfully',

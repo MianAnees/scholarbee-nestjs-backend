@@ -7,7 +7,8 @@ import {
     IsArray,
     ValidateNested,
     IsOptional,
-    IsMongoId
+    IsMongoId,
+    IsNotEmpty
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -141,21 +142,18 @@ class ApplicantSnapshotDto {
 }
 
 class PreferenceDto {
-    @IsString()
-    id: string;
-
     @IsMongoId()
+    @IsNotEmpty()
     program: string;
 
     @IsString()
+    @IsEnum(['1st', '2nd', '3rd'])
     preference_order: string;
 }
 
 class DepartmentDto {
-    @IsString()
-    id: string;
-
     @IsMongoId()
+    @IsNotEmpty()
     department: string;
 
     @IsArray()
@@ -165,32 +163,44 @@ class DepartmentDto {
 }
 
 export class CreateApplicationDto {
+    @IsOptional()
     @IsMongoId()
-    applicant: string;
+    applicant?: string;
 
     @IsMongoId()
+    @IsNotEmpty()
     admission_program_id: string;
 
     @IsMongoId()
+    @IsNotEmpty()
     campus_id: string;
 
     @IsMongoId()
+    @IsNotEmpty()
     program: string;
 
+    @IsOptional()
+    @IsMongoId()
+    admission?: string;
+
+    @IsOptional()
     @IsDate()
     @Type(() => Date)
-    submission_date: Date;
+    submission_date?: Date;
 
+    @IsOptional()
     @IsEnum(['Pending', 'Approved', 'Rejected', 'Under Review'])
-    status: string;
+    status?: string = 'Pending';
 
     @IsNumber()
+    @IsNotEmpty()
     total_processing_fee: number;
 
+    @IsOptional()
     @IsObject()
     @ValidateNested()
     @Type(() => ApplicantSnapshotDto)
-    applicant_snapshot: ApplicantSnapshotDto;
+    applicant_snapshot?: ApplicantSnapshotDto;
 
     @IsArray()
     @ValidateNested({ each: true })

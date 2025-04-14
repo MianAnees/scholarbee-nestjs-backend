@@ -7,6 +7,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { sendEmail } from '../utils/mail.config';
+import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
+import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
+import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
+import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
 
 @Injectable()
 export class UsersService {
@@ -235,7 +239,7 @@ export class UsersService {
         return user.save();
     }
 
-    async addEducationalBackground(userId: string, educationalBackground: any): Promise<User> {
+    async addEducationalBackground(userId: string, payload: CreateEducationalBackgroundDto): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
@@ -246,19 +250,13 @@ export class UsersService {
         }
 
         // Generate a unique ID for this educational background
-        educationalBackground.id = crypto.randomBytes(12).toString('hex');
+        payload.id = crypto.randomBytes(12).toString('hex');
 
-        user.educational_backgrounds.push(educationalBackground);
+        user.educational_backgrounds.push(payload);
         return user.save();
     }
 
-    async addNationalIdCard(userId: string, payload: {
-        national_id_card: {
-            front_side: string;
-            back_side: string;
-        };
-        isProfileCompleted: boolean;
-    }): Promise<User> {
+    async addNationalIdCard(userId: string, payload: CreateNationalIdCardDto): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
@@ -273,7 +271,7 @@ export class UsersService {
         return user.save();
     }
 
-    async updateEducationalBackground(userId: string, backgroundId: string, updatedData: any): Promise<User> {
+    async updateEducationalBackground(userId: string, backgroundId: string, payload: UpdateEducationalBackgroundDto): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
@@ -290,7 +288,11 @@ export class UsersService {
 
         user.educational_backgrounds[index] = {
             ...user.educational_backgrounds[index],
-            ...updatedData,
+            ...payload,
+            marks_gpa: {
+                ...user.educational_backgrounds[index].marks_gpa,
+                ...payload.marks_gpa
+            }
         };
 
         return user.save();
@@ -316,13 +318,14 @@ export class UsersService {
         return user.save();
     }
 
-    async updateNationalIdCard(userId: string, nationalIdCard: any): Promise<User> {
+    async updateNationalIdCard(userId: string, payload: UpdateNationalIdCardDto): Promise<User> {
+
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
         }
 
-        user.national_id_card = nationalIdCard;
+        user.national_id_card = payload;
         return user.save();
     }
 

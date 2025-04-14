@@ -26,8 +26,12 @@ export class ApplicationsController {
 
     @UseGuards(JwtAuthGuard)
     @Post()
-    create(@Body() createApplicationDto: CreateApplicationDto) {
-        return this.applicationsService.create(createApplicationDto);
+    async create(@Body() createApplicationDto: CreateApplicationDto, @Req() req) {
+        // Get the user ID from the JWT token
+        const userId = req.user.userId;
+
+        // Pass the user ID to the service to fetch user data and create application
+        return this.applicationsService.createWithUserSnapshot(createApplicationDto, userId);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,5 +78,29 @@ export class ApplicationsController {
     @Delete(':id')
     remove(@Param('id') id: string) {
         return this.applicationsService.remove(id);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
+    @Post('update-application-status')
+    async updateApplicationStatus(
+        @Body() updateData: { applicationId: string; status: string }
+    ) {
+        const { applicationId, status } = updateData;
+
+        if (!applicationId || !status) {
+            throw new BadRequestException('Missing applicationId or status in request body');
+        }
+
+        if (!['Pending', 'Approved', 'Rejected', 'Under Review'].includes(status)) {
+            throw new BadRequestException('Invalid status value');
+        }
+
+        const updatedApplication = await this.applicationsService.updateStatus(applicationId, status);
+
+        return {
+            message: 'Application status updated successfully',
+            application: updatedApplication
+        };
     }
 } 

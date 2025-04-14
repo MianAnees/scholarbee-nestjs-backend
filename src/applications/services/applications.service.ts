@@ -6,11 +6,13 @@ import { CreateApplicationDto } from '../dto/create-application.dto';
 import { UpdateApplicationDto } from '../dto/update-application.dto';
 import { QueryApplicationDto } from '../dto/query-application.dto';
 import { ApplicationsGateway } from '../gateways/applications.gateway';
+import { User, UserDocument } from '../../users/schemas/user.schema';
 
 @Injectable()
 export class ApplicationsService {
     constructor(
         @InjectModel(Application.name) private applicationModel: Model<ApplicationDocument>,
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
         private readonly applicationsGateway: ApplicationsGateway
     ) { }
 
@@ -32,74 +34,83 @@ export class ApplicationsService {
     }
 
     async findAll(queryDto: QueryApplicationDto): Promise<{ data: ApplicationDocument[]; meta: any }> {
-        try {
-            const {
-                student_id,
-                program_id,
-                admission_id,
-                applicant_id,
-                status,
-                page = 1,
-                limit = 10,
-                sortBy = 'createdAt',
-                sortOrder = 'desc'
-            } = queryDto;
+        const {
+            student_id,
+            program_id,
+            admission_id,
+            applicant_id,
+            status,
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+            populate = true
+        } = queryDto;
 
-            const filter: any = {};
+        const filter: any = {};
 
-            if (student_id) {
-                filter.student_id = student_id;
-            }
-
-            if (program_id) {
-                filter.program_id = program_id;
-            }
-
-            if (admission_id) {
-                filter.admission_id = admission_id;
-            }
-
-            if (applicant_id) {
-                filter.applicant = applicant_id;
-            }
-
-            if (status) {
-                filter.status = status;
-            }
-
-            const skip = (page - 1) * limit;
-            const sort: any = {};
-            sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-            const [applications, total] = await Promise.all([
-                this.applicationModel
-                    .find(filter)
-                    .sort(sort)
-                    .skip(skip)
-                    .limit(limit)
-                    .populate('student_id', 'name email profile_image')
-                    .populate('program_id')
-                    .populate('admission_id')
-                    .lean()
-                    .exec(),
-                this.applicationModel.countDocuments(filter).exec(),
-            ]);
-
-            const totalPages = Math.ceil(total / limit);
-
-            return {
-                data: applications,
-                meta: {
-                    total,
-                    page,
-                    limit,
-                    totalPages
-                }
-            };
-        } catch (error) {
-            console.error('Error in findAll:', error);
-            throw new Error('An error occurred while fetching applications');
+        if (student_id) {
+            filter.student_id = student_id;
         }
+
+        if (program_id) {
+            filter.program_id = program_id;
+        }
+
+        if (admission_id) {
+            filter.admission_id = admission_id;
+        }
+
+        if (applicant_id) {
+            filter.applicant = applicant_id;
+        }
+
+        if (status) {
+            filter.status = status;
+        }
+
+        const skip = (page - 1) * limit;
+        const sort: any = {};
+        sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+        let query = this.applicationModel.find(filter);
+
+        if (populate) {
+            query = query
+                .populate('student_id')
+                .populate('program_id')
+                .populate('admission_id')
+                .populate('campus_id')
+                .populate('program')
+                .populate('admission_program_id')
+                .populate({
+                    path: 'departments.department',
+                    model: 'AcademicDepartment'
+                })
+                .populate({
+                    path: 'departments.preferences.program',
+                    model: 'Program'
+                });
+        }
+
+        const [applications, total] = await Promise.all([
+            query
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .exec(),
+            this.applicationModel.countDocuments(filter).exec(),
+        ]);
+
+        return {
+            data: applications,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
     }
 
     async findOne(id: string, populate: boolean = true): Promise<ApplicationDocument> {
@@ -111,12 +122,20 @@ export class ApplicationsService {
 
         if (populate) {
             query = query
-                .populate('applicant')
-                .populate('admission_program_id')
+                .populate('student_id')
+                .populate('program_id')
+                .populate('admission_id')
                 .populate('campus_id')
                 .populate('program')
-                .populate('departments.department')
-                .populate('departments.preferences.program');
+                .populate('admission_program_id')
+                .populate({
+                    path: 'departments.department',
+                    model: 'AcademicDepartment'
+                })
+                .populate({
+                    path: 'departments.preferences.program',
+                    model: 'Program'
+                });
         }
 
         const application = await query.exec();
@@ -128,11 +147,7 @@ export class ApplicationsService {
         return application;
     }
 
-    async findByApplicant(applicantId: string, queryDto: QueryApplicationDto): Promise<{ data: ApplicationDocument[], meta: any }> {
-        if (!Types.ObjectId.isValid(applicantId)) {
-            throw new BadRequestException('Invalid applicant ID');
-        }
-
+    async findByApplicant(applicantId: string, queryDto: QueryApplicationDto): Promise<{ data: ApplicationDocument[]; meta: any }> {
         return this.findAll({
             ...queryDto,
             applicant_id: applicantId
@@ -232,5 +247,97 @@ export class ApplicationsService {
         });
 
         return result;
+    }
+
+    async createWithUserSnapshot(createApplicationDto: CreateApplicationDto, userId: string): Promise<ApplicationDocument> {
+        try {
+            // Check if user has already applied for this admission program
+            const existingApplication = await this.applicationModel.findOne({
+                applicant: userId,
+                admission_program_id: createApplicationDto.admission_program_id
+            }).exec();
+
+            if (existingApplication) {
+                throw new BadRequestException('Already applied for this admission program.');
+            }
+
+            // Fetch the complete user data to create the snapshot
+            const user = await this.userModel.findById(userId).exec();
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            // Create applicant snapshot from user data
+            const applicant_snapshot = {
+                first_name: user.first_name || null,
+                last_name: user.last_name || null,
+                email: user.email || null,
+                phone_number: user.phone_number || null,
+                date_of_birth: user.date_of_birth || null,
+                father_name: user.father_name || null,
+                father_profession: user.father_profession || null,
+                father_status: user.father_status || null,
+                father_income: user.father_income || null,
+                mother_name: user.mother_name || null,
+                mother_profession: user.mother_profession || null,
+                mother_status: user.mother_status || null,
+                mother_income: user.mother_income || null,
+                religion: user.religion || null,
+                special_person: user.special_person || null,
+                gender: user.gender || null,
+                nationality: user.nationality || null,
+                provinceOfDomicile: user.provinceOfDomicile || null,
+                districtOfDomicile: user.districtOfDomicile || null,
+                stateOrProvince: user.stateOrProvince || null,
+                city: user.city || null,
+                postalCode: user.postalCode || null,
+                streetAddress: user.streetAddress || null,
+                profile_image_url: user.profile_image_url || null,
+                user_type: user.user_type || null,
+                educational_backgrounds: user.educational_backgrounds?.map(edu => ({
+                    id: edu.id,
+                    education_level: edu.education_level || null,
+                    field_of_study: edu.field_of_study || null,
+                    school_college_university: edu.school_college_university || null,
+                    marks_gpa: {
+                        total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
+                        obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
+                    },
+                    year_of_passing: edu.year_of_passing || null,
+                    board: edu.board || null,
+                    transcript: edu.transcript || null,
+                })) || [],
+                national_id_card: {
+                    front_side: user.national_id_card?.front_side || null,
+                    back_side: user.national_id_card?.back_side || null,
+                },
+            };
+
+            // Create the application with the snapshot and map fields correctly
+            const application = new this.applicationModel({
+                ...createApplicationDto,
+                applicant: userId,
+                student_id: userId,  // Map applicant to student_id
+                program_id: createApplicationDto.program,  // Map program to program_id
+                admission_id: createApplicationDto.admission,  // Map admission to admission_id
+                applicant_snapshot,
+                submission_date: new Date(),
+                status: createApplicationDto.status || 'Pending'
+            });
+
+            const savedApplication = await application.save();
+
+            // Emit the update via WebSocket if needed
+            this.applicationsGateway.emitApplicationUpdate(savedApplication);
+
+            return savedApplication;
+        } catch (error) {
+            if (error instanceof BadRequestException || error instanceof NotFoundException) {
+                throw error;
+            }
+            console.error('Error creating application:', error);
+            throw new BadRequestException(error.message || 'Error processing application');
+        }
     }
 } 

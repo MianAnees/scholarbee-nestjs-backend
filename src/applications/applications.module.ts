@@ -6,11 +6,13 @@ import { ApplicationsController } from './controllers/applications.controller';
 import { ApplicationsService } from './services/applications.service';
 import { ApplicationsGateway } from './gateways/applications.gateway';
 import { Application, ApplicationSchema } from './schemas/application.schema';
+import { User, UserSchema } from '../users/schemas/user.schema';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
-            { name: Application.name, schema: ApplicationSchema }
+            { name: Application.name, schema: ApplicationSchema },
+            { name: User.name, schema: UserSchema }
         ]),
         JwtModule.registerAsync({
             imports: [ConfigModule],

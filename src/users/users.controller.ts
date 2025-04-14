@@ -44,7 +44,25 @@ export class UsersController {
         @Param('id') id: string,
         @Body() educationalBackground: any,
     ) {
+
+        console.log("educationalBackground:", educationalBackground)
         return this.usersService.addEducationalBackground(id, educationalBackground);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/national-id-card')
+    addNationalIdCard(
+        @Param('id') id: string,
+        @Body() payload: {
+            national_id_card: {
+                front_side: string;
+                back_side: string;
+            };
+            isProfileCompleted: boolean;
+        },
+    ) {
+
+        return this.usersService.addNationalIdCard(id, payload);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -65,6 +83,7 @@ export class UsersController {
     ) {
         return this.usersService.removeEducationalBackground(id, backgroundId);
     }
+
 
     @UseGuards(JwtAuthGuard)
     @Patch(':id/national-id-card')

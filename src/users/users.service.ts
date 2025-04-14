@@ -252,6 +252,27 @@ export class UsersService {
         return user.save();
     }
 
+    async addNationalIdCard(userId: string, payload: {
+        national_id_card: {
+            front_side: string;
+            back_side: string;
+        };
+        isProfileCompleted: boolean;
+    }): Promise<User> {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        const { national_id_card, isProfileCompleted } = payload;
+
+        // TODO: Check if validation for both these properties is in-place
+        user.national_id_card = national_id_card;
+        user.isProfileCompleted = isProfileCompleted;
+
+        return user.save();
+    }
+
     async updateEducationalBackground(userId: string, backgroundId: string, updatedData: any): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {

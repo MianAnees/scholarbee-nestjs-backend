@@ -46,9 +46,17 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: '*', // For development - change to specific origins in production
+    origin: [
+      'http://localhost:3020',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://api-dev.scholarbee.pk',
+      'https://scholarbee.pk',
+      'https://www.scholarbee.pk'
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type'],
   });
 
   // Use custom WebSocket adapter for proper handling

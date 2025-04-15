@@ -22,9 +22,9 @@ export interface EnvValidationSchema {
     FRONTEND_URL: string;
 
     // Email Configuration
-    SENDGRID_API_KEY: string;
+    SENDGRID_API_KEY?: string;
     RESEND_API_KEY: string;
-    DEFAULT_FROM_EMAIL: string;
+    DEFAULT_FROM_EMAIL?: string;
 
     // SMTP Configuration
     SES_SMTP_USERNAME: string;
@@ -48,6 +48,13 @@ export interface EnvValidationSchema {
     // MongoDB
     MONGODB_URI: string;
 }
+// Config validation error: "SENDGRID_API_KEY" is required. 
+
+// "DEFAULT_FROM_EMAIL" is required.
+// "AWS_ACCOUNT_ID" is required. 
+// "AWS_ACCESS_KEY" is required. 
+// "AWS_SECRET_KEY" is required
+
 
 export const envValidationSchema = Joi.object<EnvValidationSchema>({
 
@@ -72,9 +79,9 @@ export const envValidationSchema = Joi.object<EnvValidationSchema>({
     FRONTEND_URL: Joi.string().required().uri(),
 
     // Email Configuration
-    SENDGRID_API_KEY: Joi.string().required(),
+    SENDGRID_API_KEY: Joi.string().optional(),
     RESEND_API_KEY: Joi.string().required(),
-    DEFAULT_FROM_EMAIL: Joi.string().required().email(),
+    DEFAULT_FROM_EMAIL: Joi.string().optional().email(),
 
     // SMTP Configuration
     SES_SMTP_USERNAME: Joi.string().required(),

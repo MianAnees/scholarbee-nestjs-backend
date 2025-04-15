@@ -25,7 +25,8 @@ import { ProgramsModule } from './programs/programs.module';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
 import { ScholarshipsModule } from './scholarships/scholarships.module';
 import { MediaManagementModule } from './media-management/media-management.module';
-import { configuration, envValidationSchema } from 'src/config';
+import { configuration, EnvValidationSchema, envValidationSchema } from 'src/config';
+import { IConfiguration } from 'src/config/configuration';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { configuration, envValidationSchema } from 'src/config';
       envFilePath: '.env',
       isGlobal: true,
       expandVariables: true, // enables variable-expansion in .env files i.e. ${env1}+${env2}
-      load: [configuration],
+      load: [configuration], // the return of this will be directly accessible from the configService
       validationSchema: envValidationSchema,
       validationOptions: {
         abortEarly: false, // This option allows all validation errors to be reported at once, rather than stopping after the first error,
@@ -41,12 +42,11 @@ import { configuration, envValidationSchema } from 'src/config';
       },
     }),
     MongooseModule.forRootAsync({
-      imports: [ConfigModule], // Specifying ConfigModule as an import here is necessary because during the module initialization, the ConfigService is not yet available as a Global Dependency Import
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        // TODO: Use configuration() instead of configService.get<string>('MONGODB_URI')
-        // uri: configuration().database.uri,
-        uri: configService.get<string>('MONGODB_URI'),
+      // ? Even though configService has access to both the configuration and the env-vars, as a best practice, we should only access the values from the configuration object instead of the env-vars.
+      useFactory: (configService: ConfigService<IConfiguration & EnvValidationSchema>) => ({
+        uri: configService.get('database.uri', { infer: true })!,
       }),
     }),
     CommonModule,

@@ -2,6 +2,8 @@ import { DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectC
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IConfiguration } from 'src/config/configuration';
+import { EnvValidationSchema } from 'src/config/validation/env.validation';
 
 interface IPaginationOptions {
     limit?: number;
@@ -10,20 +12,25 @@ interface IPaginationOptions {
 
 @Injectable()
 export class MediaManagementService {
-    // private readonly bucketName = 's3-test-scholarbee';
-    private readonly bucketName = this.configService.getOrThrow<string>('S3_BUCKET');
+    private readonly bucketName: string;
+    private readonly s3Client: S3Client;
 
-    private readonly s3Client = new S3Client({
-        // TODO: Instead of using basic get method, create a wrapping appConfigService that will validate the env variables against the provided type and allow to access only the validated variables in a type-safe manner
-        region: this.configService.getOrThrow<string>('S3_REGION'), // Query: Does the configService validate the env variables against the provided type?
-        credentials: {
-            accessKeyId: this.configService.getOrThrow<string>('AWS_ACCESS_KEY'),
-            secretAccessKey: this.configService.getOrThrow<string>('AWS_SECRET_KEY'),
-        },
-    });
+    constructor(
+        private readonly configService: ConfigService<IConfiguration & EnvValidationSchema, true>
+    ) {
+        const s3Config = this.configService.get('s3', { infer: true })!;
+        const awsConfig = this.configService.get('aws', { infer: true })!;
 
-    constructor(private readonly configService: ConfigService) { }
-
+        this.bucketName = s3Config.bucket;
+        this.s3Client = new S3Client({
+            region: s3Config.region,
+            endpoint: s3Config.endpoint,
+            credentials: {
+                accessKeyId: awsConfig.accessKey,
+                secretAccessKey: awsConfig.secretKey,
+            },
+        });
+    }
 
     async getFiles(pagination?: IPaginationOptions) {
         const limit = pagination?.limit || 10;

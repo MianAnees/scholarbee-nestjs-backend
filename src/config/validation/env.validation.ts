@@ -1,8 +1,55 @@
 import * as Joi from 'joi';
 
-export const envValidationSchema = Joi.object({
+export interface EnvValidationSchema {
+    // JWT
+    JWT_SECRET: string;
+    JWT_EXPIRATION: string;
+
+    // App Settings
+    PORT: number;
+    NODE_ENV: string;
+    PAYLOAD_SECRET: string;
+
+    // S3 Configuration
+    S3_ENDPOINT: string;
+    S3_BUCKET: string;
+    S3_ACCESS_KEY_ID: string;
+    S3_SECRET_ACCESS_KEY: string;
+    S3_REGION: string;
+    STATIC_BUCKET_PATH: string;
+
+    // Frontend
+    FRONTEND_URL: string;
+
+    // Email Configuration
+    SENDGRID_API_KEY: string;
+    RESEND_API_KEY: string;
+    DEFAULT_FROM_EMAIL: string;
+
+    // SMTP Configuration
+    SES_SMTP_USERNAME: string;
+    SES_SMTP_PASSWORD: string;
+    SMTP_HOST: string;
+    SMTP_PORT: number;
+
+    // AWS Configuration
+    AWS_ACCOUNT_ID: string;
+    AWS_ACCESS_KEY: string;
+    AWS_SECRET_KEY: string;
+
+    // Database
+    DATABASE_HOST?: string;
+    DATABASE_PORT?: number;
+    DATABASE_USERNAME?: string;
+    DATABASE_PASSWORD?: string;
+    DATABASE_NAME?: string;
+    DATABASE_URI: string;
+
     // MongoDB
-    MONGODB_URI: Joi.string().required().uri(),
+    MONGODB_URI: string;
+}
+
+export const envValidationSchema = Joi.object<EnvValidationSchema>({
 
     // JWT
     JWT_SECRET: Joi.string().required(),
@@ -39,4 +86,14 @@ export const envValidationSchema = Joi.object({
     AWS_ACCOUNT_ID: Joi.string().required(),
     AWS_ACCESS_KEY: Joi.string().required(),
     AWS_SECRET_KEY: Joi.string().required(),
+
+    // Database (Optional)
+    DATABASE_HOST: Joi.string().optional(),
+    DATABASE_PORT: Joi.number().default(5432).optional(),
+    DATABASE_USERNAME: Joi.string().optional(),
+    DATABASE_PASSWORD: Joi.string().optional(),
+    DATABASE_NAME: Joi.string().optional(),
+
+    // MongoDB
+    MONGODB_URI: Joi.string().required().uri(),
 });

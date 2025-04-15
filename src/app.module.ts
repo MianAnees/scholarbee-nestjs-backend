@@ -34,7 +34,7 @@ import { IConfiguration } from 'src/config/configuration';
       envFilePath: '.env',
       isGlobal: true,
       expandVariables: true, // enables variable-expansion in .env files i.e. ${env1}+${env2}
-      load: [configuration],
+      load: [configuration], // the return of this will be directly accessible from the configService
       validationSchema: envValidationSchema,
       validationOptions: {
         abortEarly: false, // This option allows all validation errors to be reported at once, rather than stopping after the first error,

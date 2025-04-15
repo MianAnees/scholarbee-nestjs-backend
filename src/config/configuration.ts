@@ -12,6 +12,10 @@ const configuration = () => {
         throw new Error(`Validation failed: ${validationResult.error.message}`);
     }
 
+    if (validationResult.warning) {
+        console.warn(`Validation warning: ${validationResult.warning.message}`);
+    }
+
     const parsedEnv = validationResult.value! as EnvValidationSchema;
 
     // TODO: Step 1: Add the validationResult.value.[env-key] to the configuration object and add all the variables to the configuration object
@@ -26,7 +30,6 @@ const configuration = () => {
             nodeEnv: parsedEnv.NODE_ENV,
             payloadSecret: parsedEnv.PAYLOAD_SECRET,
         },
-
         s3: {
             endpoint: parsedEnv.S3_ENDPOINT,
             bucket: parsedEnv.S3_BUCKET,

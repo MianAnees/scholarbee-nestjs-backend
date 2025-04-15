@@ -1,17 +1,12 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { PopulateInterceptor } from './common/interceptors/populate.interceptor';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import * as dotenv from 'dotenv';
+import { NestFactory } from '@nestjs/core';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ServerOptions } from 'socket.io';
-import { Server } from 'socket.io';
-
-// Load environment variables at the very beginning
-dotenv.config();
+import { AppModule } from './app.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { PopulateInterceptor } from './common/interceptors/populate.interceptor';
 
 class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: Partial<ServerOptions>): any {
@@ -61,13 +56,16 @@ async function bootstrap() {
   app.useWebSocketAdapter(new CustomIoAdapter(app));
 
   // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   // API prefix
+  // REVIEW: We should setup api versioning as well
   app.setGlobalPrefix('api');
 
   // Get the PopulateInterceptor instance from the app context instead of creating a new one
@@ -92,5 +90,9 @@ async function bootstrap() {
   logger.log(`Application is running on: http://localhost:${port}`);
   logger.log(`Swagger documentation is available at: http://localhost:${port}/api/docs`);
   logger.log(`WebSocket server is available at: ws://localhost:${port}/socket.io`);
+  logger.log(
+    `Swagger documentation is available at: http://localhost:${port}/api/docs`,
+  );
+  logger.log(`WebSocket server is available at: ws://localhost:${port}/chat`);
 }
 bootstrap();

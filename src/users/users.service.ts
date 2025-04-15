@@ -32,6 +32,7 @@ export class UsersService {
             if (existingUser) {
                 // If the user exists but is not verified, resend the verification link
                 if (!existingUser._verified) {
+                    // TODO: shouldn't we use the generateVerificationToken function here?
                     const newVerifyToken = crypto.randomBytes(20).toString('hex');
 
                     await this.updateUser(existingUser._id.toString(), {
@@ -185,6 +186,7 @@ export class UsersService {
         }
     }
 
+    // Review: This function is not used anywhere. Should we remove it?
     async generateVerificationToken(): Promise<string> {
         return crypto.randomBytes(20).toString('hex');
     }
@@ -231,7 +233,7 @@ export class UsersService {
             throw new BadRequestException('Invalid or expired token');
         }
 
-        user.password = newPassword;
+        user.password = newPassword; // Review: should we hash the password here?
         user.resetPasswordToken = undefined;
         user.resetPasswordExpiration = undefined;
         return user.save();

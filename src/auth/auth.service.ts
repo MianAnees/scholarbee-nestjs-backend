@@ -61,7 +61,7 @@ export class AuthService {
 
         // Generate token with 7-day expiry
         const token = this.jwtService.sign(payload, {
-            expiresIn: '7d'
+            expiresIn: '7d' // Review: why is 7d specified here when it's already specified in the auth.module.ts?
         });
 
         // Calculate expiry timestamp for response

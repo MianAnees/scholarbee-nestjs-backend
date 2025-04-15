@@ -39,14 +39,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: [
-      'http://localhost:3020',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://api-dev.scholarbee.pk',
-      'https://scholarbee.pk',
-      'https://www.scholarbee.pk'
-    ],
+    origin: '*', // For development - change to specific origins in production
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Authorization', 'Content-Type'],

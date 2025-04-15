@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
         origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true,
+        allowedHeaders: ['Authorization', 'Content-Type']
     },
     namespace: '/admission-programs',
 })

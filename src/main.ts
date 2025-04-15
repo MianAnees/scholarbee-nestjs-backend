@@ -7,16 +7,12 @@ import { ServerOptions } from 'socket.io';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PopulateInterceptor } from './common/interceptors/populate.interceptor';
-import dotenv from 'dotenv';
-
-// Load environment variables at the very beginning
-dotenv.config();
 
 class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: Partial<ServerOptions>): any {
     const server = super.createIOServer(port, {
       cors: {
-        origin: true,
+        origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true,
         allowedHeaders: ['Authorization', 'Content-Type']
@@ -43,7 +39,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Authorization', 'Content-Type']

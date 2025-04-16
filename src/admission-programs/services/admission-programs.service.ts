@@ -87,7 +87,15 @@ export class AdmissionProgramsService {
 
         // Apply population if requested
         if (populate) {
-            query = query.populate('admission').populate('program').populate('createdBy');
+            query = query
+                .populate('admission')
+                .populate({
+                    path: 'program',
+                    populate: {
+                        path: 'campus_id'
+                    }
+                })
+                .populate('createdBy');
         }
 
         // Get total count for pagination

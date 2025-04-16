@@ -413,4 +413,101 @@ export class ProgramsService {
 
         return comparisonData;
     }
+
+    async findAllByUniversity(
+        universityId: string,
+        queryDto: QueryProgramDto
+    ): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
+        if (!Types.ObjectId.isValid(universityId)) {
+            throw new BadRequestException('Invalid university ID');
+        }
+
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+            populate = true
+        } = queryDto;
+
+        const skip = (page - 1) * limit;
+
+        // First get all campus IDs for this university using aggregation
+        const campusesAggregation = await this.programModel.aggregate([
+            {
+                $lookup: {
+                    from: 'campuses',
+                    let: { campusId: { $toObjectId: '$campus_id' } },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$_id', '$$campusId'] },
+                                        { $eq: ['$university_id', universityId] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'campus'
+                }
+            },
+            {
+                $match: {
+                    'campus': { $ne: [] }
+                }
+            },
+            {
+                $group: {
+                    _id: '$campus_id'
+                }
+            }
+        ]).exec();
+
+        const campusIds = campusesAggregation.map(item => item._id);
+
+        // If no campuses found, return empty result
+        if (campusIds.length === 0) {
+            return {
+                programs: [],
+                total: 0,
+                page,
+                limit,
+                totalPages: 0
+            };
+        }
+
+        // Sort options
+        const sort: { [key: string]: SortOrder } = {};
+        sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+        // Find all programs for these campuses
+        const programs = await this.programModel
+            .find({ campus_id: { $in: campusIds } })
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .exec();
+
+        // Get total count
+        const total = await this.programModel
+            .countDocuments({ campus_id: { $in: campusIds } })
+            .exec();
+
+        const totalPages = Math.ceil(total / limit);
+
+        // Populate references if requested
+        if (populate) {
+            // Implement population logic here if needed
+        }
+
+        return {
+            programs,
+            total,
+            page,
+            limit,
+            totalPages
+        };
+    }
 } 

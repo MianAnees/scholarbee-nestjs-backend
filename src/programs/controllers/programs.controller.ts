@@ -48,6 +48,15 @@ export class ProgramsController {
         return this.programsService.findByCampus(campusId, queryDto);
     }
 
+    // get all programs by university
+    @Get('university/:universityId')
+    findByUniversity(
+        @Param('universityId') universityId: string,
+        @Query() queryDto: QueryProgramDto
+    ) {
+        return this.programsService.findAllByUniversity(universityId, queryDto);
+    }
+
     @Get('academic-department/:departmentId')
     findByAcademicDepartment(
         @Param('departmentId') departmentId: string,

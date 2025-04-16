@@ -92,7 +92,11 @@ export class AdmissionProgramsService {
                 .populate({
                     path: 'program',
                     populate: {
-                        path: 'campus_id'
+                        path: 'campus_id',
+                        populate: [
+                            { path: 'address_id' },
+                            { path: 'university_id' }
+                        ]
                     }
                 })
                 .populate('createdBy');

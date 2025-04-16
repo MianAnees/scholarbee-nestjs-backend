@@ -53,7 +53,7 @@ export class AdmissionProgram {
     @Prop({ type: [String], default: [] })
     favouriteBy: string[];
 
-    @Prop({ type: String, required: true })
+    @Prop({ type: String, ref: 'Program', required: true })
     program: string;
 
     @Prop({ type: String })

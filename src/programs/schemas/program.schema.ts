@@ -12,6 +12,9 @@ export class Program {
     major?: string;
 
     @Prop({ type: String, required: false })
+    degree_level?: string;
+
+    @Prop({ type: String, required: false })
     accreditations?: string;
 
     @Prop({ type: String, required: false })

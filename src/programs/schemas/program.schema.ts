@@ -24,7 +24,7 @@ export class Program {
     sorting_weight?: string;
 
     @Prop({ type: String, ref: 'Campus', required: true })
-    campus_id: string;
+    campus: string;
 
     @Prop({ type: String, required: false })
     academic_departments?: string;

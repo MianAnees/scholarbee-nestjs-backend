@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder } from 'mongoose';
+import { Model, Types, SortOrder, RootFilterQuery } from 'mongoose';
 import { Program, ProgramDocument } from '../schemas/program.schema';
 import { CreateProgramDto } from '../dto/create-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
@@ -13,35 +13,19 @@ export class ProgramsService {
         @InjectModel(Program.name) private programModel: Model<ProgramDocument>,
     ) { }
 
-    async create(createProgramDto: CreateProgramDto): Promise<ProgramDocument> {
-        try {
-            const createdProgram = new this.programModel(createProgramDto);
-            return await createdProgram.save();
-        } catch (error) {
-            if (error.name === 'ValidationError') {
-                throw new BadRequestException(error.message);
-            }
-            throw error;
-        }
-    }
-
-    async findAll(queryDto: QueryProgramDto): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
+    private buildFilterQuery(queryDto: QueryProgramDto): RootFilterQuery<ProgramDocument> {
         const {
             search,
             name,
             major,
             mode_of_study,
             campus_id,
+            campus_ids,
+            degree_level,
             academic_departments,
-            page = 1,
-            limit = 10,
-            sortBy = 'createdAt',
-            sortOrder = 'desc',
-            populate = true
         } = queryDto;
 
-        const skip = (page - 1) * limit;
-        const filter: any = {};
+        const filter: RootFilterQuery<ProgramDocument> = {};
 
         // Apply filters
         if (search) {
@@ -63,13 +47,48 @@ export class ProgramsService {
             filter.mode_of_study = { $regex: mode_of_study, $options: 'i' };
         }
 
-        if (campus_id) {
+        if (degree_level) {
+            filter.degree_level = { $regex: degree_level, $options: 'i' };
+        }
+
+        // Handle both single campus_id and multiple campus_ids
+        if (campus_ids?.length) {
+            filter.campus_id = { $in: campus_ids };
+        } else if (campus_id) {
             filter.campus_id = campus_id;
         }
 
         if (academic_departments) {
             filter.academic_departments = academic_departments;
         }
+
+        return filter;
+    }
+
+    async create(createProgramDto: CreateProgramDto): Promise<ProgramDocument> {
+        try {
+            const createdProgram = new this.programModel(createProgramDto);
+            return await createdProgram.save();
+        } catch (error) {
+            if (error.name === 'ValidationError') {
+                throw new BadRequestException(error.message);
+            }
+            throw error;
+        }
+    }
+
+
+    async findAll(queryDto: QueryProgramDto): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+            populate = true
+        } = queryDto;
+
+        const skip = (page - 1) * limit;
+        const filter = this.buildFilterQuery(queryDto);
 
         // Sort options
         const sort: { [key: string]: SortOrder } = {};
@@ -87,15 +106,8 @@ export class ProgramsService {
         const total = await this.programModel.countDocuments(filter).exec();
         const totalPages = Math.ceil(total / limit);
 
-        // Populate references if requested
         if (populate) {
-            // You would implement population logic here based on your schema relationships
-            // For example:
-            // await Promise.all(programs.map(async (program) => {
-            //   // Populate campus
-            //   // Populate academic departments
-            //   // etc.
-            // }));
+            // Implement population logic here if needed
         }
 
         return {
@@ -412,5 +424,61 @@ export class ProgramsService {
         ]);
 
         return comparisonData;
+    }
+
+    async findAllByUniversity(
+        universityId: string,
+        queryDto: QueryProgramDto
+    ): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
+        if (!Types.ObjectId.isValid(universityId)) {
+            throw new BadRequestException('Invalid university ID');
+        }
+
+        // Get campus IDs for the university
+        const campusesAggregation = await this.programModel.aggregate([
+            {
+                $lookup: {
+                    from: 'campuses',
+                    let: { campusId: { $toObjectId: '$campus_id' } },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$_id', '$$campusId'] },
+                                        { $eq: ['$university_id', universityId] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'campus'
+                }
+            },
+            {
+                $match: { 'campus': { $ne: [] } }
+            },
+            {
+                $group: { _id: '$campus_id' }
+            }
+        ]).exec();
+
+        const campusIds = campusesAggregation.map(item => item._id);
+
+        if (campusIds.length === 0) {
+            return {
+                programs: [],
+                total: 0,
+                page: 1,
+                limit: queryDto.limit || 10,
+                totalPages: 0
+            };
+        }
+
+        // Merge the campus IDs with the query DTO and reuse findAll
+        return this.findAll({
+            ...queryDto,
+            campus_ids: campusIds
+        });
     }
 } 

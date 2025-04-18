@@ -100,7 +100,7 @@ export class ProgramsService {
         // Give preference to single campus_id filter over multiple campus_ids filter. Because the single campus_id filter is more specific and will return a smaller result set.
         if (campus_id) {
             filter.campus_id = campus_id;
-        } else if (university_id) {
+        } else if (campus_ids) {
             filter.campus_id = { $in: campus_ids };
         } 
 

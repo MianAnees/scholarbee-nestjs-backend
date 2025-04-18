@@ -478,47 +478,18 @@ export class ProgramsService {
         return comparisonData;
     }
 
+    /**
+     * DEPRECATED: Use findAll instead as it now handles the extraction of campus IDs from university ID
+     * @param universityId 
+     * @param queryDto 
+     * @returns 
+     */
     async findAllByUniversity(
         universityId: string,
         queryDto: QueryProgramDto
     ): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
-        if (!Types.ObjectId.isValid(universityId)) {
-            throw new BadRequestException('Invalid university ID');
-        }
 
-        // Get campus IDs for the university
-        const campusesAggregation = await this.programModel.aggregate<{ _id: string }>([
-            {
-                $lookup: {
-                    // lookup the `campuses` collection
-                    from: 'campuses',
-                    // means that the `campus_id` in the program documents is the id of the campus documents in the campuses collection. And we ensure that the campus_id is an object id and saved as `campusId` for the lookup
-                    let: { campusId: { $toObjectId: '$campus_id' } },
-                    // use the `campusId` to match the `_id` of the campus documents in the campuses collection AND ensure that the university_id of the campus documents matches the `universityId`
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ['$_id', '$$campusId'] }, // REVIEW: Do we need this filter? Bcz we only know the university_id and we want to get all campuses of the university So how can we get the campus_id?
-                                        { $eq: ['$university_id', universityId] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: 'campus'
-                }
-            },
-            {
-                $match: { 'campus': { $ne: [] } }
-            },
-            {
-                $group: { _id: '$campus_id' }
-            }
-        ]).exec();
-
-        const campusIds = campusesAggregation.map(item => item._id);
+        const campusIds = await this.extractCampusIdsFromUniversityId(universityId);
 
         if (campusIds.length === 0) {
             return {

@@ -18,6 +18,11 @@ export class QueryProgramDto {
     @IsString()
     mode_of_study?: string;
 
+
+    @IsOptional()
+    @IsString()
+    university_id?: string;
+
     @IsOptional()
     @IsString()
     campus_id?: string;

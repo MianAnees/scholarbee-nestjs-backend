@@ -13,18 +13,64 @@ export class ProgramsService {
         @InjectModel(Program.name) private programModel: Model<ProgramDocument>,
     ) { }
 
+    // method to translate the university_id filter to campus_id filter
+    private async extractCampusIdsFromUniversityId(universityId: string): Promise<string[]> {
+
+        if (!Types.ObjectId.isValid(universityId)) {
+            throw new BadRequestException('Invalid university ID');
+        }
+        
+        
+        // Get campus IDs for the university
+        const campusesAggregation = await this.programModel.aggregate<{ _id: string }>([
+            {
+                $lookup: {
+                  // lookup the `campuses` collection
+                    from: 'campuses',
+                    // means that the `campus_id` in the program documents is the id of the campus documents in the campuses collection. And we ensure that the campus_id is an object id and saved as `campusId` for the lookup
+                    let: { campusId: { $toObjectId: '$campus_id' } },
+                    // use the `campusId` to match the `_id` of the campus documents in the campuses collection AND ensure that the university_id of the campus documents matches the `universityId`
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$_id', '$$campusId'] }, // REVIEW: Do we need this filter? Bcz we only know the university_id and we want to get all campuses of the university So how can we get the campus_id?
+                                        { $eq: ['$university_id', universityId] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'campus'
+                }
+            },
+            {
+                $match: { 'campus': { $ne: [] } }
+            },
+            {
+                $group: { _id: '$campus_id' }
+            }
+        ]).exec();
+
+        const campusIds = campusesAggregation.map(item => item._id);
+
+        return campusIds;
+    
+    }
+
     private buildFilterQuery(queryDto: QueryProgramDto): RootFilterQuery<ProgramDocument> {
         const {
             search,
             name,
             major,
             mode_of_study,
+            university_id,
             campus_id,
             campus_ids,
             degree_level,
             academic_departments,
         } = queryDto;
-
         const filter: RootFilterQuery<ProgramDocument> = {};
 
         // Apply filters
@@ -51,12 +97,12 @@ export class ProgramsService {
             filter.degree_level = { $regex: degree_level, $options: 'i' };
         }
 
-        // Handle both single campus_id and multiple campus_ids
-        if (campus_ids?.length) {
-            filter.campus_id = { $in: campus_ids };
-        } else if (campus_id) {
+        // Give preference to single campus_id filter over multiple campus_ids filter. Because the single campus_id filter is more specific and will return a smaller result set.
+        if (campus_id) {
             filter.campus_id = campus_id;
-        }
+        } else if (campus_ids) {
+            filter.campus_id = { $in: campus_ids };
+        } 
 
         if (academic_departments) {
             filter.academic_departments = academic_departments;
@@ -84,9 +130,15 @@ export class ProgramsService {
             limit = 10,
             sortBy = 'createdAt',
             sortOrder = 'desc',
-            populate = true
+            populate = true,
+            university_id,
         } = queryDto;
 
+        // If university_id is provided, extract the campus_ids from the university_id and add them to the queryDto
+        if (university_id) {
+            queryDto.campus_ids = await this.extractCampusIdsFromUniversityId(university_id);
+        }
+        
         const skip = (page - 1) * limit;
         const filter = this.buildFilterQuery(queryDto);
 
@@ -426,44 +478,18 @@ export class ProgramsService {
         return comparisonData;
     }
 
+    /**
+     * DEPRECATED: Use findAll instead as it now handles the extraction of campus IDs from university ID
+     * @param universityId 
+     * @param queryDto 
+     * @returns 
+     */
     async findAllByUniversity(
         universityId: string,
         queryDto: QueryProgramDto
     ): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {
-        if (!Types.ObjectId.isValid(universityId)) {
-            throw new BadRequestException('Invalid university ID');
-        }
 
-        // Get campus IDs for the university
-        const campusesAggregation = await this.programModel.aggregate([
-            {
-                $lookup: {
-                    from: 'campuses',
-                    let: { campusId: { $toObjectId: '$campus_id' } },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ['$_id', '$$campusId'] },
-                                        { $eq: ['$university_id', universityId] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: 'campus'
-                }
-            },
-            {
-                $match: { 'campus': { $ne: [] } }
-            },
-            {
-                $group: { _id: '$campus_id' }
-            }
-        ]).exec();
-
-        const campusIds = campusesAggregation.map(item => item._id);
+        const campusIds = await this.extractCampusIdsFromUniversityId(universityId);
 
         if (campusIds.length === 0) {
             return {

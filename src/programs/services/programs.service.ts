@@ -23,13 +23,13 @@ export class ProgramsService {
         if (!Types.ObjectId.isValid(universityId)) {
             throw new BadRequestException('Invalid university ID');
         }
-        
-        
+
+
         // Get campus IDs for the university
         const campusesAggregation = await this.programModel.aggregate<{ _id: string }>([
             {
                 $lookup: {
-                  // lookup the `campuses` collection
+                    // lookup the `campuses` collection
                     from: 'campuses',
                     // means that the `campus_id` in the program documents is the id of the campus documents in the campuses collection. And we ensure that the campus_id is an object id and saved as `campusId` for the lookup
                     let: { campusId: { $toObjectId: '$campus_id' } },
@@ -60,7 +60,7 @@ export class ProgramsService {
         const campusIds = campusesAggregation.map(item => item._id);
 
         return campusIds;
-    
+
     }
 
     private buildFilterQuery(queryDto: QueryProgramDto): RootFilterQuery<ProgramDocument> {
@@ -106,7 +106,7 @@ export class ProgramsService {
             filter.campus_id = campus_id;
         } else if (campus_ids) {
             filter.campus_id = { $in: campus_ids };
-        } 
+        }
 
         if (academic_departments) {
             filter.academic_departments = academic_departments;
@@ -137,19 +137,27 @@ export class ProgramsService {
      * @returns 
      */
     async create(createProgramDto: CreateProgramDto): Promise<ProgramDocument> {
+        // TODO: There should be a transaction to ensure that the program is created and the university's has_programs flag is updated.
+
+        const session = await this.programModel.startSession();
+        session.startTransaction();
+
+
         try {
             const createdProgram = new this.programModel(createProgramDto);
             const savedProgram = await createdProgram.save();
-            
+
             // Update the university's has_programs flag
             await this.updateUniversityHasProgramsFlag(createProgramDto.campus_id);
-            
+
+            await session.commitTransaction();
+
             return savedProgram;
         } catch (error) {
-            if (error.name === 'ValidationError') {
-                throw new BadRequestException(error.message);
-            }
+            await session.abortTransaction();
             throw error;
+        } finally {
+            session.endSession();
         }
     }
 
@@ -168,7 +176,7 @@ export class ProgramsService {
         if (university_id) {
             queryDto.campus_ids = await this.extractCampusIdsFromUniversityId(university_id);
         }
-        
+
         const skip = (page - 1) * limit;
         const filter = this.buildFilterQuery(queryDto);
 
@@ -246,18 +254,35 @@ export class ProgramsService {
             throw new BadRequestException('Invalid program ID');
         }
 
-        const program = await this.programModel.findById(id);
-        if (!program) {
-            throw new NotFoundException(`Program with ID ${id} not found`);
+        const session = await this.programModel.startSession();
+        session.startTransaction();
+
+        try {
+            const program = await this.programModel.findById(id);
+            if (!program) {
+                throw new NotFoundException(`Program with ID ${id} not found`);
+            }
+
+            const campusId = program.campus_id;
+
+            // Delete the program
+            await program.deleteOne();
+
+            // Update the university's has_programs flag
+            await this.updateUniversityHasProgramsFlag(campusId);
+
+            await session.commitTransaction();
+
+            // Return the deleted program
+            return { deleted: true };
+
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
         }
 
-        const campusId = program.campus_id;
-        await program.deleteOne();
-        
-        // Update the university's has_programs flag
-        await this.updateUniversityHasProgramsFlag(campusId);
-        
-        return { deleted: true };
     }
 
     async findByCampus(campusId: string, queryDto: QueryProgramDto): Promise<{ programs: ProgramDocument[], total: number, page: number, limit: number, totalPages: number }> {

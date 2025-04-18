@@ -1,16 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder, RootFilterQuery } from 'mongoose';
-import { Program, ProgramDocument } from '../schemas/program.schema';
-import { CreateProgramDto } from '../dto/create-program.dto';
-import { UpdateProgramDto } from '../dto/update-program.dto';
-import { QueryProgramDto } from '../dto/query-program.dto';
+import { Model, RootFilterQuery, SortOrder, Types } from 'mongoose';
+import { Campus, CampusDocument } from 'src/campuses/schemas/campus.schema';
+import { University, UniversityDocument } from 'src/universities/schemas/university.schema';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { CreateProgramDto } from '../dto/create-program.dto';
+import { QueryProgramDto } from '../dto/query-program.dto';
+import { UpdateProgramDto } from '../dto/update-program.dto';
+import { Program, ProgramDocument } from '../schemas/program.schema';
 
 @Injectable()
 export class ProgramsService {
     constructor(
         @InjectModel(Program.name) private programModel: Model<ProgramDocument>,
+        @InjectModel(University.name) private universityModel: Model<UniversityDocument>,
+        @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
     ) { }
 
     // method to translate the university_id filter to campus_id filter
@@ -111,10 +115,36 @@ export class ProgramsService {
         return filter;
     }
 
+    private async updateUniversityHasProgramsFlag(campusId: string) {
+        // Find the campus to get its university_id
+        const campus = await this.campusModel.findById(campusId);
+        if (!campus) return;
+
+        // Count programs for this campus
+        const programCount = await this.programModel.countDocuments({ campus_id: campusId });
+
+        // Update the university's has_programs flag
+        await this.universityModel.findByIdAndUpdate(
+            campus.university_id,
+            { has_programs: programCount > 0 },
+            { new: true }
+        );
+    }
+
+    /**
+     * Create a new program and update the university's has_programs flag if program successfully created
+     * @param createProgramDto 
+     * @returns 
+     */
     async create(createProgramDto: CreateProgramDto): Promise<ProgramDocument> {
         try {
             const createdProgram = new this.programModel(createProgramDto);
-            return await createdProgram.save();
+            const savedProgram = await createdProgram.save();
+            
+            // Update the university's has_programs flag
+            await this.updateUniversityHasProgramsFlag(createProgramDto.campus_id);
+            
+            return savedProgram;
         } catch (error) {
             if (error.name === 'ValidationError') {
                 throw new BadRequestException(error.message);
@@ -216,12 +246,17 @@ export class ProgramsService {
             throw new BadRequestException('Invalid program ID');
         }
 
-        const result = await this.programModel.deleteOne({ _id: id }).exec();
-
-        if (result.deletedCount === 0) {
+        const program = await this.programModel.findById(id);
+        if (!program) {
             throw new NotFoundException(`Program with ID ${id} not found`);
         }
 
+        const campusId = program.campus_id;
+        await program.deleteOne();
+        
+        // Update the university's has_programs flag
+        await this.updateUniversityHasProgramsFlag(campusId);
+        
         return { deleted: true };
     }
 

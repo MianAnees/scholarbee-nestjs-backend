@@ -77,6 +77,9 @@ export class University {
     @Prop()
     notable_alumni: string;
 
+    @Prop({ type: Boolean, default: false })
+    has_programs: boolean;
+
     @Prop({ type: Types.ObjectId, ref: 'User' })
     createdBy: Types.ObjectId;
 }

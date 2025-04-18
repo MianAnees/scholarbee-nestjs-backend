@@ -33,8 +33,9 @@ export class UniversitiesController {
         @Query('limit') limit: number = 10,
         @Query('sortBy') sortBy: string = 'createdAt',
         @Query('order') order: string = 'desc',
+        @Query('has_programs') has_programs?: boolean,
     ) {
-        return this.universitiesService.findAll(page, limit, sortBy, order as any);
+        return this.universitiesService.findAll(page, limit, sortBy, order as any, has_programs);
     }
 
     @Get(':id')

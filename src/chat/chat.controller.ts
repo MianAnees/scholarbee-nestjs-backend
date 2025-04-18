@@ -73,12 +73,12 @@ export class ChatController {
     ) {
         // Here you would typically check if the user has admin rights for this campus
         // This is a placeholder for your authorization logic
-        const userId = req.user['sub'];
-        const userRole = req.user['role'];
+        // const userId = req.user['sub'];
+        // const userRole = req.user['role'];
 
-        if (userRole !== 'admin' && userRole !== 'campus_admin') {
-            throw new ForbiddenException('You do not have permission to access these conversations');
-        }
+        // if (userRole !== 'admin' && userRole !== 'campus_admin') {
+        //     throw new ForbiddenException('You do not have permission to access these conversations');
+        // }
 
         return this.chatService.findAllConversationsForCampus(campusId);
     }
@@ -165,10 +165,10 @@ export class ChatController {
                 throw new BadRequestException('User ID not found in token');
             }
 
-            // Check if user has admin rights
-            if (userType !== 'Admin' && userType !== 'Student') {
-                throw new ForbiddenException('You do not have permission to send messages as campus');
-            }
+            // // Check if user has admin rights
+            // if (userType !== 'Admin' && userType !== 'Student') {
+            //     throw new ForbiddenException('You do not have permission to send messages as campus');
+            // }
 
             // Save message to database first
             const message = await this.chatService.createMessage(

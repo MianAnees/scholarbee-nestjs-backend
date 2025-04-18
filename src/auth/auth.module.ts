@@ -13,7 +13,7 @@ import { UsersModule } from '../users/users.module';
         UsersModule,
         PassportModule,
         JwtModule.registerAsync({
-            imports: [ConfigModule],
+            // imports: [ConfigModule], // Review: Is this import necessary, as it's already imported in the AppModule as global?
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => ({
                 secret: configService.get<string>('JWT_SECRET'),

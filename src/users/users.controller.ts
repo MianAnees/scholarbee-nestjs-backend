@@ -3,6 +3,10 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
+import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
+import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
+import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
 
 @Controller('users')
 export class UsersController {
@@ -42,9 +46,19 @@ export class UsersController {
     @Post(':id/educational-backgrounds')
     addEducationalBackground(
         @Param('id') id: string,
-        @Body() educationalBackground: any,
+        @Body() payload: CreateEducationalBackgroundDto,
     ) {
-        return this.usersService.addEducationalBackground(id, educationalBackground);
+
+        return this.usersService.addEducationalBackground(id, payload);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/national-id-card')
+    addNationalIdCard(
+        @Param('id') id: string,
+        @Body() payload: CreateNationalIdCardDto,
+    ) {
+        return this.usersService.addNationalIdCard(id, payload);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -52,9 +66,9 @@ export class UsersController {
     updateEducationalBackground(
         @Param('id') id: string,
         @Param('backgroundId') backgroundId: string,
-        @Body() updatedData: any,
+        @Body() payload: UpdateEducationalBackgroundDto,
     ) {
-        return this.usersService.updateEducationalBackground(id, backgroundId, updatedData);
+        return this.usersService.updateEducationalBackground(id, backgroundId, payload);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -66,13 +80,14 @@ export class UsersController {
         return this.usersService.removeEducationalBackground(id, backgroundId);
     }
 
+
     @UseGuards(JwtAuthGuard)
     @Patch(':id/national-id-card')
     updateNationalIdCard(
         @Param('id') id: string,
-        @Body() nationalIdCard: any,
+        @Body() payload: UpdateNationalIdCardDto,
     ) {
-        return this.usersService.updateNationalIdCard(id, nationalIdCard);
+        return this.usersService.updateNationalIdCard(id, payload);
     }
 
     @UseGuards(JwtAuthGuard)

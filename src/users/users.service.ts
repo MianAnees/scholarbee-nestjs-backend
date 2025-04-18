@@ -7,6 +7,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { sendEmail } from '../utils/mail.config';
+import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
+import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
+import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
+import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +32,7 @@ export class UsersService {
             if (existingUser) {
                 // If the user exists but is not verified, resend the verification link
                 if (!existingUser._verified) {
+                    // TODO: shouldn't we use the generateVerificationToken function here?
                     const newVerifyToken = crypto.randomBytes(20).toString('hex');
 
                     await this.updateUser(existingUser._id.toString(), {
@@ -102,6 +107,7 @@ export class UsersService {
                     email: savedUser.email,
                     first_name: savedUser.first_name,
                     last_name: savedUser.last_name
+
                 }
             };
         } catch (error) {
@@ -180,6 +186,7 @@ export class UsersService {
         }
     }
 
+    // Review: This function is not used anywhere. Should we remove it?
     async generateVerificationToken(): Promise<string> {
         return crypto.randomBytes(20).toString('hex');
     }
@@ -226,13 +233,13 @@ export class UsersService {
             throw new BadRequestException('Invalid or expired token');
         }
 
-        user.password = newPassword;
+        user.password = newPassword; // Review: should we hash the password here?
         user.resetPasswordToken = undefined;
         user.resetPasswordExpiration = undefined;
         return user.save();
     }
 
-    async addEducationalBackground(userId: string, educationalBackground: any): Promise<User> {
+    async addEducationalBackground(userId: string, payload: CreateEducationalBackgroundDto): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
@@ -243,13 +250,28 @@ export class UsersService {
         }
 
         // Generate a unique ID for this educational background
-        educationalBackground.id = crypto.randomBytes(12).toString('hex');
+        payload.id = crypto.randomBytes(12).toString('hex');
 
-        user.educational_backgrounds.push(educationalBackground);
+        user.educational_backgrounds.push(payload);
         return user.save();
     }
 
-    async updateEducationalBackground(userId: string, backgroundId: string, updatedData: any): Promise<User> {
+    async addNationalIdCard(userId: string, payload: CreateNationalIdCardDto): Promise<User> {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        const { national_id_card, isProfileCompleted } = payload;
+
+        // TODO: Check if validation for both these properties is in-place
+        user.national_id_card = national_id_card;
+        user.isProfileCompleted = isProfileCompleted;
+
+        return user.save();
+    }
+
+    async updateEducationalBackground(userId: string, backgroundId: string, payload: UpdateEducationalBackgroundDto): Promise<User> {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
@@ -266,7 +288,11 @@ export class UsersService {
 
         user.educational_backgrounds[index] = {
             ...user.educational_backgrounds[index],
-            ...updatedData,
+            ...payload,
+            marks_gpa: {
+                ...user.educational_backgrounds[index].marks_gpa,
+                ...payload.marks_gpa
+            }
         };
 
         return user.save();
@@ -292,13 +318,14 @@ export class UsersService {
         return user.save();
     }
 
-    async updateNationalIdCard(userId: string, nationalIdCard: any): Promise<User> {
+    async updateNationalIdCard(userId: string, payload: UpdateNationalIdCardDto): Promise<User> {
+
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
         }
 
-        user.national_id_card = nationalIdCard;
+        user.national_id_card = payload;
         return user.save();
     }
 

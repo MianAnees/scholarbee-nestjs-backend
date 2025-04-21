@@ -8,10 +8,11 @@ import {
     Delete,
     Query,
     UseGuards,
+    Req,
 } from '@nestjs/common';
 import { StudentScholarshipsService } from '../services/student-scholarships.service';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
-import { UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import { UpdateStudentScholarshipApprovalStatus, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -22,11 +23,26 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 export class StudentScholarshipsController {
     constructor(private readonly studentScholarshipsService: StudentScholarshipsService) { }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @UseGuards(JwtAuthGuard, /* RolesGuard */)
+    // @Roles(Role.ADMIN, Role.STUDENT) // REVIEW: Why the role?
     @Post()
-    create(@Body() createStudentScholarshipDto: CreateStudentScholarshipDto) {
-        return this.studentScholarshipsService.create(createStudentScholarshipDto);
+    create(
+        @Req() req, // REVIEW: How to type it?
+        @Body() createStudentScholarshipDto: CreateStudentScholarshipDto) {
+        const userId = req.user.userId as string
+
+        
+        return this.studentScholarshipsService.create(createStudentScholarshipDto,userId);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN, Role.UNIVERSITY_ADMIN)
+    @Patch(':id/approval')
+    updateApprovalStatus(
+        @Param('id') id: string,
+        @Body() payload: UpdateStudentScholarshipApprovalStatus
+    ) {
+        return this.studentScholarshipsService.updateApprovalStatus(id, payload);
     }
 
     @Get()

@@ -1,60 +1,73 @@
-import { IsArray, IsDate, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { StudentScholarshipApprovalStatus } from '../schemas/student-scholarship.schema';
 import { Type } from 'class-transformer';
 
+
+/* 
+// payload from the client
+{
+    "student_id": "67e1150ac1224a00af2fa3f1",
+    "scholarship_id": "67ff8e035652e4394871f1c6",
+    "reference_1": "asdasd",
+    "reference_2": "1100",
+    "personal_statement": "asdfghj",
+    "student_snapshot": {
+        "name": "Muhammad",
+        "domicile": "bahawalpur",
+        "father_name": "Arsalan",
+        "father_status": "alive"
+    },
+    "last_degree_percentage": "44",
+    "last_degree_type": "Intermediate/FSc/FA",
+    "monthly_household_income": "50k-100k"
+    "approval_status": "Applied",
+}
+ */
+
 export class CreateStudentScholarshipDto {
-    @IsString()
+    @IsMongoId()
     @IsNotEmpty()
-    scholarship_name: string;
+    student_id: string;
+
+    @IsMongoId()
+    @IsNotEmpty()
+    scholarship_id: string;
 
     @IsString()
-    @IsNotEmpty()
-    scholarship_description: string;
+    @IsOptional()
+    reference_1?: string;
 
-    @IsEnum(['merit', 'need', 'local', 'international'])
-    scholarship_type: string;
+    @IsString()
+    @IsOptional()
+    reference_2?: string;
+
+    @IsString()
+    @IsOptional()
+    personal_statement?: string;
+
+    @IsNotEmpty()
+    student_snapshot: {
+        name: string;
+        father_name: string;
+        father_status: string;
+        domicile: string;
+    };
 
     @IsNumber()
     @IsOptional()
-    amount?: number;
-
-    @IsDate()
-    @Type(() => Date)
-    application_deadline: Date;
+    // @Type(() => Number) // REVIEW: 
+    last_degree_percentage?: number;
 
     @IsString()
     @IsOptional()
-    @IsUrl()
-    application_link?: string;
+    last_degree_type?: string;
 
     @IsString()
     @IsOptional()
-    application_process?: string;
+    monthly_household_income?: string;
 
-    @IsString()
-    @IsNotEmpty()
-    eligibility_criteria: string;
-
-    @IsArray()
+    // Use the schema properties here?
+    @IsEnum(StudentScholarshipApprovalStatus)
     @IsOptional()
-    required_documents?: Array<{ id: string; document_name: string }>;
-
-    @IsEnum(['open', 'closed'])
-    @IsOptional()
-    status?: string = 'open';
-
-    @IsMongoId()
-    @IsNotEmpty()
-    university_id: string;
-
-    @IsMongoId()
-    @IsOptional()
-    country?: string;
-
-    @IsMongoId()
-    @IsOptional()
-    region?: string;
-
-    @IsString()
-    @IsNotEmpty()
-    createdBy: string;
+    approval_status?: StudentScholarshipApprovalStatus = StudentScholarshipApprovalStatus.APPLIED;
 } 

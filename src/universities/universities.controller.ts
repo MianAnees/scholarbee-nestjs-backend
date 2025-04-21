@@ -37,7 +37,7 @@ export class UniversitiesController {
         return this.universitiesService.findAll(page, limit, sortBy, order as any);
     }
 
-    @Get()
+    @Get('open-programs')
     findAllWithOpenPrograms(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,

@@ -28,24 +28,18 @@ export class UniversitiesService {
         limit: number = 10,
         sortBy: string = 'createdAt',
         order: SortOrder = 'desc',
-        has_programs?: boolean,
     ) {
         const skip = (page - 1) * limit;
         const sort = { [sortBy]: order };
-        const filter: any = {};
-
-        if (has_programs !== undefined) {
-            filter.has_programs = has_programs;
-        }
 
         const [data, total] = await Promise.all([
-            this.universityModel.find(filter)
+            this.universityModel.find()
                 .populate('address_id')
                 .sort(sort)
                 .skip(skip)
                 .limit(limit)
                 .exec(),
-            this.universityModel.countDocuments(filter),
+            this.universityModel.countDocuments(),
         ]);
 
         return {

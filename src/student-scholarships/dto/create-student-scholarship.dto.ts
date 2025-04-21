@@ -66,8 +66,4 @@ export class CreateStudentScholarshipDto {
     @IsOptional()
     monthly_household_income?: string;
 
-    // Use the schema properties here?
-    @IsEnum(StudentScholarshipApprovalStatus)
-    @IsOptional()
-    approval_status?: StudentScholarshipApprovalStatus = StudentScholarshipApprovalStatus.APPLIED;
 } 

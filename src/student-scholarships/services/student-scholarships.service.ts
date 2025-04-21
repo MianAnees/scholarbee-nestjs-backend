@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
-import { UpdateStudentScholarshipApprovalStatus, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import {  UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
 
 @Injectable()
@@ -17,6 +17,7 @@ export class StudentScholarshipsService {
             // Check if the student has already applied for this scholarship
             // REVIEW: Is the user allowed to apply twice? 
             // REVIEW: What if the previous application was rejected?
+            // REVIEW: Is there a re-apply threshold after which a rejected student can apply?
             const existingApplication = await this.studentScholarshipModel.findOne({
                 student_id: createStudentScholarshipDto.student_id,
                 scholarship_id: createStudentScholarshipDto.scholarship_id
@@ -214,7 +215,7 @@ export class StudentScholarshipsService {
         return updatedScholarship;
     }
 
-    async updateApprovalStatus(id: string, payload: UpdateStudentScholarshipApprovalStatus): Promise<StudentScholarshipDocument> {
+    async updateApprovalStatus(id: string, updateStudentScholarshipApprovalStatusDto: UpdateStudentScholarshipApprovalStatusDto): Promise<StudentScholarshipDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('Invalid application ID');
         }
@@ -225,7 +226,7 @@ export class StudentScholarshipsService {
             throw new NotFoundException(`Application with ID ${id} not found`);
         }
 
-        application.approval_status = payload.approval_status;
+        application.approval_status = updateStudentScholarshipApprovalStatusDto.approval_status;
         return await application.save();
     }
 

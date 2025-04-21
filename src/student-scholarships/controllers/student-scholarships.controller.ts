@@ -9,10 +9,13 @@ import {
     Query,
     UseGuards,
     Req,
+    BadRequestException,
+    HttpStatus,
+    HttpCode,
 } from '@nestjs/common';
 import { StudentScholarshipsService } from '../services/student-scholarships.service';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
-import { UpdateStudentScholarshipApprovalStatus, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import { UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -26,12 +29,12 @@ export class StudentScholarshipsController {
     @UseGuards(JwtAuthGuard, /* RolesGuard */)
     // @Roles(Role.ADMIN, Role.STUDENT) // REVIEW: Why the role?
     @Post()
+    @HttpCode(HttpStatus.OK)
     create(
         @Req() req, // REVIEW: How to type it?
         @Body() createStudentScholarshipDto: CreateStudentScholarshipDto) {
         const userId = req.user.userId as string
 
-        
         return this.studentScholarshipsService.create(createStudentScholarshipDto,userId);
     }
 
@@ -40,7 +43,7 @@ export class StudentScholarshipsController {
     @Patch(':id/approval')
     updateApprovalStatus(
         @Param('id') id: string,
-        @Body() payload: UpdateStudentScholarshipApprovalStatus
+        @Body() payload: UpdateStudentScholarshipApprovalStatusDto
     ) {
         return this.studentScholarshipsService.updateApprovalStatus(id, payload);
     }

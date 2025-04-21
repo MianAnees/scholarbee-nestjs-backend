@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus, Param, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -20,6 +20,9 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     async login(@Request() req, @Body() loginDto: LoginDto) {
+
+        throw new BadRequestException("Testing")
+        
         console.log('Login attempt for:', loginDto.email);
         return this.authService.login(req.user);
     }

@@ -44,9 +44,6 @@ import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
  */
 
 
-export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
-
-
 enum LastDegreeTypeEnum {
     Matriculation = 'Matriculation',
     IntermediateFScFA = 'Intermediate/FSc/FA',
@@ -188,4 +185,5 @@ export class StudentScholarship {
     createdBy?: MongooseSchema.Types.ObjectId;
 }
 
+export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
 export const StudentScholarshipSchema = SchemaFactory.createForClass(StudentScholarship);

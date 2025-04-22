@@ -37,6 +37,16 @@ export class UniversitiesController {
         return this.universitiesService.findAll(page, limit, sortBy, order as any);
     }
 
+    @Get('open-programs')
+    findAllWithOpenPrograms(
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
+        @Query('sortBy') sortBy: string = 'createdAt',
+        @Query('order') order: string = 'desc',
+    ) {
+        return this.universitiesService.findAllWithOpenPrograms(page, limit, sortBy, order as any);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.universitiesService.findOne(id);

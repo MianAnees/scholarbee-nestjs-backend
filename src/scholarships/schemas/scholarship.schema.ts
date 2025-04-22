@@ -1,8 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
-
 
 
 enum LastDegreeTypeEnum {
@@ -14,7 +13,6 @@ enum LastDegreeTypeEnum {
 }
 
 
-// required documents enum
 enum IRequiredDocumentTitle {
     passport = 'passport',
     national_id = 'national_id',

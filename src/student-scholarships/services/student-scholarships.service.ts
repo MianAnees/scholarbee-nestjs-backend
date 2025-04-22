@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
-import {  UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import {  AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
 
 @Injectable()
@@ -12,6 +12,9 @@ export class StudentScholarshipsService {
         @InjectModel('student_scholarships') private studentScholarshipModel: Model<StudentScholarshipDocument>
     ) { }
 
+    /**
+     * Create a new student scholarship application against a scholarship on behalf of a student
+     */
     async create(createStudentScholarshipDto: CreateStudentScholarshipDto, userId:string): Promise<StudentScholarshipDocument> {
         try {
             // Check if the student has already applied for this scholarship
@@ -196,6 +199,10 @@ export class StudentScholarshipsService {
         return scholarship;
     }
 
+    /**
+     * Update a student scholarship application detail including the approval status.
+     * TODO: Should this service be allowed to modify the required documents submitted by the student also?
+     */
     async update(id: string, updateStudentScholarshipDto: UpdateStudentScholarshipDto): Promise<StudentScholarshipDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('Invalid scholarship ID');
@@ -302,33 +309,30 @@ export class StudentScholarshipsService {
         return this.findAll(queryDto);
     }
 
-    async addRequiredDocument(id: string, document: { id: string; document_name: string }): Promise<StudentScholarshipDocument> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid scholarship ID');
-        }
-
-        const scholarship = await this.studentScholarshipModel.findById(id).exec();
+    async addRequiredDocument(studentScholarshipId: Types.ObjectId, addRequiredDocumentDto: AddRequiredDocumentDto): Promise<StudentScholarshipDocument> {
+      
+        const scholarship = await this.studentScholarshipModel.findById(studentScholarshipId).exec();
 
         if (!scholarship) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+            throw new NotFoundException(`Scholarship with ID ${studentScholarshipId} not found`);
         }
+        const document = addRequiredDocumentDto.document;
 
         scholarship.required_documents.push(document);
         return await scholarship.save();
     }
 
-    async removeRequiredDocument(id: string, documentId: string): Promise<StudentScholarshipDocument> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid scholarship ID');
-        }
+    async removeRequiredDocument(studentScholarshipId: Types.ObjectId, removeRequiredDocumentDto: RemoveRequiredDocumentDto): Promise<StudentScholarshipDocument> {
 
-        const scholarship = await this.studentScholarshipModel.findById(id).exec();
+        const scholarship = await this.studentScholarshipModel.findById(studentScholarshipId).exec();
 
         if (!scholarship) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+            throw new NotFoundException(`Scholarship with ID ${studentScholarshipId} not found`);
         }
 
-        scholarship.required_documents = scholarship.required_documents.filter(doc => doc.id !== documentId);
+        const documentName = removeRequiredDocumentDto.document_name;
+
+        scholarship.required_documents = scholarship.required_documents.filter(doc => doc.document_name !== documentName);
         return await scholarship.save();
     }
 } 

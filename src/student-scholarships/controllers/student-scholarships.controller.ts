@@ -15,12 +15,14 @@ import {
 } from '@nestjs/common';
 import { StudentScholarshipsService } from '../services/student-scholarships.service';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
-import { UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import { AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { ParseObjectIdPipe } from 'nestjs-object-id';
+import { Types } from 'mongoose';
 
 @Controller('student-scholarships')
 export class StudentScholarshipsController {
@@ -90,21 +92,22 @@ export class StudentScholarshipsController {
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
-    @Post(':id/documents')
+    @Post(':studentScholarshipId/documents')
     addRequiredDocument(
-        @Param('id') id: string,
-        @Body() document: { id: string; document_name: string }
+        @Param('studentScholarshipId',ParseObjectIdPipe) studentScholarshipId: Types.ObjectId,
+        @Body() addRequiredDocumentDto: AddRequiredDocumentDto
     ) {
-        return this.studentScholarshipsService.addRequiredDocument(id, document);
+        return this.studentScholarshipsService.addRequiredDocument(studentScholarshipId, addRequiredDocumentDto);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    @Delete(':id/documents/:documentId')
+    // @Roles(Role.ADMIN)
+    // @Delete(':id/documents/:documentId')
+    @Delete(':studentScholarshipId/documents')
     removeRequiredDocument(
-        @Param('id') id: string,
-        @Param('documentId') documentId: string
+        @Param('studentScholarshipId',ParseObjectIdPipe) studentScholarshipId: Types.ObjectId,
+        @Body() removeRequiredDocumentDto: RemoveRequiredDocumentDto
     ) {
-        return this.studentScholarshipsService.removeRequiredDocument(id, documentId);
+        return this.studentScholarshipsService.removeRequiredDocument(studentScholarshipId, removeRequiredDocumentDto);
     }
 } 

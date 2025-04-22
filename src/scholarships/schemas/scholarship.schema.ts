@@ -3,20 +3,19 @@ import { Document, HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
 
-interface StudentSnapshot {
-    name?: string;
-    father_name?: string;
-    father_status?: string;
-    domicile?: string;
-    monthly_household_income?: number;
-    last_degree?: {
-        level?: string;
-        percentage?: number;
-    };
+
+
+enum LastDegreeTypeEnum {
+    Matriculation = 'Matriculation',
+    IntermediateFScFA = 'Intermediate/FSc/FA',
+    Bachelors = 'Bachelors',
+    Masters = 'Masters',
+    PhD = 'PhD',
 }
 
+
 // required documents enum
-enum RequiredDocumentTitle {
+enum IRequiredDocumentTitle {
     passport = 'passport',
     national_id = 'national_id',
     birth_certificate = 'birth_certificate',
@@ -28,51 +27,91 @@ enum RequiredDocumentTitle {
     resume_cv = 'resume_cv',
 }
 
-enum ScholarshipApprovalStatus {
+enum ScholarshipApprovalStatusEnum {
     Applied = 'Applied',
     Approved = 'Approved',
     Rejected = 'Rejected',
 }
 
-enum LastDegreeType {
-    Matriculation = 'Matriculation',
-    IntermediateFScFA = 'Intermediate/FSc/FA',
-    Bachelors = 'Bachelors',
-    Masters = 'Masters',
-    PhD = 'PhD',
+
+
+interface IStudentSnapshotLastDegree {
+    level?: LastDegreeTypeEnum;
+    percentage?: number;
 }
 
+interface IStudentSnapshot {
+    name?: string;
+    father_name?: string;
+    father_status?: string;
+    domicile?: string;
+    monthly_household_income?: number;
+    last_degree?: IStudentSnapshotLastDegree;
+}
 
-interface RequiredDocument {
-    document_name?: RequiredDocumentTitle;
+interface IRequiredDocument {
+    document_name?: IRequiredDocumentTitle;
     document_link?: string;
 }
+
+
+@Schema({ _id: false })
+export class RequiredDocument implements IRequiredDocument {
+  @Prop({
+    type: String,
+    enum: IRequiredDocumentTitle,
+    required: false,
+  })
+  document_name?: IRequiredDocumentTitle;
+
+  @Prop({ type: String, required: false })
+  document_link?: string;
+}
+
+export const RequiredDocumentSchema = SchemaFactory.createForClass(RequiredDocument);
+
+
+
+@Schema({ _id: false })
+class StudentSnapshot implements IStudentSnapshot {
+    @Prop({ type: String, required: false })
+    name?: string;
+
+    @Prop({ type: String, required: false })
+    father_name?: string;
+
+    @Prop({ type: String, required: false })
+    father_status?: string;
+
+    @Prop({ type: String, required: false })
+    domicile?: string;
+
+    @Prop({ type: Number, required: false })
+    monthly_household_income?: number;
+
+    // last_degree object with level and percentage
+    @Prop({
+        type: {
+            level: { type: String, enum: LastDegreeTypeEnum, required: false },
+            percentage: { type: Number, required: false },
+        },
+        required: false
+    })
+    last_degree?: IStudentSnapshotLastDegree
+}
+
+export const StudentSnapshotSchema = SchemaFactory.createForClass(StudentSnapshot);
+
+
+
 
 @Schema({ timestamps: false, collection: 'student_scholarships' })
 export class StudentScholarship {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
     student_id?: MongooseSchema.Types.ObjectId;
 
-    // How to refactor this?
-    @Prop({
-        type: {
-            // REVIEW: Is the default behavior to make the property required?
-            name: { type: String },
-            father_name: { type: String },
-            father_status: { type: String },
-            domicile: { type: String },
-            monthly_household_income: { type: Number },
-            last_degree: { 
-                level: {
-                    type: String,
-                    enum: LastDegreeType,
-                    required: false,
-                },
-                percentage: { type: Number, required: false },
-            },
-        },
-        default: {},
-    })
+
+    @Prop({ type: StudentSnapshotSchema, default: {}, required: true })
     student_snapshot?: StudentSnapshot;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Scholarship', required: false })
@@ -83,10 +122,10 @@ export class StudentScholarship {
 
     @Prop({
         type: String,
-        enum: ScholarshipApprovalStatus,
+        enum: ScholarshipApprovalStatusEnum,
         required: false
     })
-    approval_status?: ScholarshipApprovalStatus; 
+    approval_status?: ScholarshipApprovalStatusEnum;
 
 
     @Prop({ type: String, required: false })
@@ -98,20 +137,8 @@ export class StudentScholarship {
     @Prop({ type: String, required: false })
     reference_2?: string;
 
-    @Prop({
-        type: [
-            {
-                document_name: {
-                    type: String,
-                    enum: Object.values(RequiredDocumentTitle),
-                    required: false,
-                },
-                document_link: { type: String, required: false },
-            },
-        ],
-        default: [],
-    })
-    required_documents?: RequiredDocument[]; 
+    @Prop({ type: [StudentSnapshotSchema], default: [] })
+    required_documents?: RequiredDocument[];
 
     @Prop({ type: Date, default: Date.now })
     created_at?: Date;

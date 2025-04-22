@@ -4,18 +4,53 @@ import { Model, Types } from 'mongoose';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import {  AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
-import { StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
+import { FatherLivingStatusEnum, IStudentScholarship, LastDegreeTypeEnum, ScholarshipApprovalStatusEnum, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
+import { UserDocument } from 'src/users/schemas/user.schema';
 
 @Injectable()
 export class StudentScholarshipsService {
     constructor(
-        @InjectModel('student_scholarships') private studentScholarshipModel: Model<StudentScholarshipDocument>
+        @InjectModel('student_scholarships') private studentScholarshipModel: Model<StudentScholarshipDocument>,
+        @InjectModel('users') private userModel: Model<UserDocument>
     ) { }
+
+
+    async createUserSnapshot(
+        userId: string,
+        clientSnapshotData: Pick<IStudentScholarship['student_snapshot'],'last_degree' | 'monthly_household_income' | 'father_status'>
+
+    ): Promise<IStudentScholarship['student_snapshot']> {
+        const user = await this.userModel.findById(userId).exec();
+        
+        if (!user) {
+            throw new NotFoundException(`User with ID ${userId} not found`);
+        }
+
+        if (!user.father_name || !user.provinceOfDomicile) {
+            throw new BadRequestException('Incomplete data in profile. Please complete your profile to continue.');
+        }
+
+        // Create a partial snapshot with data from the user document
+        const userSnapshot: IStudentScholarship['student_snapshot'] = {
+            name: `${user.first_name} ${user.last_name}`,
+            father_name: user.father_name,
+            father_status: clientSnapshotData.father_status || user.father_status || FatherLivingStatusEnum.Alive,
+            domicile: user.provinceOfDomicile , // REVIEW: Are we supposed to check the province or district of domicile?
+            monthly_household_income: clientSnapshotData.monthly_household_income,
+            last_degree: clientSnapshotData.last_degree,
+        };
+
+        // Return the partial snapshot - client will need to provide:
+        // - monthly_household_income
+        // - last_degree (level and percentage)
+        return userSnapshot;
+    }
+    
 
     /**
      * Create a new student scholarship application against a scholarship on behalf of a student
      */
-    async create(createStudentScholarshipDto: CreateStudentScholarshipDto, userId:string): Promise<StudentScholarshipDocument> {
+    async create(createStudentScholarshipDto: CreateStudentScholarshipDto, userId: string): Promise<StudentScholarshipDocument> {
         try {
             // Check if the student has already applied for this scholarship
             // REVIEW: Is the user allowed to apply twice? 
@@ -30,11 +65,20 @@ export class StudentScholarshipsService {
                 throw new ConflictException('You have already applied for this scholarship');
             }
 
-            // Create a new student scholarship application
-            const createdApplication = new this.studentScholarshipModel({
+            // Get user snapshot data from the database
+            const userSnapshot = await this.createUserSnapshot(userId, createStudentScholarshipDto.student_snapshot);
+
+            const newStudentScholarshipApplication:IStudentScholarship = {
                 ...createStudentScholarshipDto,
+                student_snapshot: userSnapshot,
                 createdBy: new Types.ObjectId(userId),
-            });
+                application_date: new Date(),
+                approval_status: ScholarshipApprovalStatusEnum.Applied,
+            }
+            
+
+            // Create a new student scholarship application
+            const createdApplication = new this.studentScholarshipModel(newStudentScholarshipApplication);
             return await createdApplication.save();
         } catch (error) {
             if (error.name === 'ValidationError') {

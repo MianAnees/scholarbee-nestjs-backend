@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ParseObjectId } from 'nestjs-object-id';
 import { BetterOmit } from 'src/utils/typescript.utils';
-import { IRequiredDocumentTitle, IStudentScholarship, LastDegreeTypeEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
+import { FatherLivingStatusEnum, IRequiredDocumentTitle, IStudentScholarship, LastDegreeTypeEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
 
 
 // last_degree DTO
@@ -23,7 +23,8 @@ export class StudentSnapshotDto
     > {
 
     @IsString()
-    father_status: string;
+    @IsEnum(FatherLivingStatusEnum)
+    father_status: FatherLivingStatusEnum;
 
     @IsNumber()
     @Type(() => Number)
@@ -31,8 +32,6 @@ export class StudentSnapshotDto
 
     @ValidateNested()
     last_degree: LastDegreeDto;
-
-
 }
 
 // required_documents DTO

@@ -1,5 +1,6 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 
@@ -44,6 +45,11 @@ import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
  */
 
 
+export enum FatherLivingStatusEnum {
+  Alive = 'alive',
+  Deceased = 'deceased',
+}
+
 export enum LastDegreeTypeEnum {
   Matriculation = 'Matriculation',
   IntermediateFScFA = 'Intermediate/FSc/FA',
@@ -81,7 +87,7 @@ interface IStudentSnapshotLastDegree {
 interface IStudentSnapshot {
   name: string;
   father_name: string;
-  father_status: string;
+  father_status: FatherLivingStatusEnum;
   domicile: string;
   monthly_household_income: number;
   last_degree: IStudentSnapshotLastDegree;
@@ -94,8 +100,8 @@ interface IRequiredDocument {
 
 
 export interface IStudentScholarship {
-  student_id: MongooseSchema.Types.ObjectId;
-  scholarship_id: MongooseSchema.Types.ObjectId;
+  student_id: Types.ObjectId;
+  scholarship_id: Types.ObjectId;
   student_snapshot: IStudentSnapshot;
   application_date: Date;
   approval_status: ScholarshipApprovalStatusEnum;
@@ -103,13 +109,13 @@ export interface IStudentScholarship {
   personal_statement: string;
   reference_1: string;
   reference_2: string;
-  created_at: Date;
-  createdBy: MongooseSchema.Types.ObjectId;
+  created_at?: Date;
+  createdBy: Types.ObjectId;
 }
 
 
 
-@Schema({ timestamps: false })
+@Schema({ timestamps: false, _id: false })
 export class RequiredDocument implements IRequiredDocument {
   @Prop({
     type: String,
@@ -134,8 +140,8 @@ class StudentSnapshot implements IStudentSnapshot {
   @Prop({ type: String, required: true })
   father_name: string;
 
-  @Prop({ type: String, required: true })
-  father_status: string;
+  @Prop({ type: String, enum: FatherLivingStatusEnum, required: true })
+  father_status: FatherLivingStatusEnum;
 
   @Prop({ type: String, required: true })
   domicile: string;
@@ -176,7 +182,7 @@ export class StudentScholarship implements IStudentScholarship {
   @Prop({
     type: String,
     enum: ScholarshipApprovalStatusEnum,
-    required: true
+    default: ScholarshipApprovalStatusEnum.Applied
   })
   approval_status: IStudentScholarship['approval_status'];
 
@@ -193,7 +199,7 @@ export class StudentScholarship implements IStudentScholarship {
   @Prop({ type: [RequiredDocumentSchema], default: [] })
   required_documents?: IStudentScholarship['required_documents'];
 
-  @Prop({ type: Date, default: Date.now, required: true })
+  @Prop({ type: Date, default: Date.now })
   created_at: IStudentScholarship['created_at'];
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })

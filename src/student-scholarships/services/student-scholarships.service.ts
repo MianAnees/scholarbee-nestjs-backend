@@ -51,6 +51,7 @@ export class StudentScholarshipsService {
 
     /**
      * Create a new student scholarship application against a scholarship on behalf of a student
+     * REVIEW: This service should not allow adding/updating required documents.
      */
     async create(createStudentScholarshipDto: CreateStudentScholarshipDto, userId: string): Promise<StudentScholarshipDocument> {
         try {
@@ -232,6 +233,7 @@ export class StudentScholarshipsService {
     /**
      * Update a student scholarship application detail including the approval status.
      * TODO: Should this service be allowed to modify the required documents submitted by the student also?
+     * REVIEW: This service should not allow adding/updating required documents.
      */
     async update(id: string, updateStudentScholarshipDto: UpdateStudentScholarshipDto): Promise<StudentScholarshipDocument> {
         if (!Types.ObjectId.isValid(id)) {

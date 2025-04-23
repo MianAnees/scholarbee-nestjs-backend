@@ -76,15 +76,15 @@ export class StudentScholarshipsController {
         return this.studentScholarshipsService.update(id, updateStudentScholarshipDto);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @UseGuards(JwtAuthGuard/* , RolesGuard */)
+    // @Roles(Role.ADMIN)
     @Delete(':id')
     remove(@Param('id') id: string) {
         return this.studentScholarshipsService.remove(id);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @UseGuards(JwtAuthGuard/* , RolesGuard */)
+    // @Roles(Role.ADMIN)
     @Post(':studentScholarshipId/documents')
     addRequiredDocument(
         @Param('studentScholarshipId',ParseObjectIdPipe) studentScholarshipId: Types.ObjectId,
@@ -93,7 +93,7 @@ export class StudentScholarshipsController {
         return this.studentScholarshipsService.addRequiredDocument(studentScholarshipId, addRequiredDocumentDto);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(JwtAuthGuard/* , RolesGuard */)
     // @Roles(Role.ADMIN)
     // @Delete(':id/documents/:documentId')
     @Delete(':studentScholarshipId/documents')

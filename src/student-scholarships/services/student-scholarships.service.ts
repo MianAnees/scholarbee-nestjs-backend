@@ -48,6 +48,26 @@ export class StudentScholarshipsService {
         return userSnapshot;
     }
 
+    /**
+     * This service should check if the incoming required documents match the document-type of the scholarship against which the application is being made.
+     * If the document-type is not found in the scholarship, an error should be thrown.
+     */
+    async validateRequiredDocuments(specifiedRequiredDocuments: Scholarship['required_documents'] , receivedDocuments: IStudentScholarship['required_documents']){
+        const specifiedDocumentTypes = specifiedRequiredDocuments.map(doc => doc.document_name);
+
+
+        // check if the no. of received documents is not more than the no. of required documents
+        if (receivedDocuments.length > specifiedDocumentTypes.length) {
+            throw new BadRequestException('You have submitted more documents than required');
+        }
+
+        // Check if the received documents are of the required types
+        for (const document of receivedDocuments) {
+            if (!specifiedDocumentTypes.includes(document.document_name)) {
+                throw new BadRequestException(`Invalid document type: ${document.document_name}`);
+            }
+        }
+    }
 
     /**
      * Create a new student scholarship application against a scholarship on behalf of a student

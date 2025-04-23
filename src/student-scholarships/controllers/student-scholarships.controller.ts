@@ -60,13 +60,6 @@ export class StudentScholarshipsController {
         return this.studentScholarshipsService.getStatistics();
     }
 
-    @Get('university/:universityId')
-    findByUniversity(
-        @Param('universityId') universityId: string,
-        @Query() queryDto: QueryStudentScholarshipDto
-    ) {
-        return this.studentScholarshipsService.findByUniversity(universityId, queryDto);
-    }
 
     @Get(':id')
     findOne(@Param('id') id: string) {

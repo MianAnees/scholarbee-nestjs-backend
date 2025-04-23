@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import {  AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
-import { FatherLivingStatusEnum, IStudentScholarship, LastDegreeTypeEnum, ScholarshipApprovalStatusEnum, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
+import { FatherLivingStatusEnum, IStudentScholarship, LastDegreeLevelEnum, ScholarshipApprovalStatusEnum, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
 import { UserDocument } from 'src/users/schemas/user.schema';
 
 @Injectable()
@@ -143,7 +143,7 @@ export class StudentScholarshipsService {
 
             if (scholarship_type) {
                 filter.scholarship_type = scholarship_type;
-            }
+                }
 
             if (university_id) {
                 filter.university_id = new Types.ObjectId(university_id);
@@ -151,7 +151,7 @@ export class StudentScholarshipsService {
 
             if (country) {
                 filter.country = new Types.ObjectId(country);
-            }
+                }
 
             if (region) {
                 filter.region = new Types.ObjectId(region);
@@ -344,14 +344,6 @@ export class StudentScholarshipsService {
         };
     }
 
-    async findByUniversity(universityId: string, queryDto: QueryStudentScholarshipDto): Promise<{ data: StudentScholarshipDocument[], meta: any }> {
-        if (!Types.ObjectId.isValid(universityId)) {
-            throw new BadRequestException('Invalid university ID');
-        }
-
-        queryDto.university_id = universityId;
-        return this.findAll(queryDto);
-    }
 
     async addRequiredDocument(studentScholarshipId: Types.ObjectId, addRequiredDocumentDto: AddRequiredDocumentDto): Promise<StudentScholarshipDocument> {
       

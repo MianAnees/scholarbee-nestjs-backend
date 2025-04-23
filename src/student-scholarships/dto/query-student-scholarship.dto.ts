@@ -1,5 +1,6 @@
-import { IsEnum, IsMongoId, IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEnum, IsMongoId, IsOptional, IsString, IsNumber } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { FatherLivingStatusEnum, LastDegreeLevelEnum, ScholarshipApprovalStatusEnum } from '../schemas/student-scholarship.schema';
 
 export class QueryStudentScholarshipDto {
     @IsOptional()
@@ -15,45 +16,14 @@ export class QueryStudentScholarshipDto {
     search?: string;
 
     @IsOptional()
-    @IsString()
-    scholarship_name?: string;
+    @IsEnum(FatherLivingStatusEnum)
+    father_status?: FatherLivingStatusEnum;
 
     @IsOptional()
-    @IsString()
-    scholarship_type?: string;
+    @IsEnum(ScholarshipApprovalStatusEnum)
+    approval_status?: ScholarshipApprovalStatusEnum;
 
-    @IsOptional()
-    @IsMongoId()
-    university_id?: string;
-
-    @IsOptional()
-    @IsMongoId()
-    country?: string;
-
-    @IsOptional()
-    @IsMongoId()
-    region?: string;
-
-    @IsOptional()
-    @IsEnum(['open', 'closed'])
-    status?: string;
-
-    @IsOptional()
-    @Type(() => Date)
-    deadlineFrom?: Date;
-
-    @IsOptional()
-    @Type(() => Date)
-    deadlineTo?: Date;
-
-    @IsOptional()
-    @Type(() => Number)
-    amountMin?: number;
-
-    @IsOptional()
-    @Type(() => Number)
-    amountMax?: number;
-
+    // REVIEW: These DTOs must be refactored into a reusable decorator
     @IsOptional()
     @Type(() => Number)
     page?: number = 1;

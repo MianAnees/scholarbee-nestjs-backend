@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from 'src/users/schemas/user.schema';
 import { StudentScholarshipsController } from './controllers/student-scholarships.controller';
-import { StudentScholarshipsService } from './services/student-scholarships.service';
 import { StudentScholarship, StudentScholarshipSchema } from './schemas/student-scholarship.schema';
-import { UserSchema } from 'src/users/schemas/user.schema';
+import { StudentScholarshipsService } from './services/student-scholarships.service';
 
 @Module({
     imports: [

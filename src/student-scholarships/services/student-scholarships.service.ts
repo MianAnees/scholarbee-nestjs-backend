@@ -1,11 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, RootFilterQuery, Types } from 'mongoose';
+import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
-import {  AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
-import { FatherLivingStatusEnum, IStudentScholarship, LastDegreeLevelEnum, ScholarshipApprovalStatusEnum, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
-import { UserDocument } from 'src/users/schemas/user.schema';
+import { AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
+import { FatherLivingStatusEnum, IStudentScholarship, ScholarshipApprovalStatusEnum, StudentScholarship, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
 
 @Injectable()
 export class StudentScholarshipsService {
@@ -106,14 +106,10 @@ export class StudentScholarshipsService {
         try {
             const {
                 search,
-                scholarship_name,
-                scholarship_type,
-                university_id,
-                country,
-                region,
-                status,
                 student_id,
                 scholarship_id,
+                father_status,
+                approval_status,
                 page = 1,
                 limit = 10,
                 sortBy = 'created_at',
@@ -121,48 +117,36 @@ export class StudentScholarshipsService {
                 populate = true
             } = queryDto;
 
-            const filter: any = {};
+            const filter: RootFilterQuery<StudentScholarshipDocument> = {};
 
             if (student_id) {
                 if (!Types.ObjectId.isValid(student_id)) {
                     throw new BadRequestException('Invalid student_id format');
                 }
-                filter.student_id = student_id;
+                filter.student_id = new Types.ObjectId(student_id);
+            }
+
+            if (scholarship_id) {
+                if (!Types.ObjectId.isValid(scholarship_id)) {
+                    throw new BadRequestException('Invalid scholarship_id format');
+                }
+                filter.scholarship_id = new Types.ObjectId(scholarship_id);
             }
 
             if (search) {
                 filter.$or = [
-                    { scholarship_name: { $regex: search, $options: 'i' } },
-                    { scholarship_description: { $regex: search, $options: 'i' } }
+                    { 'student_snapshot.name': { $regex: search, $options: 'i' } },
+                    // { 'student_snapshot.father_name': { $regex: search, $options: 'i' } },
+                    // { personal_statement: { $regex: search, $options: 'i' } }
                 ];
             }
 
-            if (scholarship_name) {
-                filter.scholarship_name = { $regex: scholarship_name, $options: 'i' };
+            if (father_status) {
+                filter['student_snapshot.father_status'] = father_status;
             }
 
-            if (scholarship_type) {
-                filter.scholarship_type = scholarship_type;
-                }
-
-            if (university_id) {
-                filter.university_id = new Types.ObjectId(university_id);
-            }
-
-            if (country) {
-                filter.country = new Types.ObjectId(country);
-                }
-
-            if (region) {
-                filter.region = new Types.ObjectId(region);
-            }
-
-            if (status) {
-                filter.status = status;
-            }
-
-            if (scholarship_id) {
-                filter.scholarship_id = new Types.ObjectId(scholarship_id);
+            if (approval_status) {
+                filter.approval_status = approval_status;
             }
 
             const skip = (page - 1) * limit;
@@ -180,18 +164,6 @@ export class StudentScholarshipsService {
                     .populate({
                         path: 'scholarship_id',
                         select: 'scholarship_name scholarship_type amount application_deadline status'
-                    })
-                    .populate({
-                        path: 'university_id',
-                        select: 'name logo_url'
-                    })
-                    .populate({
-                        path: 'country',
-                        select: 'name'
-                    })
-                    .populate({
-                        path: 'region',
-                        select: 'name'
                     });
             }
 
@@ -217,11 +189,12 @@ export class StudentScholarshipsService {
                 }
             };
         } catch (error) {
+            
             if (error.name === 'ValidationError') {
                 throw new BadRequestException(error.message);
             }
             console.error('Error in findAll:', error);
-            throw new Error('An error occurred while fetching scholarships');
+            throw new Error('An error occurred while fetching student scholarships');
         }
     }
 

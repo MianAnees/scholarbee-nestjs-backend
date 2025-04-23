@@ -87,7 +87,7 @@ interface IStudentSnapshot {
   father_name: string;
   father_status: FatherLivingStatusEnum;
   domicile: string;
-  monthly_household_income: number;
+  monthly_household_income: string;
   last_degree: IStudentSnapshotLastDegree;
 }
 
@@ -144,10 +144,9 @@ class StudentSnapshotDto implements IStudentSnapshot {
   @Prop({ type: String, required: true })
   domicile: IStudentSnapshot['domicile'];
 
-  @Prop({ type: Number, required: true })
+  @Prop({ type: String, required: true })
   monthly_household_income: IStudentSnapshot['monthly_household_income'];
 
-  // last_degree object with level and percentage
   @Prop({
     type: {
       level: { type: String, enum: LastDegreeLevelEnum, required: true },

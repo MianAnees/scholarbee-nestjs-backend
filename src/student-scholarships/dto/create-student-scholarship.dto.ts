@@ -21,11 +21,11 @@ export class StudentSnapshotDto {
     @IsEnum(FatherLivingStatusEnum)
     father_status: FatherLivingStatusEnum;
 
-    @IsNumber()
-    @Type(() => Number)
-    monthly_household_income: number;
+    @IsString()
+    monthly_household_income: string;
 
     @ValidateNested()
+    @Type(() => LastDegreeDto)
     last_degree: LastDegreeDto;
 }
 
@@ -41,12 +41,12 @@ export class RequiredDocumentDto {
 
 export class CreateStudentScholarshipDto {
     @IsMongoId()
-    @ParseObjectId()
+    // @ParseObjectId()
     @IsNotEmpty()
     student_id: StudentScholarship['student_id'];
 
     @IsMongoId()
-    @ParseObjectId()
+    // @ParseObjectId()
     @IsNotEmpty()
     scholarship_id: StudentScholarship['scholarship_id'];
 
@@ -65,10 +65,12 @@ export class CreateStudentScholarshipDto {
     @IsNotEmpty()
     @IsObject()
     @ValidateNested()
+    @Type(() => StudentSnapshotDto)
     student_snapshot: StudentSnapshotDto;
 
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
+    @Type(() => RequiredDocumentDto)
     required_documents?: RequiredDocumentDto[];
 }

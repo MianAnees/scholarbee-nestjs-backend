@@ -1,4 +1,3 @@
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
@@ -50,7 +49,7 @@ export enum FatherLivingStatusEnum {
   Deceased = 'deceased',
 }
 
-export enum LastDegreeTypeEnum {
+export enum LastDegreeLevelEnum {
   Matriculation = 'Matriculation',
   IntermediateFScFA = 'Intermediate/FSc/FA',
   Bachelors = 'Bachelors',
@@ -80,8 +79,8 @@ export enum ScholarshipApprovalStatusEnum {
 
 
 interface IStudentSnapshotLastDegree {
-  level?: LastDegreeTypeEnum;
-  percentage?: number;
+  level: LastDegreeLevelEnum;
+  percentage: number;
 }
 
 interface IStudentSnapshot {
@@ -94,8 +93,8 @@ interface IStudentSnapshot {
 }
 
 interface IRequiredDocument {
-  document_name?: RequiredDocumentTitleEnum;
-  document_link?: string;
+  document_name: RequiredDocumentTitleEnum;
+  document_link: string;
 }
 
 
@@ -104,7 +103,7 @@ export interface IStudentScholarship {
   scholarship_id: Types.ObjectId;
   student_snapshot: IStudentSnapshot;
   application_date: Date;
-  approval_status: ScholarshipApprovalStatusEnum;
+  approval_status?: ScholarshipApprovalStatusEnum;
   required_documents?: IRequiredDocument[];
   personal_statement: string;
   reference_1: string;
@@ -120,12 +119,12 @@ export class RequiredDocument implements IRequiredDocument {
   @Prop({
     type: String,
     enum: RequiredDocumentTitleEnum,
-    required: false,
+    required: true,
   })
-  document_name?: RequiredDocumentTitleEnum;
+  document_name: IRequiredDocument['document_name'];
 
-  @Prop({ type: String, required: false })
-  document_link?: string;
+  @Prop({ type: String, required: true })
+  document_link: IRequiredDocument['document_link'];
 }
 
 export const RequiredDocumentSchema = SchemaFactory.createForClass(RequiredDocument);
@@ -133,34 +132,33 @@ export const RequiredDocumentSchema = SchemaFactory.createForClass(RequiredDocum
 
 
 @Schema({ _id: false })
-class StudentSnapshot implements IStudentSnapshot {
+class StudentSnapshotDto implements IStudentSnapshot {
   @Prop({ type: String, required: true })
-  name: string;
+  name: IStudentSnapshot['name'];
 
   @Prop({ type: String, required: true })
-  father_name: string;
+  father_name: IStudentSnapshot['father_name'];
 
   @Prop({ type: String, enum: FatherLivingStatusEnum, required: true })
-  father_status: FatherLivingStatusEnum;
+  father_status: IStudentSnapshot['father_status'];
 
   @Prop({ type: String, required: true })
-  domicile: string;
+  domicile: IStudentSnapshot['domicile'];
 
   @Prop({ type: Number, required: true })
-  monthly_household_income: number;
+  monthly_household_income: IStudentSnapshot['monthly_household_income'];
 
   // last_degree object with level and percentage
   @Prop({
     type: {
-      level: { type: String, enum: LastDegreeTypeEnum, required: true },
+      level: { type: String, enum: LastDegreeLevelEnum, required: true },
       percentage: { type: Number, required: true },
-    },
-    required: true
+    }
   })
-  last_degree: IStudentSnapshotLastDegree
+  last_degree: IStudentSnapshot['last_degree']
 }
 
-export const StudentSnapshotSchema = SchemaFactory.createForClass(StudentSnapshot);
+const StudentSnapshotSchema = SchemaFactory.createForClass(StudentSnapshotDto);
 
 
 
@@ -184,7 +182,7 @@ export class StudentScholarship implements IStudentScholarship {
     enum: ScholarshipApprovalStatusEnum,
     default: ScholarshipApprovalStatusEnum.Applied
   })
-  approval_status: IStudentScholarship['approval_status'];
+  approval_status?: IStudentScholarship['approval_status'];
 
 
   @Prop({ type: String, required: true })
@@ -196,11 +194,11 @@ export class StudentScholarship implements IStudentScholarship {
   @Prop({ type: String, required: true })
   reference_2: IStudentScholarship['reference_2'];
 
-  @Prop({ type: [RequiredDocumentSchema], default: [] })
+  @Prop({ type: [RequiredDocumentSchema], default: [], required:false,/* , min:1 */ })
   required_documents?: IStudentScholarship['required_documents'];
 
   @Prop({ type: Date, default: Date.now })
-  created_at: IStudentScholarship['created_at'];
+  created_at?: IStudentScholarship['created_at'];
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: IStudentScholarship['createdBy'];

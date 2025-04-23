@@ -1,8 +1,7 @@
-import { PartialType, PickType } from '@nestjs/mapped-types';
-import { CreateStudentScholarshipDto, RequiredDocumentDto } from './create-student-scholarship.dto';
-import { IsArray, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { RequiredDocumentTitleEnum, IStudentScholarship, ScholarshipApprovalStatusEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
-import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
+import { IsEnum, IsOptional, ValidateNested } from 'class-validator';
+import { RequiredDocumentTitleEnum, ScholarshipApprovalStatusEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
+import { CreateStudentScholarshipDto } from './create-student-scholarship.dto';
 
 // Base class for approval status
 export class UpdateStudentScholarshipApprovalStatusDto {
@@ -14,7 +13,7 @@ export class UpdateStudentScholarshipApprovalStatusDto {
 
 export class AddRequiredDocumentDto {
     @ValidateNested()
-    document: RequiredDocumentDto;
+    document: StudentScholarship['required_documents'][number];
 }
 
 

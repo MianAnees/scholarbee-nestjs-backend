@@ -1,14 +1,14 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ParseObjectId } from 'nestjs-object-id';
-import { BetterOmit } from 'src/utils/typescript.utils';
-import { FatherLivingStatusEnum, RequiredDocumentTitleEnum, IStudentScholarship, LastDegreeTypeEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
+import { FatherLivingStatusEnum, LastDegreeLevelEnum, RequiredDocumentTitleEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
 
 
 // last_degree DTO
 export class LastDegreeDto {
-    @IsEnum(LastDegreeTypeEnum)
-    level: LastDegreeTypeEnum;
+    @IsString()
+    @IsEnum(LastDegreeLevelEnum)
+    level: LastDegreeLevelEnum;
 
     @IsNumber()
     @Type(() => Number)
@@ -16,12 +16,7 @@ export class LastDegreeDto {
 }
 
 // student_snapshot DTO
-export class StudentSnapshotDto
-    implements Pick<
-        IStudentScholarship['student_snapshot'],
-        'last_degree' | 'father_status' | 'monthly_household_income'
-    > {
-
+export class StudentSnapshotDto {
     @IsString()
     @IsEnum(FatherLivingStatusEnum)
     father_status: FatherLivingStatusEnum;
@@ -34,55 +29,46 @@ export class StudentSnapshotDto
     last_degree: LastDegreeDto;
 }
 
-// required_documents DTO
 export class RequiredDocumentDto {
-    @IsOptional()
+    @IsString()
     @IsEnum(RequiredDocumentTitleEnum)
-    document_name?: RequiredDocumentTitleEnum;
+    document_name: RequiredDocumentTitleEnum;
 
-    @IsOptional()
     @IsString()
-    document_link?: string;
+    document_link: string;
 }
 
 
-
-interface ICreateStudentScholarshipType extends BetterOmit<
-    StudentScholarship,
-    'created_at' | 'createdBy' | 'application_date' | 'approval_status' | 'student_snapshot'
-> {
-    student_snapshot: StudentSnapshotDto;
-}
-
-export class CreateStudentScholarshipDto implements ICreateStudentScholarshipType {
+export class CreateStudentScholarshipDto {
     @IsMongoId()
     @ParseObjectId()
     @IsNotEmpty()
-    student_id: ICreateStudentScholarshipType['student_id'];
+    student_id: StudentScholarship['student_id'];
 
     @IsMongoId()
     @ParseObjectId()
     @IsNotEmpty()
-    scholarship_id: ICreateStudentScholarshipType['scholarship_id'];
+    scholarship_id: StudentScholarship['scholarship_id'];
 
     @IsOptional()
     @IsString()
-    reference_1: ICreateStudentScholarshipType['reference_1'];
+    reference_1: StudentScholarship['reference_1'];
 
     @IsOptional()
     @IsString()
-    reference_2: ICreateStudentScholarshipType['reference_2'];
+    reference_2: StudentScholarship['reference_2'];
 
     @IsOptional()
     @IsString()
-    personal_statement: ICreateStudentScholarshipType['personal_statement'];
+    personal_statement: StudentScholarship['personal_statement'];
 
     @IsNotEmpty()
     @IsObject()
     @ValidateNested()
     student_snapshot: StudentSnapshotDto;
 
+    @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
-    required_documents: RequiredDocumentDto[];
+    required_documents?: RequiredDocumentDto[];
 }

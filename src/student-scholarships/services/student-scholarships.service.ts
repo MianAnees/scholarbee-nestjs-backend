@@ -1,23 +1,26 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, RootFilterQuery, Types } from 'mongoose';
+import { Model, Query, RootFilterQuery, Types } from 'mongoose';
 import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import { AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { FatherLivingStatusEnum, IStudentScholarship, ScholarshipApprovalStatusEnum, StudentScholarship, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
+import { ScholarshipDocument } from 'src/scholarships/schemas/scholarship.schema';
+import { Scholarship } from 'src/scholarships/schemas/scholarship.schema';
 
 @Injectable()
 export class StudentScholarshipsService {
     constructor(
         @InjectModel(StudentScholarship.name) private studentScholarshipModel: Model<StudentScholarshipDocument>,
-        @InjectModel(User.name) private userModel: Model<UserDocument>
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        @InjectModel(Scholarship.name) private scholarshipModel: Model<ScholarshipDocument>
     ) { }
 
 
     async createUserSnapshot(
         userId: string,
-        clientSnapshotData: Pick<IStudentScholarship['student_snapshot'],'last_degree' | 'monthly_household_income' | 'father_status'>
+        clientSnapshotData: Pick<IStudentScholarship['student_snapshot'], 'last_degree' | 'monthly_household_income' | 'father_status'>
 
     ): Promise<IStudentScholarship['student_snapshot']> {
         const user = await this.userModel.findById(userId).exec();
@@ -35,7 +38,7 @@ export class StudentScholarshipsService {
             name: `${user.first_name} ${user.last_name}`,
             father_name: user.father_name,
             father_status: clientSnapshotData.father_status || user.father_status || FatherLivingStatusEnum.Alive,
-            domicile: user.provinceOfDomicile , // REVIEW: Are we supposed to check the province or district of domicile?
+            domicile: user.provinceOfDomicile, // REVIEW: Are we supposed to check the province or district of domicile?
             monthly_household_income: clientSnapshotData.monthly_household_income,
             last_degree: clientSnapshotData.last_degree,
         };
@@ -52,6 +55,17 @@ export class StudentScholarshipsService {
      */
     async create(createStudentScholarshipDto: CreateStudentScholarshipDto, userId: string): Promise<StudentScholarshipDocument> {
         try {
+            // Verify the student_id and scholarship_id are valid entries in the database
+            const student = await this.userModel.findById(createStudentScholarshipDto.student_id).exec();
+            const scholarship = await this.scholarshipModel.findById(createStudentScholarshipDto.scholarship_id).exec();
+            if (!student) {
+                throw new NotFoundException(`Student with ID ${createStudentScholarshipDto.student_id} not found`);
+            }
+            if (!scholarship) {
+                throw new NotFoundException(`Scholarship with ID ${createStudentScholarshipDto.scholarship_id} not found`);
+            }
+
+            
             // Check if the student has already applied for this scholarship
             // REVIEW: Is the user allowed to apply twice? 
             // REVIEW: What if the previous application was rejected?
@@ -68,7 +82,7 @@ export class StudentScholarshipsService {
             // Get user snapshot data from the database
             const userSnapshot = await this.createUserSnapshot(userId, createStudentScholarshipDto.student_snapshot);
 
-            const newStudentScholarshipApplication:IStudentScholarship = {
+            const newStudentScholarshipApplication: IStudentScholarship = {
                 ...createStudentScholarshipDto,
                 student_snapshot: userSnapshot,
                 createdBy: new Types.ObjectId(userId),
@@ -120,17 +134,11 @@ export class StudentScholarshipsService {
             const filter: RootFilterQuery<StudentScholarshipDocument> = {};
 
             if (student_id) {
-                if (!Types.ObjectId.isValid(student_id)) {
-                    throw new BadRequestException('Invalid student_id format');
-                }
-                filter.student_id = new Types.ObjectId(student_id);
+                filter.student_id = student_id;
             }
 
             if (scholarship_id) {
-                if (!Types.ObjectId.isValid(scholarship_id)) {
-                    throw new BadRequestException('Invalid scholarship_id format');
-                }
-                filter.scholarship_id = new Types.ObjectId(scholarship_id);
+                filter.scholarship_id = scholarship_id;
             }
 
             if (search) {
@@ -159,11 +167,11 @@ export class StudentScholarshipsService {
                 query = query
                     .populate({
                         path: 'student_id',
-                        select: 'name email profile_image gender phone domicile nationality'
+                        // select: 'first_name last_name email phone_number current_stage user_type educational_backgrounds provinceOfDomicile'
                     })
                     .populate({
                         path: 'scholarship_id',
-                        select: 'scholarship_name scholarship_type amount application_deadline status'
+                        // select: 'scholarship_name scholarship_type amount application_deadline status required_documents'
                     });
             }
 
@@ -205,8 +213,14 @@ export class StudentScholarshipsService {
 
         const scholarship = await this.studentScholarshipModel
             .findById(id)
-            .populate('student_id', 'name email profile_image')
-            .populate('scholarship_id')
+            .populate({
+                path: 'student_id',
+                // select: 'first_name last_name email phone_number current_stage user_type educational_backgrounds provinceOfDomicile'
+            })
+            .populate({
+                path: 'scholarship_id',
+                // select: 'scholarship_name scholarship_type amount application_deadline status required_documents'
+            })
             .exec();
 
         if (!scholarship) {

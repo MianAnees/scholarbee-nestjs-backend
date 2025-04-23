@@ -40,13 +40,11 @@ export class RequiredDocumentDto {
 
 
 export class CreateStudentScholarshipDto {
-    @IsMongoId()
-    // @ParseObjectId()
     @IsNotEmpty()
+    @ParseObjectId()
     student_id: StudentScholarship['student_id'];
 
-    @IsMongoId()
-    // @ParseObjectId()
+    @ParseObjectId()
     @IsNotEmpty()
     scholarship_id: StudentScholarship['scholarship_id'];
 

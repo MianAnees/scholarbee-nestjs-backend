@@ -1,14 +1,14 @@
-import { IsEnum, IsMongoId, IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsEnum, IsMongoId, IsOptional, IsString, IsNumber, IsNotEmpty } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { FatherLivingStatusEnum, LastDegreeLevelEnum, ScholarshipApprovalStatusEnum } from '../schemas/student-scholarship.schema';
-
+import { ParseObjectId } from 'nestjs-object-id';
 export class QueryStudentScholarshipDto {
     @IsOptional()
-    @IsMongoId()
+    @ParseObjectId()
     student_id?: string;
 
     @IsOptional()
-    @IsMongoId()
+    @ParseObjectId()
     scholarship_id?: string;
 
     @IsOptional()

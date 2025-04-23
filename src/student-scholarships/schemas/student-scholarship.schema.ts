@@ -59,7 +59,7 @@ export enum LastDegreeTypeEnum {
 }
 
 
-export enum IRequiredDocumentTitle {
+export enum RequiredDocumentTitleEnum {
   passport = 'passport',
   national_id = 'national_id',
   birth_certificate = 'birth_certificate',
@@ -94,7 +94,7 @@ interface IStudentSnapshot {
 }
 
 interface IRequiredDocument {
-  document_name?: IRequiredDocumentTitle;
+  document_name?: RequiredDocumentTitleEnum;
   document_link?: string;
 }
 
@@ -119,10 +119,10 @@ export interface IStudentScholarship {
 export class RequiredDocument implements IRequiredDocument {
   @Prop({
     type: String,
-    enum: IRequiredDocumentTitle,
+    enum: RequiredDocumentTitleEnum,
     required: false,
   })
-  document_name?: IRequiredDocumentTitle;
+  document_name?: RequiredDocumentTitleEnum;
 
   @Prop({ type: String, required: false })
   document_link?: string;

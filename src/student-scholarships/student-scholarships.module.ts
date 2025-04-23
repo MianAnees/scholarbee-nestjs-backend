@@ -8,8 +8,8 @@ import { StudentScholarshipsService } from './services/student-scholarships.serv
 @Module({
     imports: [
         MongooseModule.forFeature([
-            { name: 'student_scholarships', schema: StudentScholarshipSchema },
-            { name: 'users', schema: UserSchema }
+            { name: StudentScholarship.name, schema: StudentScholarshipSchema },
+            { name: User.name, schema: UserSchema },
         ])
     ],
     controllers: [StudentScholarshipsController],

@@ -10,8 +10,8 @@ import { FatherLivingStatusEnum, IStudentScholarship, ScholarshipApprovalStatusE
 @Injectable()
 export class StudentScholarshipsService {
     constructor(
-        @InjectModel('student_scholarships') private studentScholarshipModel: Model<StudentScholarshipDocument>,
-        @InjectModel('users') private userModel: Model<UserDocument>
+        @InjectModel(StudentScholarship.name) private studentScholarshipModel: Model<StudentScholarshipDocument>,
+        @InjectModel(User.name) private userModel: Model<UserDocument>
     ) { }
 
 

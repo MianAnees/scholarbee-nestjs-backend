@@ -1,13 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Query, RootFilterQuery, Types } from 'mongoose';
+import { Model, RootFilterQuery, Types } from 'mongoose';
+import { Scholarship, ScholarshipDocument } from 'src/scholarships/schemas/scholarship.schema';
 import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { CreateStudentScholarshipDto } from '../dto/create-student-scholarship.dto';
 import { QueryStudentScholarshipDto } from '../dto/query-student-scholarship.dto';
 import { AddRequiredDocumentDto, RemoveRequiredDocumentDto, UpdateStudentScholarshipApprovalStatusDto, UpdateStudentScholarshipDto } from '../dto/update-student-scholarship.dto';
 import { FatherLivingStatusEnum, IStudentScholarship, ScholarshipApprovalStatusEnum, StudentScholarship, StudentScholarshipDocument } from '../schemas/student-scholarship.schema';
-import { ScholarshipDocument } from 'src/scholarships/schemas/scholarship.schema';
-import { Scholarship } from 'src/scholarships/schemas/scholarship.schema';
 
 @Injectable()
 export class StudentScholarshipsService {
@@ -24,7 +23,7 @@ export class StudentScholarshipsService {
 
     ): Promise<IStudentScholarship['student_snapshot']> {
         const user = await this.userModel.findById(userId).exec();
-        
+
         if (!user) {
             throw new NotFoundException(`User with ID ${userId} not found`);
         }
@@ -48,7 +47,7 @@ export class StudentScholarshipsService {
         // - last_degree (level and percentage)
         return userSnapshot;
     }
-    
+
 
     /**
      * Create a new student scholarship application against a scholarship on behalf of a student
@@ -65,7 +64,7 @@ export class StudentScholarshipsService {
                 throw new NotFoundException(`Scholarship with ID ${createStudentScholarshipDto.scholarship_id} not found`);
             }
 
-            
+
             // Check if the student has already applied for this scholarship
             // REVIEW: Is the user allowed to apply twice? 
             // REVIEW: What if the previous application was rejected?
@@ -89,7 +88,7 @@ export class StudentScholarshipsService {
                 application_date: new Date(),
                 approval_status: ScholarshipApprovalStatusEnum.Applied,
             }
-            
+
 
             // Create a new student scholarship application
             const createdApplication = new this.studentScholarshipModel(newStudentScholarshipApplication);
@@ -197,7 +196,7 @@ export class StudentScholarshipsService {
                 }
             };
         } catch (error) {
-            
+
             if (error.name === 'ValidationError') {
                 throw new BadRequestException(error.message);
             }
@@ -239,15 +238,46 @@ export class StudentScholarshipsService {
             throw new BadRequestException('Invalid scholarship ID');
         }
 
+        const previousApplication = await this.studentScholarshipModel.findById(id).exec();
+
+        if (!previousApplication) {
+            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+        }
+
+        // Convert to plain object and merge updates
+        const previousApplicationData = previousApplication.toObject();
+        const updatedData = {
+            ...previousApplicationData,
+            ...updateStudentScholarshipDto,
+            student_snapshot: {
+                ...previousApplicationData.student_snapshot,
+                ...updateStudentScholarshipDto.student_snapshot,
+                last_degree: {
+                    ...previousApplicationData.student_snapshot.last_degree,
+                    ...updateStudentScholarshipDto.student_snapshot.last_degree
+                }
+            }
+        };
+
+        // Update the document and return the new version
         const updatedScholarship = await this.studentScholarshipModel
-            .findByIdAndUpdate(id, updateStudentScholarshipDto, { new: true })
-            .populate('university_id')
-            .populate('country')
-            .populate('region')
+            .findByIdAndUpdate(
+                id,
+                { $set: updatedData },
+                { new: true }
+            )
+            .populate({
+                path: 'student_id',
+                // select: 'first_name last_name email phone_number current_stage user_type educational_backgrounds provinceOfDomicile'
+            })
+            .populate({
+                path: 'scholarship_id',
+                // select: 'scholarship_name scholarship_type amount application_deadline status required_documents'
+            })
             .exec();
 
         if (!updatedScholarship) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+            throw new NotFoundException(`Failed to update scholarship with ID ${id}`);
         }
 
         return updatedScholarship;
@@ -259,7 +289,7 @@ export class StudentScholarshipsService {
         }
 
         const application = await this.studentScholarshipModel.findById(id);
-        
+
         if (!application) {
             throw new NotFoundException(`Application with ID ${id} not found`);
         }
@@ -333,7 +363,7 @@ export class StudentScholarshipsService {
 
 
     async addRequiredDocument(studentScholarshipId: Types.ObjectId, addRequiredDocumentDto: AddRequiredDocumentDto): Promise<StudentScholarshipDocument> {
-      
+
         const scholarship = await this.studentScholarshipModel.findById(studentScholarshipId).exec();
 
         if (!scholarship) {

@@ -66,8 +66,8 @@ export class StudentScholarshipsController {
         return this.studentScholarshipsService.findOne(id);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @UseGuards(JwtAuthGuard/* , RolesGuard */)
+    // @Roles(Role.ADMIN)
     @Patch(':id')
     update(
         @Param('id') id: string,

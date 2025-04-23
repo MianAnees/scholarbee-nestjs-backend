@@ -1,7 +1,7 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { IsEnum, IsOptional, ValidateNested } from 'class-validator';
+import { OmitType, PartialType, PickType } from '@nestjs/mapped-types';
+import { IsEnum, IsObject, IsOptional, ValidateNested } from 'class-validator';
 import { RequiredDocumentTitleEnum, ScholarshipApprovalStatusEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
-import { CreateStudentScholarshipDto, RequiredDocumentDto } from './create-student-scholarship.dto';
+import { CreateStudentScholarshipDto, RequiredDocumentDto, StudentSnapshotDto, LastDegreeDto } from './create-student-scholarship.dto';
 import { Type } from 'class-transformer';
 
 // Base class for approval status
@@ -24,9 +24,20 @@ export class RemoveRequiredDocumentDto {
     document_name: RequiredDocumentTitleEnum;
 }
 
+
+
+class UpdateStudentScholarship_StudentSnapshotDto extends PartialType(StudentSnapshotDto) {}
+
 // REVIEW (low): Shouldn't OmitType be used to exclude the properties which should not be update-able
-export class UpdateStudentScholarshipDto extends PartialType(CreateStudentScholarshipDto)  {
-    @IsEnum(ScholarshipApprovalStatusEnum)
+export class UpdateStudentScholarshipDto extends PartialType(
+    OmitType(
+        CreateStudentScholarshipDto, 
+        ['student_id', 'scholarship_id','student_snapshot']
+    )
+) {
     @IsOptional()
-    approval_status?: ScholarshipApprovalStatusEnum;
+    @IsObject()
+    @ValidateNested()
+    @Type(() => UpdateStudentScholarship_StudentSnapshotDto)
+    student_snapshot?: Partial<StudentSnapshotDto>;
 }

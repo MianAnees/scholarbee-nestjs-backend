@@ -148,6 +148,7 @@ class StudentSnapshotDto implements IStudentSnapshot {
   monthly_household_income: IStudentSnapshot['monthly_household_income'];
 
   @Prop({
+    _id: false,
     type: {
       level: { type: String, enum: LastDegreeLevelEnum, required: true },
       percentage: { type: Number, required: true },

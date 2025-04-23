@@ -40,8 +40,8 @@ export class StudentScholarshipsController {
         return this.studentScholarshipsService.create(createStudentScholarshipDto,userId);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN, Role.UNIVERSITY_ADMIN)
+    @UseGuards(JwtAuthGuard/* , RolesGuard */)
+    // @Roles(Role.ADMIN, Role.UNIVERSITY_ADMIN)
     @Patch(':id/approval')
     updateApprovalStatus(
         @Param('id') id: string,

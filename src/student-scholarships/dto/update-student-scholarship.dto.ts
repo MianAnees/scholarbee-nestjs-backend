@@ -1,5 +1,5 @@
 import { OmitType, PartialType, PickType } from '@nestjs/mapped-types';
-import { IsEnum, IsObject, IsOptional, ValidateNested } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsObject, IsOptional, ValidateNested } from 'class-validator';
 import { RequiredDocumentTitleEnum, ScholarshipApprovalStatusEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
 import { CreateStudentScholarshipDto, RequiredDocumentDto, StudentSnapshotDto, LastDegreeDto } from './create-student-scholarship.dto';
 import { Type } from 'class-transformer';
@@ -7,8 +7,8 @@ import { Type } from 'class-transformer';
 // Base class for approval status
 export class UpdateStudentScholarshipApprovalStatusDto {
     @IsEnum(ScholarshipApprovalStatusEnum)
-    @IsOptional()
-    approval_status?: ScholarshipApprovalStatusEnum = ScholarshipApprovalStatusEnum.Applied;
+    @IsNotEmpty()
+    approval_status: ScholarshipApprovalStatusEnum;
 }
 
 

@@ -21,8 +21,6 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login(@Request() req, @Body() loginDto: LoginDto) {
 
-        throw new BadRequestException("Testing")
-        
         console.log('Login attempt for:', loginDto.email);
         return this.authService.login(req.user);
     }

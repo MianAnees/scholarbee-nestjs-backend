@@ -7,7 +7,7 @@ import { Scholarship, ScholarshipSchema } from './schemas/scholarship.schema';
 @Module({
     imports: [
         MongooseModule.forFeature([
-            { name: 'scholarship', schema: ScholarshipSchema }
+            { name: Scholarship.name, schema: ScholarshipSchema }
         ])
     ],
     controllers: [ScholarshipsController],

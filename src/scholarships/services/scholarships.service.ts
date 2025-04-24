@@ -8,7 +8,7 @@ import { QueryScholarshipDto } from '../dto/query-scholarship.dto';
 @Injectable()
 export class ScholarshipsService {
     constructor(
-        @InjectModel('scholarship') private scholarshipModel: Model<ScholarshipDocument>
+        @InjectModel(Scholarship.name) private scholarshipModel: Model<ScholarshipDocument>
     ) { }
 
     async create(createScholarshipDto: CreateScholarshipDto, userId: string): Promise<ScholarshipDocument> {

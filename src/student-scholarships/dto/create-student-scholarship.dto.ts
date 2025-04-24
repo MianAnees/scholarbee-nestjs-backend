@@ -1,60 +1,75 @@
-import { IsArray, IsDate, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
+import { ParseObjectId } from 'nestjs-object-id';
+import { FatherLivingStatusEnum, LastDegreeLevelEnum, RequiredDocumentTitleEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
 
-export class CreateStudentScholarshipDto {
+
+// last_degree DTO
+export class LastDegreeDto {
     @IsString()
-    @IsNotEmpty()
-    scholarship_name: string;
-
-    @IsString()
-    @IsNotEmpty()
-    scholarship_description: string;
-
-    @IsEnum(['merit', 'need', 'local', 'international'])
-    scholarship_type: string;
+    @IsEnum(LastDegreeLevelEnum)
+    level: LastDegreeLevelEnum;
 
     @IsNumber()
-    @IsOptional()
-    amount?: number;
+    @Type(() => Number)
+    percentage: number;
+}
 
-    @IsDate()
-    @Type(() => Date)
-    application_deadline: Date;
+// student_snapshot DTO
+export class StudentSnapshotDto {
+    @IsString()
+    @IsEnum(FatherLivingStatusEnum)
+    father_status: FatherLivingStatusEnum;
 
     @IsString()
-    @IsOptional()
+    monthly_household_income: string;
+
+    @ValidateNested()
+    @Type(() => LastDegreeDto)
+    last_degree: LastDegreeDto;
+}
+
+export class RequiredDocumentDto {
+    @IsString()
+    @IsEnum(RequiredDocumentTitleEnum)
+    document_name: RequiredDocumentTitleEnum;
+
+    @IsString()
     @IsUrl()
-    application_link?: string;
+    document_link: string;
+}
 
-    @IsString()
-    @IsOptional()
-    application_process?: string;
 
-    @IsString()
+export class CreateStudentScholarshipDto {
     @IsNotEmpty()
-    eligibility_criteria: string;
+    @ParseObjectId()
+    student_id: StudentScholarship['student_id'];
 
+    @ParseObjectId()
+    @IsNotEmpty()
+    scholarship_id: StudentScholarship['scholarship_id'];
+
+    @IsOptional()
+    @IsString()
+    reference_1: StudentScholarship['reference_1'];
+
+    @IsOptional()
+    @IsString()
+    reference_2: StudentScholarship['reference_2'];
+
+    // @IsOptional()
+    // @IsString()
+    // personal_statement: StudentScholarship['personal_statement'];
+
+    @IsNotEmpty()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => StudentSnapshotDto)
+    student_snapshot: StudentSnapshotDto;
+
+    @IsOptional()
     @IsArray()
-    @IsOptional()
-    required_documents?: Array<{ id: string; document_name: string }>;
-
-    @IsEnum(['open', 'closed'])
-    @IsOptional()
-    status?: string = 'open';
-
-    @IsMongoId()
-    @IsNotEmpty()
-    university_id: string;
-
-    @IsMongoId()
-    @IsOptional()
-    country?: string;
-
-    @IsMongoId()
-    @IsOptional()
-    region?: string;
-
-    @IsString()
-    @IsNotEmpty()
-    createdBy: string;
-} 
+    @ValidateNested({ each: true })
+    @Type(() => RequiredDocumentDto)
+    required_documents?: RequiredDocumentDto[];
+}

@@ -104,7 +104,7 @@ export interface IStudentScholarship {
   application_date: Date;
   approval_status?: ScholarshipApprovalStatusEnum;
   required_documents?: IRequiredDocument[];
-  personal_statement: string;
+  // personal_statement: string;
   reference_1: string;
   reference_2: string;
   created_at?: Date;
@@ -184,8 +184,8 @@ export class StudentScholarship implements IStudentScholarship {
   approval_status?: IStudentScholarship['approval_status'];
 
 
-  @Prop({ type: String, required: true })
-  personal_statement: IStudentScholarship['personal_statement'];
+  // @Prop({ type: String, required: true })
+  // personal_statement: IStudentScholarship['personal_statement'];
 
   @Prop({ type: String, required: true })
   reference_1: IStudentScholarship['reference_1'];

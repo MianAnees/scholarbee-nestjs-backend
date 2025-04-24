@@ -57,9 +57,9 @@ export class CreateStudentScholarshipDto {
     @IsString()
     reference_2: StudentScholarship['reference_2'];
 
-    @IsOptional()
-    @IsString()
-    personal_statement: StudentScholarship['personal_statement'];
+    // @IsOptional()
+    // @IsString()
+    // personal_statement: StudentScholarship['personal_statement'];
 
     @IsNotEmpty()
     @IsObject()

@@ -431,19 +431,19 @@ export class StudentScholarshipsService {
 
     async addRequiredDocument(studentScholarshipId: Types.ObjectId, addRequiredDocumentDto: AddRequiredDocumentDto): Promise<StudentScholarshipDocument> {
 
-        const scholarship = await this.studentScholarshipModel.findById(studentScholarshipId).exec();
+        const existingApplication = await this.studentScholarshipModel.findById(studentScholarshipId).exec();
 
-        if (!scholarship) {
+        if (!existingApplication) {
             throw new NotFoundException(`Scholarship with ID ${studentScholarshipId} not found`);
         }
         const document = addRequiredDocumentDto.document;
 
-        if (!scholarship.required_documents) {
-            scholarship.required_documents = [document];
+        if (!existingApplication.required_documents) {
+            existingApplication.required_documents = [document];
         } else {
-            scholarship.required_documents.push(document);
+            existingApplication.required_documents.push(document);
         }
-        return await scholarship.save();
+        return await existingApplication.save();
     }
 
     async removeRequiredDocument(studentScholarshipId: Types.ObjectId, removeRequiredDocumentDto: RemoveRequiredDocumentDto): Promise<StudentScholarshipDocument> {

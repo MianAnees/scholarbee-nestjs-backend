@@ -15,7 +15,7 @@ export class UpdateStudentScholarshipApprovalStatusDto {
 export class AddRequiredDocumentDto {
     @ValidateNested()
     @Type(() => RequiredDocumentDto)
-    document: StudentScholarship['required_documents'][number];
+    document: RequiredDocumentDto;
 }
 
 

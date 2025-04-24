@@ -51,20 +51,55 @@ export class StudentScholarshipsService {
     /**
      * This service should check if the incoming required documents match the document-type of the scholarship against which the application is being made.
      * If the document-type is not found in the scholarship, an error should be thrown.
+     * Primary Scenarios:
+     * - The received documents should not be more than the specified documents
+     * - The received documents should only be of the types specified in the scholarship
+     * - No duplicate documents should be submitted
+     * Conditional Scenarios:
+     * - If the matchCount is true, the number of received documents should be equal to the number of specified documents.
+     * - If the matchCount is false, the number of received documents should be less than or equal to the number of specified documents.
      */
-    async validateRequiredDocuments(specifiedRequiredDocuments: Scholarship['required_documents'] , receivedDocuments: IStudentScholarship['required_documents']){
+    async validateRequiredDocuments(
+        specifiedRequiredDocuments: Scholarship['required_documents'],
+        receivedDocuments: IStudentScholarship['required_documents'],
+        shouldMatchCount: boolean = false
+    ) {
         const specifiedDocumentTypes = specifiedRequiredDocuments.map(doc => doc.document_name);
 
+        const receivedDocumentTypes = receivedDocuments?.map(doc => doc.document_name) || [];
 
-        // check if the no. of received documents is not more than the no. of required documents
-        if (receivedDocuments.length > specifiedDocumentTypes.length) {
-            throw new BadRequestException('You have submitted more documents than required');
+        // Quick check: if lengths are equal, there are no duplicates
+        const uniqueDocumentTypes = new Set(receivedDocumentTypes);
+        if (uniqueDocumentTypes.size !== receivedDocumentTypes.length) {
+            // If we get here, we know there are duplicates, so let's find them
+            const documentCounts = new Map<string, number>();
+            for (const docType of receivedDocumentTypes) {
+                documentCounts.set(docType, (documentCounts.get(docType) || 0) + 1);
+            }
+
+            // Find document types that appear more than once
+            const duplicateDocuments = Array.from(documentCounts.entries())
+                .filter(([_, count]) => count > 1)  // Keep only entries with count > 1
+                .map(([docType]) => docType);       // Extract just the document type names
+
+            throw new BadRequestException(`Duplicate document(s) submitted: ${duplicateDocuments.join(', ')}`);
+        }
+
+        if (shouldMatchCount) {
+            // if the matchCount is true, receivedDocument count should be equal to specifiedDocument count
+            if (receivedDocumentTypes.length !== specifiedDocumentTypes.length) {
+                throw new BadRequestException(`Scholarship application requires exactly ${specifiedDocumentTypes.length} documents: ${specifiedDocumentTypes.join(', ')}`);
+            }
+        }
+        // if the matchCount is false, only ensure that receivedDoc Count is not more than specifiedDoc Count
+        else if (receivedDocumentTypes.length > specifiedDocumentTypes.length) {
+            throw new BadRequestException(`Scholarship application requires at most ${specifiedDocumentTypes.length} documents: ${specifiedDocumentTypes.join(', ')}`);
         }
 
         // Check if the received documents are of the required types
-        for (const document of receivedDocuments) {
-            if (!specifiedDocumentTypes.includes(document.document_name)) {
-                throw new BadRequestException(`Invalid document type: ${document.document_name}`);
+        for (const documentType of receivedDocumentTypes) {
+            if (!specifiedDocumentTypes.includes(documentType)) {
+                throw new BadRequestException(`The document type: ${documentType} is not required for this scholarship`);
             }
         }
     }
@@ -101,6 +136,9 @@ export class StudentScholarshipsService {
 
             // Get user snapshot data from the database
             const userSnapshot = await this.createUserSnapshot(userId, createStudentScholarshipDto.student_snapshot);
+
+            // Validate the required documents
+            await this.validateRequiredDocuments(scholarship.required_documents, createStudentScholarshipDto.required_documents, true);
 
             const newStudentScholarshipApplication: IStudentScholarship = {
                 ...createStudentScholarshipDto,
@@ -261,6 +299,13 @@ export class StudentScholarshipsService {
         }
 
         const previousApplication = await this.studentScholarshipModel.findById(id).exec();
+        if (!previousApplication) throw new NotFoundException(`Application with ID (${id}) not found.`);
+
+        const scholarship = await this.scholarshipModel.findById(previousApplication.scholarship_id).exec();
+        if (!scholarship) throw new NotFoundException(`Scholarship with ID (${previousApplication.scholarship_id}) not found.`);
+
+        // Validate the required documents
+        await this.validateRequiredDocuments(scholarship.required_documents, updateStudentScholarshipDto.required_documents, true);
 
         if (!previousApplication) {
             throw new NotFoundException(`Scholarship with ID ${id} not found`);
@@ -276,7 +321,7 @@ export class StudentScholarshipsService {
                 ...updateStudentScholarshipDto.student_snapshot,
                 last_degree: {
                     ...previousApplicationData.student_snapshot.last_degree,
-                    ...updateStudentScholarshipDto.student_snapshot.last_degree
+                    ...updateStudentScholarshipDto.student_snapshot?.last_degree
                 }
             }
         };
@@ -393,7 +438,11 @@ export class StudentScholarshipsService {
         }
         const document = addRequiredDocumentDto.document;
 
-        scholarship.required_documents.push(document);
+        if (!scholarship.required_documents) {
+            scholarship.required_documents = [document];
+        } else {
+            scholarship.required_documents.push(document);
+        }
         return await scholarship.save();
     }
 
@@ -407,6 +456,9 @@ export class StudentScholarshipsService {
 
         const documentName = removeRequiredDocumentDto.document_name;
 
+        if (!scholarship.required_documents) {
+            throw new NotFoundException(`No existing documents found for deletion against application ID (${studentScholarshipId})`);
+        }
         scholarship.required_documents = scholarship.required_documents.filter(doc => doc.document_name !== documentName);
         return await scholarship.save();
     }

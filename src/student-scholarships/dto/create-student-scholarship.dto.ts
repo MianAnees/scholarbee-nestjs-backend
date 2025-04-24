@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
 import { ParseObjectId } from 'nestjs-object-id';
 import { FatherLivingStatusEnum, LastDegreeLevelEnum, RequiredDocumentTitleEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
 
@@ -35,6 +35,7 @@ export class RequiredDocumentDto {
     document_name: RequiredDocumentTitleEnum;
 
     @IsString()
+    @IsUrl()
     document_link: string;
 }
 

@@ -8,6 +8,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
+import { ResourceProtectionGuard } from './guards/resource-protection.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -15,6 +17,8 @@ export class AuthController {
         private authService: AuthService,
         private usersService: UsersService
     ) { }
+
+
 
     @Post('login_v1')
     @HttpCode(HttpStatus.OK)
@@ -47,6 +51,25 @@ export class AuthController {
     @UseGuards(JwtAuthGuard)
     @Get('protected')
     protected(@Request() req) {
+        return {
+            message: 'You are protected',
+            user: req.user
+        };
+    }
+
+    @UseGuards(LocalAuthenticationGuard)
+    @Post('login_v2')
+    @HttpCode(HttpStatus.OK)
+    async login_v2(@Request() req) {
+        // REVIEW: How to add type here
+        const sanitizedUser = req.user as SanitizedUser; // this is the validated user object without sensitive data
+
+        return this.authService.login_v2(sanitizedUser);
+    }
+
+    @UseGuards(ResourceProtectionGuard)
+    @Get('protected_v2')
+    protected_v2(@Request() req) {
         return {
             message: 'You are protected',
             user: req.user

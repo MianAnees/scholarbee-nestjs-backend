@@ -126,6 +126,40 @@ export class AuthService {
         };
     }
 
+    // V2: Passport Local Strategy validation
+    async validateUser_v2(email: string, password: string): Promise<any> {
+
+        // You can customize this logic for v2 as needed
+        const user = await this.usersService.findByEmail(email);
+        if (!user) return null;
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) return null;
+        // Remove sensitive info for v2
+        const userObject = user.toObject();
+        delete userObject.hash;
+        delete userObject.salt;
+        delete userObject.password;
+        return userObject;
+    }
+
+    /**
+     * Receives the validated user and transforms it into a token
+     */
+    async login_v2(user: SanitizedUser) {
+
+        // REVIEW: validation of user and getting a sanitized user object logic is handled in the local-v2.strategy.ts
+        // const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
+
+        // Tokenize user
+        const token = await this.tokenizeUser(user);
+
+        return {
+            token,
+            userId: user._id,
+            username: user.email,
+        };
+    }
+
     async login(user: any) {
         // Create JWT payload
         const payload = {

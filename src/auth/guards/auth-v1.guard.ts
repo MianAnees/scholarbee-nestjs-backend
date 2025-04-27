@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from "@nestjs/common";
-import { Observable } from "rxjs";
 import { AuthService } from "src/auth/auth.service";
+import { } from '@nestjs/jwt';
+
 
 @Injectable()
 export class AuthV1Guard implements CanActivate {
@@ -33,6 +34,11 @@ export class AuthV1Guard implements CanActivate {
 
             return true;
         } catch (error) {
+            // check if the token is expired
+            if (error.name === 'TokenExpiredError') {
+                throw new UnauthorizedException('Token expired');
+            }
+
             throw new UnauthorizedException('Invalid token');
         }
     }

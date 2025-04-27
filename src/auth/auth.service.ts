@@ -104,7 +104,7 @@ export class AuthService {
      * Validate the received JWT token and return the payload
      */
     async validateToken_v1(token: string) {
-        const payload = this.jwtService.verify<LoginTokenPayload>(token);
+        const payload = await this.jwtService.verifyAsync<LoginTokenPayload>(token);
         return payload;
     }
 

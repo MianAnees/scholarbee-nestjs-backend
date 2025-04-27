@@ -29,7 +29,10 @@ export class AuthController {
     @Get('protected_v1')
     @HttpCode(HttpStatus.OK)
     async protected_v1(@Request() req) {
-        return req.user;
+        return {
+            message: 'You are protected',
+            user: req.user
+        };
     }
 
     @UseGuards(LocalAuthGuard)

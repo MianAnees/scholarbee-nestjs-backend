@@ -8,6 +8,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UsersService } from '../users/users.service';
+import { AuthV1Guard } from 'src/auth/guards/auth-v1.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -15,6 +16,21 @@ export class AuthController {
         private authService: AuthService,
         private usersService: UsersService
     ) { }
+
+    @UseGuards(LocalAuthGuard)
+    @Post('login_v1')
+    @HttpCode(HttpStatus.OK)
+    async login_v1(@Request() req, @Body() loginDto: LoginDto) {
+
+        return this.authService.login_v1(loginDto);
+    }
+
+    @UseGuards(AuthV1Guard)
+    @Get('protected_v1')
+    @HttpCode(HttpStatus.OK)
+    async protected_v1(@Request() req) {
+        return req.user;
+    }
 
     @UseGuards(LocalAuthGuard)
     @Post('login')

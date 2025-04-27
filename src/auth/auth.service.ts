@@ -4,6 +4,18 @@ import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { sendEmail } from '../utils/mail.config';
+import { LoginDto } from 'src/auth/dto/login.dto';
+import { User } from 'src/users/schemas/user.schema';
+import { BetterOmit } from 'src/utils/typescript.utils';
+
+type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
+    _id: string;
+};
+type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
+
+interface LoginTokenPayload extends SanitizedUser {
+    sub: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -48,6 +60,70 @@ export class AuthService {
             console.error('Login error:', error);
             throw error;
         }
+    }
+
+    /**
+     * Validate user and get user data after removing sensitive information
+     */
+    private async validateAndGetUserData_v1(loginDto: LoginDto) {
+
+        // Check if user exists
+        const user = await this.usersService.findByEmail(loginDto.email);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Check if password is correct
+        const isMatch = await user.comparePassword(loginDto.password);
+        if (!isMatch) {
+            throw new BadRequestException('Invalid email or password.');
+        }
+
+        // Remove sensitive information
+        const userObject = user.toObject<UserWithoutComparePassword>();
+        const { hash, salt, password, ...userObjectWithoutSensitiveData } = userObject;
+
+        return userObjectWithoutSensitiveData;
+
+    }
+
+    /**
+     * Tokenize the received user object and create a JWT token based on JWT standard
+     */
+    private async tokenizeUser_v1(user: SanitizedUser) {
+        const payload: LoginTokenPayload = {
+            sub: user._id,
+            ...user
+        };
+
+        // Create JWT token
+        return this.jwtService.sign(payload);
+    }
+
+    /**
+     * Validate the received JWT token and return the payload
+     */
+    async validateToken_v1(token: string) {
+        const payload = this.jwtService.verify<LoginTokenPayload>(token);
+        return payload;
+    }
+
+    /**
+     * Login user and return the token
+     */
+    async login_v1(loginDto: LoginDto) {
+
+        // Validate user and get user data
+        const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
+
+        // Tokenize user
+        const token = await this.tokenizeUser_v1(sanitizedUser);
+
+        return {
+            token,
+            userId: sanitizedUser._id,
+            username: sanitizedUser.email,
+        };
     }
 
     async login(user: any) {

@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
 import { ResourceProtectionGuard } from './guards/resource-protection.guard';
+import { RefreshAuthenticationGuard } from 'src/auth/guards/refresh-authentication.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -62,10 +63,25 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login_v2(@Request() req) {
         // REVIEW: How to add type here
-        const sanitizedUser = req.user as SanitizedUser; // this is the validated user object without sensitive data
 
-        return this.authService.login_v2(sanitizedUser);
+        return this.authService.login_v2(req.user);
     }
+
+    @UseGuards(ResourceProtectionGuard)
+    @Post('logout_v2')
+    @HttpCode(HttpStatus.OK)
+    async logout_v2(@Request() req) {
+        return this.authService.logout_v2(req.user);
+    }
+
+
+    @UseGuards(RefreshAuthenticationGuard)
+    @Post('refresh_v2')
+    @HttpCode(HttpStatus.OK)
+    async refreshToken(@Request() req) {
+        return this.authService.refreshToken_v2(req.user);
+    }
+
 
     @UseGuards(ResourceProtectionGuard)
     @Get('protected_v2')
@@ -142,4 +158,5 @@ export class AuthController {
         // If validation passes, generate token and return response
         return this.authService.login(user);
     }
+
 } 

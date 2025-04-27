@@ -1,9 +1,10 @@
-import { Strategy } from 'passport-local';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '../auth.service';
+import { Request } from 'express';
+import { Strategy } from 'passport-local';
 import { LoginDto } from 'src/auth/dto/login.dto';
 import { AuthStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { AuthService } from '../auth.service';
 
 // TODO: How to use this to enforce type in constructor?
 type LoginDtoType = keyof LoginDto;
@@ -19,12 +20,10 @@ export class LocalAuthenticationStrategy extends PassportStrategy(Strategy, Auth
     }
 
     async validate(
-        // these parameters will be extracted from the request body
         email: string,
         password: string
     ) {
         const user = await this.authService.validateAndGetUserData_v1({ email, password });
-        console.log(` user:`, user)
         return user;
     }
 } 

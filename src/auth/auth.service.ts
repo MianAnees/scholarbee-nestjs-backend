@@ -1,20 +1,26 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { sendEmail } from '../utils/mail.config';
 import { LoginDto } from 'src/auth/dto/login.dto';
-import { User } from 'src/users/schemas/user.schema';
+import { IConfiguration } from 'src/config/configuration';
+import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { BetterOmit } from 'src/utils/typescript.utils';
+import { UsersService } from '../users/users.service';
+import { sendEmail } from '../utils/mail.config';
 
 type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
     _id: string;
 };
 export type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
 
-export interface LoginTokenPayload extends SanitizedUser {
+export interface AccessTokenPayload extends SanitizedUser {
     sub: string;
+}
+
+export interface RefreshTokenPayload {
+    userId: string;
 }
 
 @Injectable()
@@ -22,6 +28,7 @@ export class AuthService {
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
+        private configService: ConfigService<IConfiguration>
     ) { }
 
     async validateUser(email: string, password: string): Promise<any> {
@@ -61,11 +68,18 @@ export class AuthService {
             throw error;
         }
     }
+    private async sanitizeUser(user: UserDocument): Promise<SanitizedUser> {
+        const userObject = user.toObject<UserWithoutComparePassword>();
+        const { hash, salt, password, ...userObjectWithoutSensitiveData } = userObject;
+
+        return userObjectWithoutSensitiveData;
+    }
+
 
     /**
      * Validate user and get user data after removing sensitive information
      */
-    async validateAndGetUserData_v1(loginDto: LoginDto) {
+    async validateAndGetUserData_v1(loginDto: LoginDto): Promise<SanitizedUser> {
 
         // Check if user exists
         const user = await this.usersService.findByEmail(loginDto.email);
@@ -79,33 +93,64 @@ export class AuthService {
             throw new UnauthorizedException('Invalid email or password.');
         }
 
-        // Remove sensitive information
-        const userObject = user.toObject<UserWithoutComparePassword>();
-        const { hash, salt, password, ...userObjectWithoutSensitiveData } = userObject;
-
-        return userObjectWithoutSensitiveData;
+        const sanitizedUser = await this.sanitizeUser(user);
+        return sanitizedUser;
 
     }
 
     /**
      * Tokenize the received user object and create a JWT token based on JWT standard
      */
-    async tokenizeUser(user: SanitizedUser) {
-        const payload: LoginTokenPayload = {
+    async generateTokens(user: SanitizedUser) {
+        const accessTokenPayload: AccessTokenPayload = {
             sub: user._id,
             ...user
         };
 
+        const refreshTokenPayload: RefreshTokenPayload = {
+            userId: user._id
+        };
+
+        const [accessToken, refreshToken] = await Promise.all([
+            this.jwtService.signAsync(accessTokenPayload, {
+                secret: this.configService.get('jwt.loginSecret', { infer: true }),
+                expiresIn: `${this.configService.get('jwt.loginExpiration', { infer: true })}s`
+            }),
+            this.jwtService.signAsync(refreshTokenPayload, {
+                secret: this.configService.get('jwt.refreshSecret', { infer: true }),
+                expiresIn: `${this.configService.get('jwt.refreshExpiration', { infer: true })}s`
+            })
+        ]);
+
         // Create JWT token
-        return this.jwtService.sign(payload);
+        return {
+            accessToken,
+            refreshToken
+        };
     }
 
     /**
      * Validate the received JWT token and return the payload
      */
     async validateToken_v1(token: string) {
-        const payload = await this.jwtService.verifyAsync<LoginTokenPayload>(token);
+        const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token);
         return payload;
+    }
+
+    async validateRefreshToken(userId: string, token: string): Promise<User> {
+
+        const user = await this.usersService.findById(userId);
+        if (!user || !user.refreshTokenHash) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+        // Compare the hash of the refresh token
+        // const isRefreshTokenMatch = await argon2.verify(user.refreshTokenHash, token);
+        const isRefreshTokenMatch = await bcrypt.compare(token, user.refreshTokenHash);
+        if (!isRefreshTokenMatch) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        return user;
     }
 
     /**
@@ -117,10 +162,11 @@ export class AuthService {
         const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
 
         // Tokenize user
-        const token = await this.tokenizeUser(sanitizedUser);
+        const { accessToken, refreshToken } = await this.generateTokens(sanitizedUser);
 
         return {
-            token,
+            accessToken,
+            refreshToken,
             userId: sanitizedUser._id,
             username: sanitizedUser.email,
         };
@@ -146,19 +192,55 @@ export class AuthService {
      * Receives the validated user and transforms it into a token
      */
     async login_v2(user: SanitizedUser) {
-
         // REVIEW: validation of user and getting a sanitized user object logic is handled in the local-v2.strategy.ts
         // const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
 
         // Tokenize user
-        const token = await this.tokenizeUser(user);
+        const { accessToken, refreshToken } = await this.generateTokens(user);
+
+        // hash and save refresh token
+        // const refreshTokenHash = await argon2.hash(refreshToken);
+        const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+        await this.usersService.updateUser(user._id, { refreshTokenHash });
+        console.log(` refreshToken & Hash:`, { refreshToken, refreshTokenHash })
 
         return {
-            token,
+            token: accessToken, // for backward compatibility
+            accessToken,
+            refreshToken,
             userId: user._id,
             username: user.email,
         };
     }
+
+    async logout_v2(user: SanitizedUser) {
+        // Revoke the refresh token
+        await this.usersService.updateUser(user._id, { refreshTokenHash: null });
+        return { message: 'Successfully signed out' };
+    }
+
+
+    async refreshToken_v2(user: UserDocument) {
+
+        const sanitizedUser = await this.sanitizeUser(user);
+
+        const { accessToken, refreshToken } = await this.generateTokens(sanitizedUser);
+
+
+        // BUG: Using bcrypt was giving unexpected results
+        // const refreshTokenHash = await argon2.hash(refreshToken);
+        const refreshTokenHash = await bcrypt.hash(refreshToken, 10)
+        await this.usersService.updateUser(sanitizedUser._id, { refreshTokenHash });
+
+        return {
+            token: accessToken,
+            accessToken,
+            refreshToken,
+            userId: user._id,
+            username: user.email,
+        };
+    }
+
 
     async login(user: any) {
         // Create JWT payload
@@ -364,4 +446,5 @@ export class AuthService {
 
         return { success: true, message: 'Password changed successfully' };
     }
+
 }

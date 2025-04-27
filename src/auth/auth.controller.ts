@@ -17,7 +17,6 @@ export class AuthController {
         private usersService: UsersService
     ) { }
 
-    @UseGuards(LocalAuthGuard)
     @Post('login_v1')
     @HttpCode(HttpStatus.OK)
     async login_v1(@Request() req, @Body() loginDto: LoginDto) {

@@ -11,9 +11,9 @@ import { BetterOmit } from 'src/utils/typescript.utils';
 type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
     _id: string;
 };
-type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
+export type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
 
-interface LoginTokenPayload extends SanitizedUser {
+export interface LoginTokenPayload extends SanitizedUser {
     sub: string;
 }
 
@@ -65,7 +65,7 @@ export class AuthService {
     /**
      * Validate user and get user data after removing sensitive information
      */
-    private async validateAndGetUserData_v1(loginDto: LoginDto) {
+    async validateAndGetUserData_v1(loginDto: LoginDto) {
 
         // Check if user exists
         const user = await this.usersService.findByEmail(loginDto.email);
@@ -76,7 +76,7 @@ export class AuthService {
         // Check if password is correct
         const isMatch = await user.comparePassword(loginDto.password);
         if (!isMatch) {
-            throw new BadRequestException('Invalid email or password.');
+            throw new UnauthorizedException('Invalid email or password.');
         }
 
         // Remove sensitive information
@@ -90,7 +90,7 @@ export class AuthService {
     /**
      * Tokenize the received user object and create a JWT token based on JWT standard
      */
-    private async tokenizeUser_v1(user: SanitizedUser) {
+    async tokenizeUser(user: SanitizedUser) {
         const payload: LoginTokenPayload = {
             sub: user._id,
             ...user
@@ -117,7 +117,7 @@ export class AuthService {
         const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
 
         // Tokenize user
-        const token = await this.tokenizeUser_v1(sanitizedUser);
+        const token = await this.tokenizeUser(sanitizedUser);
 
         return {
             token,
@@ -136,9 +136,7 @@ export class AuthService {
         };
 
         // Generate token with 7-day expiry
-        const token = this.jwtService.sign(payload, {
-            expiresIn: '7d' // Review: why is 7d specified here when it's already specified in the auth.module.ts?
-        });
+        const token = this.jwtService.sign(payload);
 
         // Calculate expiry timestamp for response
         const expiry = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7 days

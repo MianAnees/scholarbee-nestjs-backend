@@ -1,14 +1,13 @@
-import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus, Param, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LoginDto } from './dto/login.dto';
-import { SignupDto } from './dto/signup.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Request, UseGuards } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { AuthV1Guard } from 'src/auth/guards/auth-v1.guard';
+import { AuthService, SanitizedUser } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SignupDto } from './dto/signup.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -24,7 +23,7 @@ export class AuthController {
         return this.authService.login_v1(loginDto);
     }
 
-    @UseGuards(AuthV1Guard)
+    @UseGuards(LocalAuthGuard)
     @Get('protected_v1')
     @HttpCode(HttpStatus.OK)
     async protected_v1(@Request() req) {
@@ -38,9 +37,20 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     async login(@Request() req, @Body() loginDto: LoginDto) {
+        // REVIEW: How is exp and message being sent to the client from this endpoint?
 
         console.log('Login attempt for:', loginDto.email);
+        // Receives the validated user and transforms it into a token
         return this.authService.login(req.user);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('protected')
+    protected(@Request() req) {
+        return {
+            message: 'You are protected',
+            user: req.user
+        };
     }
 
     @Post('signup')

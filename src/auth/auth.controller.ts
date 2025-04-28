@@ -20,24 +20,6 @@ export class AuthController {
     ) { }
 
 
-
-    @Post('login_v1')
-    @HttpCode(HttpStatus.OK)
-    async login_v1(@Request() req, @Body() loginDto: LoginDto) {
-
-        return this.authService.login_v1(loginDto);
-    }
-
-    @UseGuards(LocalAuthGuard)
-    @Get('protected_v1')
-    @HttpCode(HttpStatus.OK)
-    async protected_v1(@Request() req) {
-        return {
-            message: 'You are protected',
-            user: req.user
-        };
-    }
-
     @UseGuards(LocalAuthGuard)
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -47,15 +29,6 @@ export class AuthController {
         console.log('Login attempt for:', loginDto.email);
         // Receives the validated user and transforms it into a token
         return this.authService.login(req.user);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('protected')
-    protected(@Request() req) {
-        return {
-            message: 'You are protected',
-            user: req.user
-        };
     }
 
     @UseGuards(LocalAuthenticationGuard)

@@ -1,6 +1,9 @@
 import * as Joi from 'joi';
 
 export interface EnvValidationSchema {
+    // ELASTICSEARCH
+    ELASTICSEARCH_URL: string;
+
     // JWT
     JWT_SECRET: string;
     JWT_EXPIRATION: string;
@@ -57,6 +60,9 @@ export interface EnvValidationSchema {
 
 
 export const envValidationSchema = Joi.object<EnvValidationSchema>({
+
+    // ELASTICSEARCH
+    ELASTICSEARCH_URL: Joi.string().required().uri(),
 
     // JWT
     JWT_SECRET: Joi.string().required(),

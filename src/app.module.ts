@@ -31,7 +31,7 @@ import { IConfiguration } from 'src/config/configuration';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: '.env',
+      envFilePath: '.env.v2',
       isGlobal: true,
       expandVariables: true, // enables variable-expansion in .env files i.e. ${env1}+${env2}
       load: [configuration], // the return of this will be directly accessible from the configService

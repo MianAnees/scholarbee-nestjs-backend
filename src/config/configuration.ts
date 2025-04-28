@@ -25,6 +25,10 @@ const configuration = () => {
             expiration: parsedEnv.JWT_EXPIRATION,
         },
 
+        elasticsearch: {
+            serverUrl: parsedEnv.ELASTICSEARCH_URL,
+        },
+
         app: {
             port: parsedEnv.PORT || 3010,
             nodeEnv: parsedEnv.NODE_ENV,

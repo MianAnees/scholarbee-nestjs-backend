@@ -49,13 +49,13 @@ export class ElasticsearchService {
         return true;
       }
 
-      await this.elasticsearchService.indices.create({
-        index,
-        body: {
-          settings,
-          mappings,
-        },
-      });
+      // await this.elasticsearchService.indices.create({
+      //   index,
+      //   body: {
+      //     settings,
+      //     mappings,
+      //   },
+      // });
       this.logger.log(`Index ${index} created successfully`);
       return true;
     } catch (error) {
@@ -173,7 +173,7 @@ export class ElasticsearchService {
       await this.elasticsearchService.update({
         index,
         id,
-        body: { doc },
+        body: { /* doc */ },
         refresh: true,
       });
       return true;

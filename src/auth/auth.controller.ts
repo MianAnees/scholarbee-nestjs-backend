@@ -41,7 +41,7 @@ export class AuthController {
     }
 
     @UseGuards(ResourceProtectionGuard)
-    @Post('logout_v2')
+    @Post('logout')
     @HttpCode(HttpStatus.OK)
     async logout_v2(@Request() req) {
         return this.authService.logout_v2(req.user);

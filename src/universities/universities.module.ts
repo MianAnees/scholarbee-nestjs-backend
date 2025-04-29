@@ -5,6 +5,7 @@ import { UniversitiesController } from './universities.controller';
 import { University, UniversitySchema } from './schemas/university.schema';
 import { Program, ProgramSchema } from '../programs/schemas/program.schema';
 import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
             { name: Program.name, schema: ProgramSchema },
             { name: Campus.name, schema: CampusSchema },
         ]),
+        AnalyticsModule,
     ],
     controllers: [UniversitiesController],
     providers: [UniversitiesService],

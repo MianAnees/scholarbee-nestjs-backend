@@ -27,6 +27,8 @@ const configuration = () => {
 
         elasticsearch: {
             serverUrl: parsedEnv.ELASTICSEARCH_URL,
+            username: parsedEnv.ELASTICSEARCH_USERNAME,
+            password: parsedEnv.ELASTICSEARCH_PASSWORD,
         },
 
         app: {

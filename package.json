@@ -19,6 +19,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "search-tracking:test": "ts-node scripts/test-search-tracking.ts",
+    "search-tracking:verify": "ts-node scripts/verify-search-tracking.ts",
+    "test:search": "npm run test:search-tracking && npm run verify:search-tracking",
     "docker:override:up": "docker compose -f docker-compose.override.yml up -d",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
@@ -61,6 +64,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.7.0",
     "@nestjs/cli": "9.5.0",
     "@nestjs/schematics": "9.2.0",
     "@nestjs/testing": "^10.0.0",
@@ -75,6 +79,7 @@
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "axios": "^1.9.0",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",

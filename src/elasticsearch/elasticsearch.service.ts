@@ -195,6 +195,4 @@ export class ElasticsearchService {
       return false;
     }
   }
-
-
 } 

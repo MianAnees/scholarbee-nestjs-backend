@@ -8,6 +8,7 @@ import {
     Delete,
     Query,
     UseGuards,
+    Req,
 } from '@nestjs/common';
 import { ProgramsService } from '../services/programs.service';
 import { CreateProgramDto } from '../dto/create-program.dto';
@@ -18,10 +19,16 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { UserEventLoggerService } from '../../analytics/services/user-event-logger.service';
+import { UserEventType } from '../../analytics/types/user-event.types';
+import { Request } from 'express';
 
 @Controller('programs')
 export class ProgramsController {
-    constructor(private readonly programsService: ProgramsService) { }
+    constructor(
+        private readonly programsService: ProgramsService,
+        private readonly userEventLogger: UserEventLoggerService,
+    ) { }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
@@ -31,8 +38,21 @@ export class ProgramsController {
     }
 
     @Get()
-    findAll(@Query() queryDto: QueryProgramDto) {
-        return this.programsService.findAll(queryDto);
+    async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
+        const result = await this.programsService.findAll(queryDto);
+        
+        // Track search event
+        await this.userEventLogger.logEvent({
+            timestamp: new Date(),
+            studentId: req.user?.['sub'],
+            eventType: UserEventType.SEARCH,
+            eventData: {
+                filters: queryDto,
+                results_count: result.total,
+            },
+        });
+
+        return result;
     }
 
     @Get('statistics')
@@ -41,36 +61,91 @@ export class ProgramsController {
     }
 
     @Get('campus/:campusId')
-    findByCampus(
+    async findByCampus(
         @Param('campusId') campusId: string,
-        @Query() queryDto: QueryProgramDto
+        @Query() queryDto: QueryProgramDto,
+        @Req() req: Request,
     ) {
-        return this.programsService.findByCampus(campusId, queryDto);
+        const result = await this.programsService.findByCampus(campusId, queryDto);
+        
+        // Track search event
+        await this.userEventLogger.logEvent({
+            timestamp: new Date(),
+            studentId: req.user?.['sub'],
+            eventType: UserEventType.SEARCH,
+            eventData: {
+                filters: { ...queryDto, campusId },
+                results_count: result.total,
+            },
+        });
+
+        return result;
     }
 
-    // get all programs by university
     @Get('university/:universityId')
-    findByUniversity(
+    async findAllByUniversity(
         @Param('universityId') universityId: string,
-        @Query() queryDto: QueryProgramDto
+        @Query() queryDto: QueryProgramDto,
+        @Req() req: Request,
     ) {
-        return this.programsService.findAllByUniversity(universityId, queryDto);
+        const result = await this.programsService.findAllByUniversity(universityId, queryDto);
+        
+        // Track search event
+        await this.userEventLogger.logEvent({
+            timestamp: new Date(),
+            studentId: req.user?.['sub'],
+            eventType: UserEventType.SEARCH,
+            eventData: {
+                filters: { ...queryDto, universityId },
+                results_count: result.total,
+            },
+        });
+
+        return result;
     }
 
     @Get('academic-department/:departmentId')
-    findByAcademicDepartment(
+    async findByAcademicDepartment(
         @Param('departmentId') departmentId: string,
-        @Query() queryDto: QueryProgramDto
+        @Query() queryDto: QueryProgramDto,
+        @Req() req: Request,
     ) {
-        return this.programsService.findByAcademicDepartment(departmentId, queryDto);
+        const result = await this.programsService.findByAcademicDepartment(departmentId, queryDto);
+        
+        // Track search event
+        await this.userEventLogger.logEvent({
+            timestamp: new Date(),
+            studentId: req.user?.['sub'],
+            eventType: UserEventType.SEARCH,
+            eventData: {
+                filters: { ...queryDto, departmentId },
+                results_count: result.total,
+            },
+        });
+
+        return result;
     }
 
     @Get(':id')
-    findOne(
+    async findOne(
         @Param('id') id: string,
-        @Query('populate') populate: boolean = true
+        @Query('populate') populate: boolean = true,
+        @Req() req: Request,
     ) {
-        return this.programsService.findOne(id, populate);
+        const result = await this.programsService.findOne(id, populate);
+        
+        // Track search event
+        await this.userEventLogger.logEvent({
+            timestamp: new Date(),
+            studentId: req.user?.['sub'],
+            eventType: UserEventType.SEARCH,
+            eventData: {
+                filters: { id, populate },
+                results_count: result ? 1 : 0,
+            },
+        });
+
+        return result;
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)

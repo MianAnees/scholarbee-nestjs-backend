@@ -3,10 +3,11 @@
  */
 
 export const DEFAULT_ES_NODE = 'http://localhost:9200';
-export const DEFAULT_INDICES = {
+export const DEFAULT_ES_INDICES = {
   PROGRAMS: 'programs',
   UNIVERSITIES: 'universities',
   SEARCH_LOGS: 'search_logs',
+  USER_EVENTS: 'user-events',
 };
 
 /**
@@ -166,6 +167,66 @@ export const SEARCH_LOGS_MAPPING = {
     client_info: {
       type: 'object',
       enabled: true
+    }
+  }
+};
+
+/**
+ * Default mapping for user events index
+ */
+export const USER_EVENTS_MAPPING = {
+  properties: {
+    timestamp: {
+      type: 'date'
+    },
+    studentId: {
+      type: 'keyword'
+    },
+    eventType: {
+      type: 'keyword'
+    },
+    eventData: {
+      type: 'object',
+      enabled: true,
+      properties: {
+        major: {
+          type: 'text',
+          fields: {
+            keyword: {
+              type: 'keyword',
+              ignore_above: 256
+            }
+          }
+        },
+        degree_level: {
+          type: 'keyword'
+        },
+        university_id: {
+          type: 'keyword'
+        },
+        program_id: {
+          type: 'keyword'
+        },
+        filters: {
+          type: 'object',
+          enabled: true
+        },
+        results_count: {
+          type: 'integer'
+        },
+        selected_results: {
+          type: 'keyword'
+        },
+        source: {
+          type: 'keyword'
+        },
+        referral_code: {
+          type: 'keyword'
+        },
+        marketing_channel: {
+          type: 'keyword'
+        }
+      }
     }
   }
 };

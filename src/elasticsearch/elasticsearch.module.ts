@@ -1,16 +1,31 @@
 import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ElasticsearchModule as NestElasticsearchModule } from '@nestjs/elasticsearch';
 import { ElasticsearchService } from './elasticsearch.service';
 import { ElasticsearchController } from './elasticsearch.controller';
+import { ElasticsearchInitService } from './elasticsearch-init.service';
 
 @Module({
   imports: [
-    HttpModule,
-    ConfigModule,
+    NestElasticsearchModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        node: configService.get('elasticsearch.serverUrl'),
+        auth: {
+          username: configService.get('elasticsearch.username'),
+          password: configService.get('elasticsearch.password'),
+        },
+        tls: {
+          rejectUnauthorized: false
+        },
+        maxRetries: 3,
+        requestTimeout: 10000,
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [ElasticsearchController],
-  providers: [ElasticsearchService],
+  providers: [ElasticsearchService, ElasticsearchInitService],
   exports: [ElasticsearchService],
 })
 export class ElasticsearchModule {} 

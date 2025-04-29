@@ -7,7 +7,7 @@ export class ElasticsearchController {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
   @Get('index/:index')
-  async checkIndexExists(@Param('index') index: string) {
+  async indexExists(@Param('index') index: string) {
     return { exists: await this.elasticsearchService.indexExists(index) };
   }
 

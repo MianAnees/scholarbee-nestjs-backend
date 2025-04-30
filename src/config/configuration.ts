@@ -29,6 +29,7 @@ const configuration = () => {
             serverUrl: parsedEnv.ELASTICSEARCH_URL,
             username: parsedEnv.ELASTICSEARCH_USERNAME,
             password: parsedEnv.ELASTICSEARCH_PASSWORD,
+            apiKey: parsedEnv.ELASTICSEARCH_API_KEY,
         },
 
         app: {

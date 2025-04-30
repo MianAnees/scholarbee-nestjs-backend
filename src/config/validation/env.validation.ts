@@ -5,6 +5,7 @@ export interface EnvValidationSchema {
     ELASTICSEARCH_URL: string;
     ELASTICSEARCH_USERNAME: string;
     ELASTICSEARCH_PASSWORD: string;
+    ELASTICSEARCH_API_KEY: string;
 
     // JWT
     JWT_SECRET: string;
@@ -67,6 +68,7 @@ export const envValidationSchema = Joi.object<EnvValidationSchema>({
     ELASTICSEARCH_URL: Joi.string().required().uri(),
     ELASTICSEARCH_USERNAME: Joi.string().required(),
     ELASTICSEARCH_PASSWORD: Joi.string().required(),
+    ELASTICSEARCH_API_KEY: Joi.string().required(),
 
     // JWT
     JWT_SECRET: Joi.string().required(),

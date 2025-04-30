@@ -12,8 +12,9 @@ import { ElasticsearchInitService } from './elasticsearch-init.service';
       useFactory: async (configService: ConfigService) => ({
         node: configService.get('elasticsearch.serverUrl'),
         auth: {
-          username: configService.get('elasticsearch.username'),
-          password: configService.get('elasticsearch.password'),
+          apiKey: configService.get('elasticsearch.apiKey'),
+          // username: configService.get('elasticsearch.username'),
+          // password: configService.get('elasticsearch.password'),
         },
         tls: {
           rejectUnauthorized: false

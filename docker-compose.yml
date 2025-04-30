@@ -26,6 +26,9 @@ services:
       - scholarbee-network
       - elastic-start-local_default
     restart: unless-stopped
+    env_file:
+      - .env
+      - .env.v2
 
 networks:
   scholarbee-network:

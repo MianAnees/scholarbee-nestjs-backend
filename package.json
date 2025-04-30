@@ -26,8 +26,9 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "elastic:setup": "sh scripts/elastic-setup.sh",
-    "elastic:cleanup": "sh scripts/elastic-cleanup.sh"
+    "es:start": "sh elastic-start-local/start.sh",
+    "es:stop": "sh elastic-start-local/stop.sh",
+    "es:uninstall": "sh elastic-start-local/uninstall.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",

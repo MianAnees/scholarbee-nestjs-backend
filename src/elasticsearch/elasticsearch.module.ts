@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ElasticsearchModule as NestElasticsearchModule } from '@nestjs/elasticsearch';
 import { ElasticsearchService } from './elasticsearch.service';
 import { ElasticsearchController } from './elasticsearch.controller';
-import { MappingAdapterService } from './adapters/mapping-adapter.service';
+import { MappingRegistryService } from './services/mapping-registry.service';
 
 @Module({
   imports: [
@@ -13,8 +13,6 @@ import { MappingAdapterService } from './adapters/mapping-adapter.service';
         node: configService.get('elasticsearch.serverUrl'),
         auth: {
           apiKey: configService.get('elasticsearch.apiKey'),
-          // username: configService.get('elasticsearch.username'),
-          // password: configService.get('elasticsearch.password'),
         },
         tls: {
           rejectUnauthorized: false
@@ -26,7 +24,7 @@ import { MappingAdapterService } from './adapters/mapping-adapter.service';
     }),
   ],
   controllers: [ElasticsearchController],
-  providers: [ElasticsearchService, MappingAdapterService],
+  providers: [ElasticsearchService, MappingRegistryService],
   exports: [ElasticsearchService],
 })
 export class ElasticsearchModule {} 

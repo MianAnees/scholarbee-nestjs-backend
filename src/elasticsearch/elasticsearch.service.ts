@@ -2,8 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { ConfigService } from '@nestjs/config';
 import { IConfiguration } from 'src/config/configuration';
-import { AnalyzableFieldsConfig } from './adapters/mapping-adapter.service';
-import { MappingAdapterService } from './adapters/mapping-adapter.service';
 
 @Injectable()
 export class ElasticsearchService {
@@ -12,7 +10,6 @@ export class ElasticsearchService {
   constructor(
     private readonly elasticsearchService: NestElasticsearchService,
     private readonly configService: ConfigService<IConfiguration, true>,
-    private readonly mappingAdapter: MappingAdapterService,
   ) {}
 
   /**
@@ -33,18 +30,14 @@ export class ElasticsearchService {
   async createIndex(
     index: string,
     settings?: Record<string, any>,
-    searchableFields?: AnalyzableFieldsConfig,
+    mappings?: Record<string, any>,
   ): Promise<boolean> {
     try {
-      const mapping = searchableFields 
-        ? this.mappingAdapter.convertToElasticsearchMapping(searchableFields)
-        : undefined;
-
       await this.elasticsearchService.indices.create({
         index,
         body: {
           settings,
-          mappings: mapping,
+          mappings,
         },
       });
       return true;

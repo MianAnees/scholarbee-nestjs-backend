@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ElasticsearchService } from './elasticsearch.service';
-import { DEFAULT_ES_INDICES } from './elasticsearch.config';
 
 @Controller('elasticsearch')
 export class ElasticsearchController {
@@ -81,32 +80,5 @@ export class ElasticsearchController {
   @Delete('index/:index')
   async deleteIndex(@Param('index') index: string) {
     return { success: await this.elasticsearchService.deleteIndex(index) };
-  }
-
-  // Convenience endpoints for specific indices
-  @Get('programs/:id')
-  async getProgram(@Param('id') id: string) {
-    return await this.elasticsearchService.getDocument(
-      DEFAULT_ES_INDICES.PROGRAMS,
-      id,
-    );
-  }
-
-  @Get('universities/:id')
-  async getUniversity(@Param('id') id: string) {
-    return await this.elasticsearchService.getDocument(
-      DEFAULT_ES_INDICES.UNIVERSITIES,
-      id,
-    );
-  }
-
-  @Post('search/programs')
-  async searchPrograms(@Body() query: any) {
-    return await this.elasticsearchService.search(DEFAULT_ES_INDICES.PROGRAMS, query);
-  }
-
-  @Post('search/universities')
-  async searchUniversities(@Body() query: any) {
-    return await this.elasticsearchService.search(DEFAULT_ES_INDICES.UNIVERSITIES, query);
   }
 } 

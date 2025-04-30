@@ -2,12 +2,11 @@
  * Default Elasticsearch configuration values and constants
  */
 
-export const DEFAULT_ES_NODE = 'http://localhost:9200';
-export const DEFAULT_ES_INDICES = {
-  PROGRAMS: 'programs',
-  UNIVERSITIES: 'universities',
-  SEARCH_LOGS: 'search_logs',
-  USER_EVENTS: 'user-events',
+export enum DEFAULT_ES_INDICES {
+  PROGRAMS = 'programs',
+  UNIVERSITIES = 'universities',
+  SEARCH_LOGS = 'search_logs',
+  USER_EVENTS = 'user-events',
 };
 
 /**

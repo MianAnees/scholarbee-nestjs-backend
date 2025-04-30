@@ -1,66 +1,79 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ES_INDICES, DEFAULT_INDEX_SETTINGS } from '../../analytics/config/elasticsearch-indices.config';
+import { AnalyticFieldMappingConfig, AnalyzableFieldsConfig } from '../../elasticsearch/adapters/mapping-adapter.service';
 
 /**
- * Program index mapping
+ * Program searchable fields definition
+ * This is domain-specific and independent of any search implementation
  */
-const PROGRAM_MAPPING = {
-  properties: {
-    name: {
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        },
-        search: {
-          type: 'text',
-          analyzer: 'standard'
-        }
-      }
-    },
-    major: {
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        },
-        search: {
-          type: 'text',
-          analyzer: 'standard'
-        }
-      }
-    },
-    degree_level: {
-      type: 'keyword'
-    },
-    mode_of_study: {
-      type: 'keyword'
-    },
-    campus_id: {
-      type: 'keyword'
-    },
-    university_id: {
-      type: 'keyword'
-    },
-    academic_departments: {
-      type: 'keyword'
-    },
-    description: {
-      type: 'text',
-      analyzer: 'english'
-    },
-    created_at: {
-      type: 'date'
-    },
-    updated_at: {
-      type: 'date'
-    }
-  }
+interface ProgramSearchableFields extends AnalyzableFieldsConfig {
+  name: AnalyticFieldMappingConfig;
+  major: AnalyticFieldMappingConfig;
+  degree_level: AnalyticFieldMappingConfig;
+  mode_of_study: AnalyticFieldMappingConfig;
+  campus_id: AnalyticFieldMappingConfig;
+  university_id: AnalyticFieldMappingConfig;
+  academic_departments: AnalyticFieldMappingConfig;
+  description: AnalyticFieldMappingConfig;
+  created_at: AnalyticFieldMappingConfig;
+  updated_at: AnalyticFieldMappingConfig;
+}
+
+/**
+ * Program searchable fields configuration
+ */
+const PROGRAM_SEARCHABLE_FIELDS: ProgramSearchableFields = {
+  name: {
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  },
+  major: {
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  },
+  degree_level: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  mode_of_study: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  campus_id: {
+    searchable: false,
+    filterable: true,
+    sortable: false,
+  },
+  university_id: {
+    searchable: false,
+    filterable: true,
+    sortable: false,
+  },
+  academic_departments: {
+    searchable: false,
+    filterable: true,
+    sortable: false,
+  },
+  description: {
+    searchable: true,
+    filterable: false,
+    sortable: false,
+  },
+  created_at: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  updated_at: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
 };
 
 @Injectable()
@@ -88,7 +101,7 @@ export class ProgramsEsInitService implements OnModuleInit {
         const success = await this.elasticsearchService.createIndex(
           ES_INDICES.PROGRAMS,
           DEFAULT_INDEX_SETTINGS,
-          PROGRAM_MAPPING,
+          PROGRAM_SEARCHABLE_FIELDS,
         );
         
         if (success) {

@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { ConfigService } from '@nestjs/config';
 import { IConfiguration } from 'src/config/configuration';
+import { AnalyzableFieldsConfig } from './adapters/mapping-adapter.service';
+import { MappingAdapterService } from './adapters/mapping-adapter.service';
 
 @Injectable()
 export class ElasticsearchService {
@@ -10,6 +12,7 @@ export class ElasticsearchService {
   constructor(
     private readonly elasticsearchService: NestElasticsearchService,
     private readonly configService: ConfigService<IConfiguration, true>,
+    private readonly mappingAdapter: MappingAdapterService,
   ) {}
 
   /**
@@ -19,33 +22,31 @@ export class ElasticsearchService {
     try {
       return await this.elasticsearchService.indices.exists({ index });
     } catch (error) {
-      this.logger.error(`Error checking index existence: ${error.message}`, error.stack);
+      this.logger.error(`Error checking if index exists: ${error.message}`, error.stack);
       return false;
     }
   }
 
   /**
-   * Create an index with mappings and settings
+   * Create an index with the given settings and mappings
    */
   async createIndex(
     index: string,
     settings?: Record<string, any>,
-    mappings?: Record<string, any>,
+    searchableFields?: AnalyzableFieldsConfig,
   ): Promise<boolean> {
     try {
-      if (await this.indexExists(index)) {
-        this.logger.log(`Index ${index} already exists`);
-        return true;
-      }
+      const mapping = searchableFields 
+        ? this.mappingAdapter.convertToElasticsearchMapping(searchableFields)
+        : undefined;
 
       await this.elasticsearchService.indices.create({
         index,
         body: {
           settings,
-          mappings,
+          mappings: mapping,
         },
       });
-      this.logger.log(`Index ${index} created successfully`);
       return true;
     } catch (error) {
       this.logger.error(`Error creating index: ${error.message}`, error.stack);
@@ -65,8 +66,7 @@ export class ElasticsearchService {
       await this.elasticsearchService.index({
         index,
         id,
-        document,
-        refresh: true,
+        body: document,
       });
       return true;
     } catch (error) {
@@ -76,55 +76,37 @@ export class ElasticsearchService {
   }
 
   /**
-   * Perform a bulk operation to index multiple documents
+   * Search an index
    */
-  async bulk(operations: any[]): Promise<boolean> {
+  async search(index: string, query: any): Promise<any> {
     try {
-      await this.elasticsearchService.bulk({
-        refresh: true,
-        operations: operations.map(op => ({
-          ...op,
-          index: op.index,
-        })),
-      });
-      return true;
-    } catch (error) {
-      this.logger.error(`Error performing bulk operation: ${error.message}`, error.stack);
-      return false;
-    }
-  }
-
-  /**
-   * Search documents
-   */
-  async search<T>(index: string, query: any): Promise<{
-    hits: Array<{ _id: string; _source: T }>;
-    total: number;
-    aggregations?: any;
-  }> {
-    try {
-      const response = await this.elasticsearchService.search<T>({
+      const result = await this.elasticsearchService.search({
         index,
-        ...query,
+        body: query,
       });
-
-      return {
-        hits: response.hits.hits.map(hit => ({
-          _id: hit._id,
-          _source: hit._source,
-        })),
-        total: typeof response.hits.total === 'number' 
-          ? response.hits.total 
-          : response.hits.total.value,
-        aggregations: response.aggregations,
-      };
+      return result;
     } catch (error) {
-      this.logger.error(`Error performing search: ${error.message}`, error.stack);
+      this.logger.error(`Error searching index: ${error.message}`, error.stack);
       throw error;
     }
   }
 
-  
+  /**
+   * Get a document by ID
+   */
+  async getDocument(index: string, id: string): Promise<any> {
+    try {
+      const result = await this.elasticsearchService.get({
+        index,
+        id,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(`Error getting document: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   /**
    * Delete a document
    */
@@ -133,7 +115,6 @@ export class ElasticsearchService {
       await this.elasticsearchService.delete({
         index,
         id,
-        refresh: true,
       });
       return true;
     } catch (error) {
@@ -154,32 +135,14 @@ export class ElasticsearchService {
       await this.elasticsearchService.update({
         index,
         id,
-        doc,
-        refresh: true,
+        body: {
+          doc,
+        },
       });
       return true;
     } catch (error) {
       this.logger.error(`Error updating document: ${error.message}`, error.stack);
       return false;
-    }
-  }
-
-  /**
-   * Get a document by ID
-   */
-  async getDocument<T>(index: string, id: string): Promise<T | null> {
-    try {
-      const response = await this.elasticsearchService.get<T>({
-        index,
-        id,
-      });
-      return response._source;
-    } catch (error) {
-      if (error.meta?.statusCode === 404) {
-        return null;
-      }
-      this.logger.error(`Error getting document: ${error.message}`, error.stack);
-      throw error;
     }
   }
 
@@ -192,6 +155,19 @@ export class ElasticsearchService {
       return true;
     } catch (error) {
       this.logger.error(`Error deleting index: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Bulk index documents
+   */
+  async bulk(operations: any[]): Promise<boolean> {
+    try {
+      const response = await this.elasticsearchService.bulk({ body: operations });
+      return !response.errors;
+    } catch (error) {
+      this.logger.error(`Error performing bulk operation: ${error.message}`, error.stack);
       return false;
     }
   }

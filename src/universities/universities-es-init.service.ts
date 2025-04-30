@@ -1,62 +1,67 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ElasticsearchService } from '../elasticsearch/elasticsearch.service';
 import { ES_INDICES, DEFAULT_INDEX_SETTINGS } from '../analytics/config/elasticsearch-indices.config';
+import { AnalyticFieldMappingConfig, AnalyzableFieldsConfig } from '../elasticsearch/adapters/mapping-adapter.service';
 
 /**
- * University index mapping
+ * University searchable fields definition
+ * This is domain-specific and independent of any search implementation
  */
-const UNIVERSITY_MAPPING = {
-  properties: {
-    name: {
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        },
-        search: {
-          type: 'text',
-          analyzer: 'standard'
-        }
-      }
-    },
-    short_name: {
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        }
-      }
-    },
-    description: {
-      type: 'text',
-      analyzer: 'english'
-    },
-    location: {
-      type: 'text',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        }
-      }
-    },
-    country: {
-      type: 'keyword'
-    },
-    city: {
-      type: 'keyword'
-    },
-    created_at: {
-      type: 'date'
-    },
-    updated_at: {
-      type: 'date'
-    }
-  }
+interface UniversitySearchableFields extends AnalyzableFieldsConfig {
+  name: AnalyticFieldMappingConfig;
+  short_name: AnalyticFieldMappingConfig;
+  description: AnalyticFieldMappingConfig;
+  location: AnalyticFieldMappingConfig;
+  country: AnalyticFieldMappingConfig;
+  city: AnalyticFieldMappingConfig;
+  created_at: AnalyticFieldMappingConfig;
+  updated_at: AnalyticFieldMappingConfig;
+}
+
+/**
+ * University searchable fields configuration
+ */
+const UNIVERSITY_SEARCHABLE_FIELDS: UniversitySearchableFields = {
+  name: {
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  },
+  short_name: {
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  },
+  description: {
+    searchable: true,
+    filterable: false,
+    sortable: false,
+  },
+  location: {
+    searchable: true,
+    filterable: true,
+    sortable: true,
+  },
+  country: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  city: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  created_at: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
+  updated_at: {
+    searchable: false,
+    filterable: true,
+    sortable: true,
+  },
 };
 
 @Injectable()
@@ -84,7 +89,7 @@ export class UniversitiesEsInitService implements OnModuleInit {
         const success = await this.elasticsearchService.createIndex(
           ES_INDICES.UNIVERSITIES,
           DEFAULT_INDEX_SETTINGS,
-          UNIVERSITY_MAPPING,
+          UNIVERSITY_SEARCHABLE_FIELDS,
         );
         
         if (success) {

@@ -6,6 +6,8 @@ import { University, UniversitySchema } from './schemas/university.schema';
 import { Program, ProgramSchema } from '../programs/schemas/program.schema';
 import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { UniversitiesEsInitService } from './universities-es-init.service';
+import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
 
 @Module({
     imports: [
@@ -15,9 +17,10 @@ import { AnalyticsModule } from '../analytics/analytics.module';
             { name: Campus.name, schema: CampusSchema },
         ]),
         AnalyticsModule,
+        ElasticsearchModule,
     ],
     controllers: [UniversitiesController],
-    providers: [UniversitiesService],
+    providers: [UniversitiesService, UniversitiesEsInitService],
     exports: [UniversitiesService],
 })
 export class UniversitiesModule { } 

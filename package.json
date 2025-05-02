@@ -21,6 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "search-tracking:test": "ts-node scripts/test-search-tracking.ts",
     "search-tracking:verify": "ts-node scripts/verify-search-tracking.ts",
+    "search-tracking:generate": "ts-node scripts/generate-and-send-search-history.ts",
     "test:search": "npm run test:search-tracking && npm run verify:search-tracking",
     "docker:override:up": "docker compose -f docker-compose.override.yml up -d",
     "docker:up": "docker compose up -d",

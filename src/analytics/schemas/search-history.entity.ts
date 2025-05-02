@@ -47,94 +47,94 @@ export interface ISearchHistory {
 
 @EsEntity({
     index: 'search-history'
-  })
-  export class SearchHistoryEntity extends BaseEntity {
+})
+export class SearchHistoryEntity extends BaseEntity {
     /**
      * The name of the program or university searched for.
      * - 'text' type allows full-text search (e.g., partial matches, relevance ranking).
      * - 'keyword' subfield enables exact match and aggregations (e.g., most searched names).
      */
     @EsField({
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
+        type: 'text',
+        analyzer: 'english',
+        fields: {
+            keyword: {
+                type: 'keyword',
+                ignore_above: 256
+            }
         }
-      }
     })
     name: string;
-  
+
     /**
      * The major (field of study) associated with the search.
      * - 'text' type for flexible search.
      * - 'keyword' subfield for aggregations (e.g., most popular majors).
      */
     @EsField({
-      type: 'text',
-      analyzer: 'english',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
+        type: 'text',
+        analyzer: 'english',
+        fields: {
+            keyword: {
+                type: 'keyword',
+                ignore_above: 256
+            }
         }
-      }
     })
     major: string;
-  
+
     /**
      * The degree level (e.g., Bachelor, Master, PhD).
      * - 'keyword' type for exact match and aggregations (e.g., most searched degree levels).
      */
     @EsField({
-      type: 'keyword'
+        type: 'keyword'
     })
     degree_level: string;
-  
+
     /**
      * The mode of study (e.g., full-time, part-time).
      * - 'keyword' type for filtering and aggregations.
      */
     @EsField({
-      type: 'keyword'
+        type: 'keyword'
     })
     mode_of_study: string;
-  
+
     /**
      * The campus identifier related to the search.
      * - 'keyword' type for exact match and aggregations.
      */
     @EsField({
-      type: 'keyword'
+        type: 'keyword'
     })
     campus_id: string;
-  
+
     /**
      * The university identifier related to the search.
      * - 'keyword' type for exact match and aggregations.
      */
     @EsField({
-      type: 'keyword'
+        type: 'keyword'
     })
     university_id: string;
-  
+
     /**
      * List of academic departments associated with the search.
      * - 'keyword' type for each department, enabling filtering and aggregations.
      */
     @EsField({
-      type: 'keyword'
+        type: 'keyword'
     })
     academic_departments: string[];
-  
+
     /**
      * Free-text description or additional context for the search.
      * - 'text' type for full-text search and flexible querying.
      */
     @EsField({
-      type: 'text',
-      analyzer: 'english'
+        type: 'text',
+        analyzer: 'english'
     })
     description: string;
-  } 
+} 

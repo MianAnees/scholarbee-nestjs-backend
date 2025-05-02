@@ -1,5 +1,10 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
+import { Request } from 'express';
+// src/analytics/dto/query-most-searched-majors.dto.ts
+import { IsOptional, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
+import { QueryMostSearchedMajorsDto } from '../dto/query-most-searched-majors.dto';
 
 @Controller('analytics')
 export class AnalyticsController {
@@ -12,9 +17,11 @@ export class AnalyticsController {
     }
 
     @Get('most-searched-majors')
-    async getMostSearchedMajors(@Query('limit') limit: number = 10) {
-        return this.searchHistoryAnalyticsService.getMostSearchedMajors(limit);
-
+    async getMostSearchedMajors(
+        @Query() query: QueryMostSearchedMajorsDto,
+        @Req() req: Request
+    ) {
+        return this.searchHistoryAnalyticsService.getMostSearchedMajors(query);
     }
 
     @Get('most-searched-degree-levels')

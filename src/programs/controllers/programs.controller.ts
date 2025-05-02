@@ -11,6 +11,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { SearchResourceEnum, UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -22,7 +23,7 @@ import { CreateProgramDto } from '../dto/create-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { ProgramsService } from '../services/programs.service';
-import { SearchResourceEnum, UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
+
 @Controller('programs')
 export class ProgramsController {
     constructor(
@@ -39,8 +40,6 @@ export class ProgramsController {
 
     @Get()
     async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-        const result = await this.programsService.findAll(queryDto);
-
 
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
 
@@ -58,6 +57,10 @@ export class ProgramsController {
                 university_id: queryDto.university_id,
             },
         });
+
+        return []
+        
+        const result = await this.programsService.findAll(queryDto);
 
         return result;
     }

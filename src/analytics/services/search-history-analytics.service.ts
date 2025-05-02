@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ISearchHistory } from '../schemas/search-history.entity';
+import { QueryMostSearchedMajorsDto } from '../dto/query-most-searched-majors.dto';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {
@@ -34,19 +35,21 @@ export class SearchHistoryAnalyticsService {
   /**
    * Get most searched majors from search_history index
    */
-  async getMostSearchedMajors(limit: number = 10): Promise<Array<{ major: string; count: number }>> {
+  async getMostSearchedMajors(queryDto: QueryMostSearchedMajorsDto): Promise<Array<{ major: string; count: number }>> {
     try {
       const response = await this.elasticsearchService.search(this.SEARCH_HISTORY_INDEX, {
         aggs: {
           top_majors: {
             terms: {
               field: 'data.major.keyword',
-              size: limit
+              size: queryDto.limit
             }
           }
         },
         size: 0
       });
+
+      console.log(JSON.stringify(response, null, 2));
 
       return response.aggregations.top_majors.buckets.map((bucket: any) => ({
         major: bucket.key,

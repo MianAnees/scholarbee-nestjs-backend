@@ -24,11 +24,32 @@ const majors = [
 ];
 const modesOfStudy = ['full-time', 'part-time', 'online', 'distance'];
 
+const universityNames = [
+  'Harvard University',
+  'Stanford University',
+  'MIT',
+  'University of Oxford',
+  'University of Cambridge',
+  'Yale University',
+  'Princeton University',
+];
+const programNames = [
+  'Computer Science Program',
+  'Business Administration Program',
+  'Mechanical Engineering Program',
+  'Medicine Program',
+  'Law Program',
+  'Psychology Program',
+  'Economics Program',
+];
+
 // Generate a single fake ISearchHistory object
 function generateFakeSearchHistory(): any {
   const degree_level = faker.helpers.arrayElement(LastDegreeLevelEnum);
   const major = faker.helpers.arrayElement(majors);
   const mode_of_study = faker.helpers.arrayElement(modesOfStudy);
+  const university_name = faker.helpers.arrayElement(universityNames);
+  const program_name = faker.helpers.arrayElement(programNames);
 
   return {
     timestamp: faker.date.recent(),
@@ -36,8 +57,8 @@ function generateFakeSearchHistory(): any {
     user_type: faker.helpers.arrayElement(UserTypeEnum),
     user_id: faker.string.uuid(),
     data: {
-      university_name: faker.company.name() + ' University',
-      program_name: faker.commerce.productName() + ' Program',
+      university_name,
+      program_name,
       degree_level,
       major,
       university_id: faker.string.uuid(),

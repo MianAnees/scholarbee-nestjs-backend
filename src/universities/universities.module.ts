@@ -8,6 +8,7 @@ import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { UniversitiesEsInitService } from './universities-es-init.service';
 import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
+import { MappingRegistryService } from 'src/elasticsearch/services/mapping-registry.service';
 
 @Module({
     imports: [
@@ -20,7 +21,7 @@ import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
         ElasticsearchModule,
     ],
     controllers: [UniversitiesController],
-    providers: [UniversitiesService, UniversitiesEsInitService],
+    providers: [UniversitiesService, UniversitiesEsInitService, MappingRegistryService],
     exports: [UniversitiesService],
 })
 export class UniversitiesModule { } 

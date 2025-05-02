@@ -6,6 +6,7 @@ import { Program, ProgramSchema } from './schemas/program.schema';
 import { AnalyticsModule } from 'src/analytics/analytics.module';
 import { ProgramsEsInitService } from './services/programs-es-init.service';
 import { ElasticsearchModule } from 'src/elasticsearch/elasticsearch.module';
+import { MappingRegistryService } from 'src/elasticsearch/services/mapping-registry.service';
 
 @Module({
     imports: [
@@ -16,7 +17,7 @@ import { ElasticsearchModule } from 'src/elasticsearch/elasticsearch.module';
         ])
     ],
     controllers: [ProgramsController],
-    providers: [ProgramsService, ProgramsEsInitService],
+    providers: [ProgramsService, ProgramsEsInitService,MappingRegistryService],
     exports: [ProgramsService]
 })
 export class ProgramsModule { } 

@@ -27,6 +27,7 @@ import { ScholarshipsModule } from './scholarships/scholarships.module';
 import { MediaManagementModule } from './media-management/media-management.module';
 import { configuration, EnvValidationSchema, envValidationSchema } from 'src/config';
 import { IConfiguration } from 'src/config/configuration';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { IConfiguration } from 'src/config/configuration';
     ProgramsModule,
     BlogPostsModule,
     MediaManagementModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -31,4 +31,31 @@ export class SearchHistoryAnalyticsService {
     }
   }
 
+  /**
+   * Get most searched majors from search_history index
+   */
+  async getMostSearchedMajors(limit: number = 10): Promise<Array<{ major: string; count: number }>> {
+    try {
+      const response = await this.elasticsearchService.search(this.SEARCH_HISTORY_INDEX, {
+        aggs: {
+          top_majors: {
+            terms: {
+              field: 'data.major.keyword',
+              size: limit
+            }
+          }
+        },
+        size: 0
+      });
+
+      return response.aggregations.top_majors.buckets.map((bucket: any) => ({
+        major: bucket.key,
+        count: bucket.doc_count
+      }));
+    } catch (error) {
+      this.logger.error(`Error getting most searched majors: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
 } 

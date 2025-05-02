@@ -13,8 +13,8 @@ export class AnalyticsController {
 
     @Get('most-searched-majors')
     async getMostSearchedMajors(@Query('limit') limit: number = 10) {
-        throw new Error('Not implemented');
-        // return this.searchHistoryAnalyticsService.getMostSearchedMajors(limit);
+        return this.searchHistoryAnalyticsService.getMostSearchedMajors(limit);
+
     }
 
     @Get('most-searched-degree-levels')

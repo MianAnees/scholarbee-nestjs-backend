@@ -5,7 +5,7 @@ import { ISearchHistory } from '../schemas/search-history.entity';
 @Injectable()
 export class SearchHistoryAnalyticsService {
   private readonly logger = new Logger(SearchHistoryAnalyticsService.name);
-  private readonly SEARCH_HISTORY_INDEX = 'search-history';
+  private readonly SEARCH_HISTORY_INDEX = 'search_history';
 
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 

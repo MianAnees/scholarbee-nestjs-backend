@@ -1,15 +1,36 @@
-import axios from 'axios';
 import { faker } from '@faker-js/faker';
+import axios from 'axios';
+import { ISearchHistory, } from 'src/analytics/schemas/search-history.entity';
+
+export enum UserTypeEnum {
+  STUDENT = 'student',
+  ADMIN = 'admin',
+  CAMPUS_ADMIN = 'campus_admin',
+}
+
+// TODO: Should be mapped to the schema model names
+export enum SearchResourceEnum {
+  PROGRAM = 'program',
+  UNIVERSITY = 'university',
+  CAMPUS = 'campus',
+}
+
+export enum LastDegreeLevelEnum {
+  Matriculation = 'Matriculation',
+  IntermediateFScFA = 'Intermediate/FSc/FA',
+  Bachelors = 'Bachelors',
+  Masters = 'Masters',
+  PhD = 'PhD',
+}
+
 
 // Enum values from your codebase
-const UserTypeEnum = ['student', 'admin', 'campus_admin'] as const;
-const SearchResourceEnum = ['program', 'university', 'campus'] as const;
-const LastDegreeLevelEnum = [
-  'Matriculation',
-  'Intermediate/FSc/FA',
-  'Bachelors',
-  'Masters',
-  'PhD',
+const UserTypeEnumValues = [UserTypeEnum.STUDENT, UserTypeEnum.ADMIN, UserTypeEnum.CAMPUS_ADMIN] as const;
+const SearchResourceEnumValues = [SearchResourceEnum.PROGRAM, SearchResourceEnum.UNIVERSITY, SearchResourceEnum.CAMPUS] as const;
+const LastDegreeLevelEnumValues = [
+  LastDegreeLevelEnum.Bachelors,
+  LastDegreeLevelEnum.Masters,
+  LastDegreeLevelEnum.PhD,
 ] as const;
 
 // Example majors and modes of study (customize as needed)
@@ -44,8 +65,8 @@ const programNames = [
 ];
 
 // Generate a single fake ISearchHistory object
-function generateFakeSearchHistory(): any {
-  const degree_level = faker.helpers.arrayElement(LastDegreeLevelEnum);
+function generateFakeSearchHistory(): ISearchHistory {
+  const degree_level = faker.helpers.arrayElement(LastDegreeLevelEnumValues);
   const major = faker.helpers.arrayElement(majors);
   const mode_of_study = faker.helpers.arrayElement(modesOfStudy);
   const university_name = faker.helpers.arrayElement(universityNames);
@@ -53,8 +74,8 @@ function generateFakeSearchHistory(): any {
 
   return {
     timestamp: faker.date.recent(),
-    resource_type: 'program', // For this example, always 'program'
-    user_type: faker.helpers.arrayElement(UserTypeEnum),
+    resource_type: faker.helpers.arrayElement(SearchResourceEnumValues),
+    user_type: faker.helpers.arrayElement(UserTypeEnumValues),
     user_id: faker.string.uuid(),
     data: {
       university_name,
@@ -77,9 +98,6 @@ async function main() {
   const count = 10;
   const fakeSearchHistories = Array.from({ length: count }, generateFakeSearchHistory);
 
-  // Log the generated data
-  console.log('Generated ISearchHistory objects:', JSON.stringify(fakeSearchHistories, null, 2));
-  return;
 
   // Send each as a GET request to /programs with the relevant query params
   for (const search of fakeSearchHistories) {

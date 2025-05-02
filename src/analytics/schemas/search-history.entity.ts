@@ -138,3 +138,49 @@ export class SearchHistoryEntity extends BaseEntity {
     })
     description: string;
 } 
+
+
+
+export const searchHistoryMappings = {
+  properties: {
+    academic_departments: {
+      type: 'keyword'
+    },
+    campus_id: {
+      type: 'keyword'
+    },
+    degree_level: {
+      type: 'keyword'
+    },
+    description: {
+      type: 'text',
+      analyzer: 'english'
+    },
+    major: {
+      type: 'text',
+      fields: {
+        keyword: {
+          type: 'keyword',
+          ignore_above: 256
+        }
+      },
+      analyzer: 'english'
+    },
+    mode_of_study: {
+      type: 'keyword'
+    },
+    name: {
+      type: 'text',
+      fields: {
+        keyword: {
+          type: 'keyword',
+          ignore_above: 256
+        }
+      },
+      analyzer: 'english'
+    },
+    university_id: {
+      type: 'keyword'
+    }
+  }
+};

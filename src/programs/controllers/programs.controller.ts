@@ -13,7 +13,6 @@ import {
 import { Request } from 'express';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
-import { SearchResourceEnum, UserTypeEnum } from '../../analytics/types/analytics-event.types';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -23,6 +22,7 @@ import { CreateProgramDto } from '../dto/create-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { ProgramsService } from '../services/programs.service';
+import { SearchResourceEnum, UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
 @Controller('programs')
 export class ProgramsController {
     constructor(

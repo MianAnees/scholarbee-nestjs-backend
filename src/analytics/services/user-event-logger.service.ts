@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
-import { UserEvent } from '../types/analytics-event.types';
+import { UserEvent } from '../schemas/analytics-event.entity';
 
 @Injectable()
 export class UserEventLoggerService {

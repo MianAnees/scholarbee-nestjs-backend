@@ -45,7 +45,7 @@ export class ProgramsController {
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
 
         // Track search event
-        await this.searchHistoryAnalyticsService.indexSearchHistory({
+        await this.searchHistoryAnalyticsService.indexDocument({
             timestamp: new Date(),
             user_id: req.user?.['sub'],
             user_type: UserTypeEnum.STUDENT,
@@ -77,7 +77,7 @@ export class ProgramsController {
 
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
         // Track search event
-        await this.searchHistoryAnalyticsService.indexSearchHistory({
+        await this.searchHistoryAnalyticsService.indexDocument({
             timestamp: new Date(),
             user_id: req.user?.['sub'],
             user_type: UserTypeEnum.STUDENT,
@@ -105,7 +105,7 @@ export class ProgramsController {
 
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
         // Track search event
-        await this.searchHistoryAnalyticsService.indexSearchHistory({
+        await this.searchHistoryAnalyticsService.indexDocument({
             timestamp: new Date(),
             user_id: req.user?.['sub'],
             user_type: UserTypeEnum.STUDENT,

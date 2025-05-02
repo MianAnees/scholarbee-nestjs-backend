@@ -12,7 +12,7 @@ export class SearchHistoryAnalyticsService {
   /**
    * Log a user event to Elasticsearch
    */
-  async indexSearchHistory(searchHistory: ISearchHistory): Promise<boolean> {
+  async indexDocument(searchHistory: ISearchHistory): Promise<boolean> {
     
     try {
       const document = {

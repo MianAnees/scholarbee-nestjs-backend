@@ -6,7 +6,6 @@ import { University, UniversitySchema } from './schemas/university.schema';
 import { Program, ProgramSchema } from '../programs/schemas/program.schema';
 import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
 import { AnalyticsModule } from '../analytics/analytics.module';
-import { UniversitiesEsInitService } from './universities-es-init.service';
 import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
 import { MappingRegistryService } from 'src/elasticsearch/services/mapping-registry.service';
 
@@ -21,7 +20,7 @@ import { MappingRegistryService } from 'src/elasticsearch/services/mapping-regis
         ElasticsearchModule,
     ],
     controllers: [UniversitiesController],
-    providers: [UniversitiesService, UniversitiesEsInitService, MappingRegistryService],
+    providers: [UniversitiesService, MappingRegistryService],
     exports: [UniversitiesService],
 })
-export class UniversitiesModule { } 
+export class UniversitiesModule { }

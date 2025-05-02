@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ProgramsController } from './controllers/programs.controller';
-import { ProgramsService } from './services/programs.service';
-import { Program, ProgramSchema } from './schemas/program.schema';
 import { AnalyticsModule } from 'src/analytics/analytics.module';
-import { ProgramsEsInitService } from './services/programs-es-init.service';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 import { ElasticsearchModule } from 'src/elasticsearch/elasticsearch.module';
-import { MappingRegistryService } from 'src/elasticsearch/services/mapping-registry.service';
+import { ProgramsController } from './controllers/programs.controller';
+import { Program, ProgramSchema } from './schemas/program.schema';
+import { ProgramsService } from './services/programs.service';
 
 @Module({
     imports: [
@@ -17,7 +16,7 @@ import { MappingRegistryService } from 'src/elasticsearch/services/mapping-regis
         ])
     ],
     controllers: [ProgramsController],
-    providers: [ProgramsService, ProgramsEsInitService,MappingRegistryService],
+    providers: [ProgramsService,  SearchHistoryAnalyticsService],
     exports: [ProgramsService]
 })
 export class ProgramsModule { } 

@@ -1,28 +1,25 @@
 import {
-    Controller,
-    Get,
-    Post,
     Body,
-    Patch,
-    Param,
+    Controller,
     Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
     Query,
-    UseGuards,
     Req,
+    UseGuards,
 } from '@nestjs/common';
-import { UniversitiesService } from './universities.service';
+import { Request } from 'express';
+import { SortOrder } from 'mongoose';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
-import { UserEventLoggerService } from '../analytics/services/user-event-logger.service';
-import { UserEventType } from '../analytics/types/user-event.types';
-
+import { UniversitiesService } from './universities.service';
 @Controller('universities')
 export class UniversitiesController {
     constructor(
         private readonly universitiesService: UniversitiesService,
-        private readonly userEventLogger: UserEventLoggerService,
     ) { }
 
     @UseGuards(JwtAuthGuard)
@@ -37,21 +34,10 @@ export class UniversitiesController {
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
         @Query('sortBy') sortBy: string = 'createdAt',
-        @Query('order') order: string = 'desc',
+        @Query('order') order: SortOrder = 'desc',
         @Req() req: Request,
     ) {
-        const result = await this.universitiesService.findAll(page, limit, sortBy, order as any);
-        
-        // Track search event
-        await this.userEventLogger.logEvent({
-            timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { page, limit, sortBy, order },
-                results_count: result.data.length,
-            },
-        });
+        const result = await this.universitiesService.findAll(page, limit, sortBy, order);
 
         return result;
     }
@@ -65,23 +51,6 @@ export class UniversitiesController {
         @Req() req: Request,
     ) {
         const result = await this.universitiesService.findAllWithOpenPrograms(page, limit, sortBy, order as any);
-        
-        // Track search event
-        await this.userEventLogger.logEvent({
-            timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { 
-                    page, 
-                    limit, 
-                    sortBy, 
-                    order,
-                    hasOpenPrograms: true 
-                },
-                results_count: result.data.length,
-            },
-        });
 
         return result;
     }

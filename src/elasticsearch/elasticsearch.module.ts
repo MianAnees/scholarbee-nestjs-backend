@@ -25,6 +25,6 @@ import { MappingRegistryService } from './services/mapping-registry.service';
   ],
   controllers: [ElasticsearchController],
   providers: [ElasticsearchService, MappingRegistryService],
-  exports: [ElasticsearchService],
+  exports: [ElasticsearchService, MappingRegistryService],
 })
 export class ElasticsearchModule {} 

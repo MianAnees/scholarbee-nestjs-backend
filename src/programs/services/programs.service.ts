@@ -6,6 +6,7 @@ import { CreateProgramDto } from '../dto/create-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 
 @Injectable()
 export class ProgramsService {

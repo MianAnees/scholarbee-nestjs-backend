@@ -1,5 +1,13 @@
 import { IsOptional, IsString, IsNumber, IsBoolean, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
+import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
+
+// export enum DegreeLevelEnum {
+//     BACHELORS = 'Bachelors',
+//     MASTERS = 'Masters',
+//     PHD = 'PhD',
+// }
+
 
 export class QueryProgramDto {
     @IsOptional()
@@ -35,7 +43,7 @@ export class QueryProgramDto {
 
     @IsOptional()
     @IsString()
-    degree_level?: string;
+    degree_level?: LastDegreeLevelEnum;
 
     @IsOptional()
     @IsString()

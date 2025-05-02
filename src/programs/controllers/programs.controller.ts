@@ -1,33 +1,33 @@
 import {
-    Controller,
-    Get,
-    Post,
     Body,
-    Patch,
-    Param,
+    Controller,
     Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
     Query,
-    UseGuards,
     Req,
+    UseGuards,
 } from '@nestjs/common';
-import { ProgramsService } from '../services/programs.service';
-import { CreateProgramDto } from '../dto/create-program.dto';
-import { UpdateProgramDto } from '../dto/update-program.dto';
-import { QueryProgramDto } from '../dto/query-program.dto';
-import { CompareProgramsDto } from '../dto/compare-programs.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { Request } from 'express';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
+import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
+import { SearchResourceEnum, UserTypeEnum } from '../../analytics/types/analytics-event.types';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { UserEventLoggerService } from '../../analytics/services/user-event-logger.service';
-import { UserEventType } from '../../analytics/types/user-event.types';
-import { Request } from 'express';
-
+import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { CreateProgramDto } from '../dto/create-program.dto';
+import { QueryProgramDto } from '../dto/query-program.dto';
+import { UpdateProgramDto } from '../dto/update-program.dto';
+import { ProgramsService } from '../services/programs.service';
 @Controller('programs')
 export class ProgramsController {
     constructor(
         private readonly programsService: ProgramsService,
-        private readonly userEventLogger: UserEventLoggerService,
+        private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
     ) { }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,15 +40,22 @@ export class ProgramsController {
     @Get()
     async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
         const result = await this.programsService.findAll(queryDto);
-        
+
+
+        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
+
         // Track search event
-        await this.userEventLogger.logEvent({
+        await this.searchHistoryAnalyticsService.indexSearchHistory({
             timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: queryDto,
-                results_count: result.total,
+            user_id: req.user?.['sub'],
+            user_type: UserTypeEnum.STUDENT,
+            resource_type: SearchResourceEnum.PROGRAM,
+            data: {
+                major,
+                degree_level: degree_level as LastDegreeLevelEnum,
+                mode_of_study,
+                program_name,
+                university_id: queryDto.university_id,
             },
         });
 
@@ -67,17 +74,23 @@ export class ProgramsController {
         @Req() req: Request,
     ) {
         const result = await this.programsService.findByCampus(campusId, queryDto);
-        
+
+        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
         // Track search event
-        await this.userEventLogger.logEvent({
+        await this.searchHistoryAnalyticsService.indexSearchHistory({
             timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { ...queryDto, campusId },
-                results_count: result.total,
+            user_id: req.user?.['sub'],
+            user_type: UserTypeEnum.STUDENT,
+            resource_type: SearchResourceEnum.PROGRAM,
+            data: {
+                major,
+                degree_level: degree_level as LastDegreeLevelEnum,
+                mode_of_study,
+                program_name,
+                university_id: queryDto.university_id,
             },
         });
+
 
         return result;
     }
@@ -89,15 +102,20 @@ export class ProgramsController {
         @Req() req: Request,
     ) {
         const result = await this.programsService.findAllByUniversity(universityId, queryDto);
-        
+
+        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
         // Track search event
-        await this.userEventLogger.logEvent({
+        await this.searchHistoryAnalyticsService.indexSearchHistory({
             timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { ...queryDto, universityId },
-                results_count: result.total,
+            user_id: req.user?.['sub'],
+            user_type: UserTypeEnum.STUDENT,
+            resource_type: SearchResourceEnum.PROGRAM,
+            data: {
+                major,
+                degree_level: degree_level as LastDegreeLevelEnum,
+                mode_of_study,
+                program_name,
+                university_id: queryDto.university_id,
             },
         });
 
@@ -111,18 +129,6 @@ export class ProgramsController {
         @Req() req: Request,
     ) {
         const result = await this.programsService.findByAcademicDepartment(departmentId, queryDto);
-        
-        // Track search event
-        await this.userEventLogger.logEvent({
-            timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { ...queryDto, departmentId },
-                results_count: result.total,
-            },
-        });
-
         return result;
     }
 
@@ -133,17 +139,6 @@ export class ProgramsController {
         @Req() req: Request,
     ) {
         const result = await this.programsService.findOne(id, populate);
-        
-        // Track search event
-        await this.userEventLogger.logEvent({
-            timestamp: new Date(),
-            studentId: req.user?.['sub'],
-            eventType: UserEventType.SEARCH,
-            eventData: {
-                filters: { id, populate },
-                results_count: result ? 1 : 0,
-            },
-        });
 
         return result;
     }

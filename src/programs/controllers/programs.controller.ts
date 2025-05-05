@@ -38,6 +38,7 @@ export class ProgramsController {
         return this.programsService.create(createProgramDto);
     }
 
+    // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
     private async indexSearchHistory(user_id: string, queryDto: QueryProgramDto) {
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
 

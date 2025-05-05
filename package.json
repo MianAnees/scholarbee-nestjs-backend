@@ -52,6 +52,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "dotenv": "^16.4.7",
+    "elastic-builder": "^2.31.0",
     "es-mapping-ts": "^1.0.1",
     "joi": "^17.13.3",
     "mongodb": "^5.8.1",

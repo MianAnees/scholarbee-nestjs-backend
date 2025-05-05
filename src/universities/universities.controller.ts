@@ -11,11 +11,12 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { SortOrder } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateUniversityDto } from './dto/create-university.dto';
+import { QueryUniversityDto } from './dto/query-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
 import { UniversitiesService } from './universities.service';
+
 @Controller('universities')
 export class UniversitiesController {
     constructor(
@@ -30,27 +31,15 @@ export class UniversitiesController {
     }
 
     @Get()
-    async findAll(
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
-        @Query('sortBy') sortBy: string = 'createdAt',
-        @Query('order') order: SortOrder = 'desc',
-        @Req() req: Request,
-    ) {
-        const result = await this.universitiesService.findAll(page, limit, sortBy, order);
+    async findAll(@Query() queryDto: QueryUniversityDto) {
+        const result = await this.universitiesService.findAll(queryDto);
 
         return result;
     }
 
     @Get('open-programs')
-    async findAllWithOpenPrograms(
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
-        @Query('sortBy') sortBy: string = 'createdAt',
-        @Query('order') order: string = 'desc',
-        @Req() req: Request,
-    ) {
-        const result = await this.universitiesService.findAllWithOpenPrograms(page, limit, sortBy, order as any);
+    async findAllWithOpenPrograms(@Query() queryDto: QueryUniversityDto) {
+        const result = await this.universitiesService.findAllWithOpenPrograms(queryDto);
 
         return result;
     }

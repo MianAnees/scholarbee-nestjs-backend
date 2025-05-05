@@ -1,22 +1,21 @@
 import {
-    Controller,
-    Get,
-    Post,
     Body,
-    Patch,
-    Param,
+    Controller,
     Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
     Query,
-    UseGuards,
     Req,
-    BadRequestException,
+    UseGuards
 } from '@nestjs/common';
-import { AdmissionProgramsService } from '../services/admission-programs.service';
-import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
-import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
-import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
+import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
+import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
+import { AdmissionProgramsService } from '../services/admission-programs.service';
 
 @Controller('admission-programs')
 export class AdmissionProgramsController {
@@ -30,6 +29,7 @@ export class AdmissionProgramsController {
 
     @Get()
     findAll(@Query() queryDto: QueryAdmissionProgramDto) {
+        
         return this.admissionProgramsService.findAll(queryDto);
     }
 

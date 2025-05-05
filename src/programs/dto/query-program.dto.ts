@@ -8,8 +8,27 @@ import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-sc
 //     PHD = 'PhD',
 // }
 
+class PaginationDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    page?: number = 1;
 
-export class QueryProgramDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    limit?: number = 10;
+
+    @IsOptional()
+    @IsString()
+    sortBy?: string = 'createdAt';
+
+    @IsOptional()
+    @IsString()
+    sortOrder?: 'asc' | 'desc' = 'desc';
+}
+
+export class QueryProgramDto extends PaginationDto {
     @IsOptional()
     @IsString()
     search?: string;
@@ -49,23 +68,6 @@ export class QueryProgramDto {
     @IsString()
     academic_departments?: string;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    page?: number = 1;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    limit?: number = 10;
-
-    @IsOptional()
-    @IsString()
-    sortBy?: string = 'createdAt';
-
-    @IsOptional()
-    @IsString()
-    sortOrder?: 'asc' | 'desc' = 'desc';
 
     @IsOptional()
     @Type(() => Boolean)

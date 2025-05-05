@@ -72,7 +72,6 @@ export class MappingRegistryService implements OnModuleInit {
     } catch (error) {
       this.logger.error(
         `Error applying mapping to index ${index}: ${error.message}`,
-        error.stack,
       );
       return false;
     }

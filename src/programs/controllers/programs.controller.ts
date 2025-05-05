@@ -38,15 +38,13 @@ export class ProgramsController {
         return this.programsService.create(createProgramDto);
     }
 
-    @Get()
-    async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-
+    private async indexSearchHistory(user_id: string, queryDto: QueryProgramDto) {
         const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
 
         // Track search event
         await this.searchHistoryAnalyticsService.indexDocument({
             timestamp: new Date(),
-            user_id: req.user?.['sub'],
+            user_id,
             user_type: UserTypeEnum.STUDENT,
             resource_type: SearchResourceEnum.PROGRAM,
             data: {
@@ -57,11 +55,12 @@ export class ProgramsController {
                 university_id: queryDto.university_id,
             },
         });
+    }
 
-        return []
-        
+    @Get()
+    async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
+        await this.indexSearchHistory(req.user?.['sub'], queryDto)
         const result = await this.programsService.findAll(queryDto);
-
         return result;
     }
 
@@ -76,25 +75,9 @@ export class ProgramsController {
         @Query() queryDto: QueryProgramDto,
         @Req() req: Request,
     ) {
+
+        await this.indexSearchHistory(req.user?.['sub'], queryDto)
         const result = await this.programsService.findByCampus(campusId, queryDto);
-
-        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
-        // Track search event
-        await this.searchHistoryAnalyticsService.indexDocument({
-            timestamp: new Date(),
-            user_id: req.user?.['sub'],
-            user_type: UserTypeEnum.STUDENT,
-            resource_type: SearchResourceEnum.PROGRAM,
-            data: {
-                major,
-                degree_level: degree_level as LastDegreeLevelEnum,
-                mode_of_study,
-                program_name,
-                university_id: queryDto.university_id,
-            },
-        });
-
-
         return result;
     }
 
@@ -104,24 +87,8 @@ export class ProgramsController {
         @Query() queryDto: QueryProgramDto,
         @Req() req: Request,
     ) {
+        await this.indexSearchHistory(req.user?.['sub'], queryDto)
         const result = await this.programsService.findAllByUniversity(universityId, queryDto);
-
-        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
-        // Track search event
-        await this.searchHistoryAnalyticsService.indexDocument({
-            timestamp: new Date(),
-            user_id: req.user?.['sub'],
-            user_type: UserTypeEnum.STUDENT,
-            resource_type: SearchResourceEnum.PROGRAM,
-            data: {
-                major,
-                degree_level: degree_level as LastDegreeLevelEnum,
-                mode_of_study,
-                program_name,
-                university_id: queryDto.university_id,
-            },
-        });
-
         return result;
     }
 
@@ -142,7 +109,6 @@ export class ProgramsController {
         @Req() req: Request,
     ) {
         const result = await this.programsService.findOne(id, populate);
-
         return result;
     }
 

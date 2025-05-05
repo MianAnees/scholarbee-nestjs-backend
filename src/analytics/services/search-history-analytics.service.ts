@@ -75,6 +75,46 @@ export class SearchHistoryAnalyticsService {
   }
 
   /**
+   * Get most searched programs from search_history index
+   * TODO: Find the place where this should be indexed. Most probably the `program_id` should be indexed when searching for admission programs or atleast the program name should be indexed when searching for programs
+   */
+  async getMostSearchedPrograms(
+    queryDto: QueryMostSearchedMajorsDto,
+  ): Promise<Array<{ program: string; count: number }>> {
+    try {
+      const response = await this.elasticsearchService.search(
+        this.SEARCH_HISTORY_INDEX,
+        {
+          aggs: {
+            top_programs: {
+              terms: {
+                field: 'data.program_name.keyword',
+                size: queryDto.limit,
+              },
+            },
+          },
+          size: 0,
+        },
+      );
+
+      const aggregationResponse = response.aggregations.top_programs as {
+        buckets: { key: string; doc_count: number }[];
+      };
+
+      return aggregationResponse.buckets.map((bucket) => ({
+        program: bucket.key,
+        count: bucket.doc_count,
+      }));
+    } catch (error) {
+      this.logger.error(
+        `Error getting most searched programs: ${error.message}`,
+        error.stack,
+      );
+      return [];
+    }
+  }
+
+  /**
    * Get most searched universities from search_history index
    */
   async getMostSearchedUniversities(

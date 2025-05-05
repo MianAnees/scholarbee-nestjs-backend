@@ -30,6 +30,11 @@ export class AnalyticsController {
     // return this.searchHistoryAnalyticsService.getMostSearchedDegreeLevels(limit);
   }
 
+  @Get('most-searched-programs')
+  async getMostSearchedPrograms(@Query('limit') limit: number = 10) {
+    return this.searchHistoryAnalyticsService.getMostSearchedPrograms(limit);
+  }
+
   @Get('most-searched-universities')
   async getMostSearchedUniversities(
     @Query() query: QueryMostSearchedUniversitiesDto,

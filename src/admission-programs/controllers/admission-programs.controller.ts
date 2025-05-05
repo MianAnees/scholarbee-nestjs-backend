@@ -127,7 +127,7 @@ export class AdmissionProgramsController {
     @Query() filterDto: FilterAdmissionProgramDto,
     @Req() req: Request,
   ) {
-    await this.indexSearchHistory(req.user['sub'], filterDto);
+    await this.indexSearchHistory(req.user?.['sub'], filterDto);
     const result =
       await this.admissionProgramsService.findWithFilters(filterDto);
     return result;

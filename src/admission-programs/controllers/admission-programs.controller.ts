@@ -16,7 +16,6 @@ import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsService } from '../services/admission-programs.service';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 import {
   SearchResourceEnum,
   UserTypeEnum,
@@ -27,7 +26,6 @@ import { Request } from 'express';
 export class AdmissionProgramsController {
   constructor(
     private readonly admissionProgramsService: AdmissionProgramsService,
-    private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -40,34 +38,6 @@ export class AdmissionProgramsController {
       createAdmissionProgramDto,
       req.user.userId,
     );
-  }
-
-  // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
-  private async indexSearchHistory(
-    user_id: string,
-    fitlerDto: FilterAdmissionProgramDto,
-  ) {
-    const {
-      // degree_level, major, mode_of_study, name: program_name, university_id
-      major,
-      university,
-      programName,
-    } = fitlerDto;
-
-    // Track search event
-    await this.searchHistoryAnalyticsService.indexDocument({
-      timestamp: new Date(),
-      user_id,
-      user_type: UserTypeEnum.STUDENT,
-      resource_type: SearchResourceEnum.UNIVERSITY,
-      data: {
-        major,
-        // degree_level: degree_level as LastDegreeLevelEnum.,
-        // mode_of_study,
-        program_name: programName,
-        university_id: university,
-      },
-    });
   }
 
   @Get()
@@ -127,7 +97,10 @@ export class AdmissionProgramsController {
     @Query() filterDto: FilterAdmissionProgramDto,
     @Req() req: Request,
   ) {
-    await this.indexSearchHistory(req.user?.['sub'], filterDto);
+    await this.admissionProgramsService.indexSearchHistory(
+      req.user?.['sub'],
+      filterDto,
+    );
     const result =
       await this.admissionProgramsService.findWithFilters(filterDto);
     return result;

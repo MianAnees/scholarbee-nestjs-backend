@@ -1,7 +1,34 @@
 import { IsOptional, IsString, IsNumber, IsBoolean, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
+import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 
-export class QueryProgramDto {
+// export enum DegreeLevelEnum {
+//     BACHELORS = 'Bachelors',
+//     MASTERS = 'Masters',
+//     PHD = 'PhD',
+// }
+
+class PaginationDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    page?: number = 1;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    limit?: number = 10;
+
+    @IsOptional()
+    @IsString()
+    sortBy?: string = 'createdAt';
+
+    @IsOptional()
+    @IsString()
+    sortOrder?: 'asc' | 'desc' = 'desc';
+}
+
+export class QueryProgramDto extends PaginationDto {
     @IsOptional()
     @IsString()
     search?: string;
@@ -35,29 +62,12 @@ export class QueryProgramDto {
 
     @IsOptional()
     @IsString()
-    degree_level?: string;
+    degree_level?: LastDegreeLevelEnum;
 
     @IsOptional()
     @IsString()
     academic_departments?: string;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    page?: number = 1;
-
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    limit?: number = 10;
-
-    @IsOptional()
-    @IsString()
-    sortBy?: string = 'createdAt';
-
-    @IsOptional()
-    @IsString()
-    sortOrder?: 'asc' | 'desc' = 'desc';
 
     @IsOptional()
     @Type(() => Boolean)

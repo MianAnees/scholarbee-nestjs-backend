@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Query, Req } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, SortOrder, Types } from 'mongoose';
 import { CreateUniversityDto } from './dto/create-university.dto';
@@ -7,6 +7,7 @@ import { University, UniversityDocument } from './schemas/university.schema';
 import { Program, ProgramDocument } from '../programs/schemas/program.schema';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
 import { RootFilterQuery } from 'mongoose';
+import { QueryUniversityDto } from './dto/query-university.dto';
 
 @Injectable()
 export class UniversitiesService {
@@ -66,23 +67,28 @@ export class UniversitiesService {
     }
 
     async findAll(
-        page: number = 1,
-        limit: number = 10,
-        sortBy: string = 'createdAt',
-        order: SortOrder = 'desc',
-        filter: RootFilterQuery<UniversityDocument> = {},
+        queryDto: QueryUniversityDto,
+        overrideFilter: RootFilterQuery<UniversityDocument> = {}
     ) {
+        const {page,limit,order,sortBy, name:nameSearch} =queryDto;
         const skip = (page - 1) * limit;
         const sort = { [sortBy]: order };
 
+        if (nameSearch){
+            overrideFilter = {
+                ...overrideFilter,
+               name: { $regex: nameSearch, $options: 'i' } 
+            }
+        }
+
         const [data, total] = await Promise.all([
-            this.universityModel.find(filter)
+            this.universityModel.find(overrideFilter)
                 .populate('address_id')
                 .sort(sort)
                 .skip(skip)
                 .limit(limit)
                 .exec(),
-            this.universityModel.countDocuments(filter),
+            this.universityModel.countDocuments(overrideFilter),
         ]);
 
         return {
@@ -96,17 +102,11 @@ export class UniversitiesService {
         };
     }
 
-    async findAllWithOpenPrograms(
-        page: number = 1,
-        limit: number = 10,
-        sortBy: string = 'createdAt',
-        order: SortOrder = 'desc',
-    ) {
-
+    async findAllWithOpenPrograms(queryDto: QueryUniversityDto) {
         const uniqueUniversityIds = await this.extractUniversityIdsWithOpenPrograms();
 
         // Finally, get the universities with pagination
-        const result = await this.findAll(page, limit, sortBy, order, {
+        const result = await this.findAll(queryDto, {
             _id: { $in: uniqueUniversityIds }
         });
 

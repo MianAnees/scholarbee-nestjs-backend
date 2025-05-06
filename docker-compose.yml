@@ -19,11 +19,22 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION}
       - FRONTEND_URL=${FRONTEND_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
-      - PORT=3000
+      - ELASTICSEARCH_URL=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
     networks:
       - scholarbee-network
+      - elastic-start-local_default
     restart: unless-stopped
+    env_file:
+      - .env
+      - .env.v2
 
 networks:
   scholarbee-network:
-    driver: bridge 
+    driver: bridge
+  elastic-start-local_default:
+    external: true
+
+volumes:
+  elasticsearch-data: 

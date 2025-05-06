@@ -1,24 +1,27 @@
 import {
-    Controller,
-    Get,
-    Post,
     Body,
-    Patch,
-    Param,
+    Controller,
     Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
     Query,
-    UseGuards,
     Req,
+    UseGuards,
 } from '@nestjs/common';
-import { UniversitiesService } from './universities.service';
-import { CreateUniversityDto } from './dto/create-university.dto';
-import { UpdateUniversityDto } from './dto/update-university.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateUniversityDto } from './dto/create-university.dto';
+import { QueryUniversityDto } from './dto/query-university.dto';
+import { UpdateUniversityDto } from './dto/update-university.dto';
+import { UniversitiesService } from './universities.service';
 
 @Controller('universities')
 export class UniversitiesController {
-    constructor(private readonly universitiesService: UniversitiesService) { }
+    constructor(
+        private readonly universitiesService: UniversitiesService,
+    ) { }
 
     @UseGuards(JwtAuthGuard)
     @Post()
@@ -28,23 +31,17 @@ export class UniversitiesController {
     }
 
     @Get()
-    findAll(
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
-        @Query('sortBy') sortBy: string = 'createdAt',
-        @Query('order') order: string = 'desc',
-    ) {
-        return this.universitiesService.findAll(page, limit, sortBy, order as any);
+    async findAll(@Query() queryDto: QueryUniversityDto) {
+        const result = await this.universitiesService.findAll(queryDto);
+
+        return result;
     }
 
     @Get('open-programs')
-    findAllWithOpenPrograms(
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
-        @Query('sortBy') sortBy: string = 'createdAt',
-        @Query('order') order: string = 'desc',
-    ) {
-        return this.universitiesService.findAllWithOpenPrograms(page, limit, sortBy, order as any);
+    async findAllWithOpenPrograms(@Query() queryDto: QueryUniversityDto) {
+        const result = await this.universitiesService.findAllWithOpenPrograms(queryDto);
+
+        return result;
     }
 
     @Get(':id')

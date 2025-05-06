@@ -27,6 +27,7 @@ import { ScholarshipsModule } from './scholarships/scholarships.module';
 import { MediaManagementModule } from './media-management/media-management.module';
 import { configuration, EnvValidationSchema, envValidationSchema } from 'src/config';
 import { IConfiguration } from 'src/config/configuration';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -45,7 +46,9 @@ import { IConfiguration } from 'src/config/configuration';
       imports: [ConfigModule],
       inject: [ConfigService],
       // ? Even though configService has access to both the configuration and the env-vars, as a best practice, we should only access the values from the configuration object instead of the env-vars.
-      useFactory: (configService: ConfigService<IConfiguration & EnvValidationSchema>) => ({
+      useFactory: (
+        configService: ConfigService<IConfiguration & EnvValidationSchema>,
+      ) => ({
         uri: configService.get('database.uri', { infer: true })!,
       }),
     }),
@@ -70,6 +73,7 @@ import { IConfiguration } from 'src/config/configuration';
     ProgramsModule,
     BlogPostsModule,
     MediaManagementModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

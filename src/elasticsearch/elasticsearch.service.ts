@@ -1,0 +1,174 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
+import { ConfigService } from '@nestjs/config';
+import { IConfiguration } from 'src/config/configuration';
+
+@Injectable()
+export class ElasticsearchService {
+  private readonly logger = new Logger(ElasticsearchService.name);
+
+  constructor(
+    private readonly elasticsearchService: NestElasticsearchService,
+    private readonly configService: ConfigService<IConfiguration, true>,
+  ) {}
+
+  /**
+   * Check if an index exists
+   */
+  async indexExists(index: string): Promise<boolean> {
+    try {
+      return await this.elasticsearchService.indices.exists({ index });
+    } catch (error) {
+      this.logger.error(`Error checking if index exists: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Create an index with the given settings and mappings
+   */
+  async createIndex(
+    index: string,
+    settings?: Record<string, any>,
+    mappings?: Record<string, any>,
+  ): Promise<boolean> {
+    try {
+      await this.elasticsearchService.indices.create({
+        index,
+        body: {
+          settings,
+          mappings,
+        },
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error creating index: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Index a document
+   */
+  async indexDocument(
+    index: string,
+    id: string,
+    document: Record<string, any>,
+  ): Promise<boolean> {
+    try {
+      await this.elasticsearchService.index({
+        index,
+        id,
+        body: document,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error indexing document: ${error.message}`, {
+        index,
+        id,
+        document,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Search an index
+   */
+  async search(index: string, query: any): Promise<any> {
+    try {
+      const result = await this.elasticsearchService.search({
+        index,
+        body: query,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(`Error searching index: ${error.message}`, {
+        index,
+        query,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get a document by ID
+   */
+  async getDocument(index: string, id: string): Promise<any> {
+    try {
+      const result = await this.elasticsearchService.get({
+        index,
+        id,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(`Error getting document: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a document
+   */
+  async deleteDocument(index: string, id: string): Promise<boolean> {
+    try {
+      await this.elasticsearchService.delete({
+        index,
+        id,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error deleting document: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Update a document
+   */
+  async updateDocument(
+    index: string,
+    id: string,
+    doc: Record<string, any>,
+  ): Promise<boolean> {
+    try {
+      await this.elasticsearchService.update({
+        index,
+        id,
+        body: {
+          doc,
+        },
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error updating document: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Delete an index
+   */
+  async deleteIndex(index: string): Promise<boolean> {
+    try {
+      await this.elasticsearchService.indices.delete({ index });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error deleting index: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  /**
+   * Bulk index documents
+   */
+  async bulk(operations: any[]): Promise<boolean> {
+    try {
+      const response = await this.elasticsearchService.bulk({ body: operations });
+      return !response.errors;
+    } catch (error) {
+      this.logger.error(`Error performing bulk operation: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+} 

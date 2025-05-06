@@ -31,6 +31,13 @@ const configuration = () => {
             refreshExpiration: parsedEnv.REFRESH_JWT_EXPIRATION_SEC,
         },
 
+        elasticsearch: {
+            serverUrl: parsedEnv.ELASTICSEARCH_URL,
+            username: parsedEnv.ELASTICSEARCH_USERNAME,
+            password: parsedEnv.ELASTICSEARCH_PASSWORD,
+            apiKey: parsedEnv.ELASTICSEARCH_API_KEY,
+        },
+
         app: {
             port: parsedEnv.PORT || 3010,
             nodeEnv: parsedEnv.NODE_ENV,

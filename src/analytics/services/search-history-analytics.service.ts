@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ISearchHistory } from '../schemas/search-history.entity';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
@@ -22,7 +22,6 @@ export class SearchHistoryAnalyticsService {
    * Log a user event to Elasticsearch
    */
   async indexDocument(searchHistory: ISearchHistory): Promise<boolean> {
-    
     this.logger.log(`🔍 Indexing document`, searchHistory);
     try {
       const document = {
@@ -150,21 +149,20 @@ export class SearchHistoryAnalyticsService {
           };
         });
 
-      const universityIds = aggregationResponse.buckets.map(
-        (bucket) => bucket.key,
+      const universityObjectIds = aggregationResponse.buckets.map(
+        (bucket) => new Types.ObjectId(bucket.key),
       );
 
       // convert the university_id to university name using mongoose
       const universityDetailList = await this.universityModel
         .find({
-          _id: { $in: universityIds },
-          // only select the name and _id fields
-          select: 'name _id',
+          _id: { $in: universityObjectIds },
         })
+        .select('name _id')
         .lean();
 
       // if count of universityIds is not equal to the count of universitiesInfo, throw an error
-      if (universityIds.length !== universityDetailList.length) {
+      if (universityObjectIds.length !== universityDetailList.length) {
         throw new Error(
           'Count of response is not equal to the count of universitiesInfo',
         );
@@ -176,7 +174,7 @@ export class SearchHistoryAnalyticsService {
       for (const bucket of aggregationResponse.buckets) {
         try {
           const matchedUniversity = universityDetailList.find(
-            (university) => university._id === bucket.key,
+            (university) => university._id.toString() === bucket.key,
           );
 
           if (!matchedUniversity) {
@@ -184,13 +182,13 @@ export class SearchHistoryAnalyticsService {
           }
 
           // check if the bucket.key is one of the valid university_id
-          if (!universityIds.includes(bucket.key)) {
+          if (!universityObjectIds.some((id) => id.toString() === bucket.key)) {
             throw new Error('Invalid university_id');
           }
 
           goodResp.push({
-            name: matchedUniversity.name,
             university_id: bucket.key,
+            university: matchedUniversity.name,
             count: bucket.doc_count,
           });
         } catch (error) {

@@ -26,112 +26,94 @@ import { ProgramsService } from '../services/programs.service';
 
 @Controller('programs')
 export class ProgramsController {
-    constructor(
-        private readonly programsService: ProgramsService,
-        private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
-    ) { }
+  constructor(
+    private readonly programsService: ProgramsService,
+    private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
+  ) {}
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    @Post()
-    create(@Body() createProgramDto: CreateProgramDto) {
-        return this.programsService.create(createProgramDto);
-    }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post()
+  create(@Body() createProgramDto: CreateProgramDto) {
+    return this.programsService.create(createProgramDto);
+  }
 
-    // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
-    private async indexSearchHistory(user_id: string, queryDto: QueryProgramDto) {
-        const { degree_level, major, mode_of_study, name: program_name, } = queryDto;
+  @Get()
+  async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
+    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    const result = await this.programsService.findAll(queryDto);
+    return result;
+  }
 
-        // Track search event
-        await this.searchHistoryAnalyticsService.indexDocument({
-            timestamp: new Date(),
-            user_id,
-            user_type: UserTypeEnum.STUDENT,
-            resource_type: SearchResourceEnum.PROGRAM,
-            data: {
-                major,
-                degree_level: degree_level as LastDegreeLevelEnum,
-                mode_of_study,
-                program_name,
-                university_id: queryDto.university_id,
-            },
-        });
-    }
+  @Get('statistics')
+  getStatistics() {
+    return this.programsService.getStatistics();
+  }
 
-    @Get()
-    async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-        await this.indexSearchHistory(req.user?.['sub'], queryDto)
-        const result = await this.programsService.findAll(queryDto);
-        return result;
-    }
+  @Get('campus/:campusId')
+  async findByCampus(
+    @Param('campusId') campusId: string,
+    @Query() queryDto: QueryProgramDto,
+    @Req() req: Request,
+  ) {
+    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    const result = await this.programsService.findByCampus(campusId, queryDto);
+    return result;
+  }
 
-    @Get('statistics')
-    getStatistics() {
-        return this.programsService.getStatistics();
-    }
+  @Get('university/:universityId')
+  async findAllByUniversity(
+    @Param('universityId') universityId: string,
+    @Query() queryDto: QueryProgramDto,
+    @Req() req: Request,
+  ) {
+    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    const result = await this.programsService.findAllByUniversity(
+      universityId,
+      queryDto,
+    );
+    return result;
+  }
 
-    @Get('campus/:campusId')
-    async findByCampus(
-        @Param('campusId') campusId: string,
-        @Query() queryDto: QueryProgramDto,
-        @Req() req: Request,
-    ) {
+  @Get('academic-department/:departmentId')
+  async findByAcademicDepartment(
+    @Param('departmentId') departmentId: string,
+    @Query() queryDto: QueryProgramDto,
+    @Req() req: Request,
+  ) {
+    const result = await this.programsService.findByAcademicDepartment(
+      departmentId,
+      queryDto,
+    );
+    return result;
+  }
 
-        await this.indexSearchHistory(req.user?.['sub'], queryDto)
-        const result = await this.programsService.findByCampus(campusId, queryDto);
-        return result;
-    }
+  @Get(':id')
+  async findOne(
+    @Param('id') id: string,
+    @Query('populate') populate: boolean = true,
+    @Req() req: Request,
+  ) {
+    const result = await this.programsService.findOne(id, populate);
+    return result;
+  }
 
-    @Get('university/:universityId')
-    async findAllByUniversity(
-        @Param('universityId') universityId: string,
-        @Query() queryDto: QueryProgramDto,
-        @Req() req: Request,
-    ) {
-        await this.indexSearchHistory(req.user?.['sub'], queryDto)
-        const result = await this.programsService.findAllByUniversity(universityId, queryDto);
-        return result;
-    }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateProgramDto: UpdateProgramDto) {
+    return this.programsService.update(id, updateProgramDto);
+  }
 
-    @Get('academic-department/:departmentId')
-    async findByAcademicDepartment(
-        @Param('departmentId') departmentId: string,
-        @Query() queryDto: QueryProgramDto,
-        @Req() req: Request,
-    ) {
-        const result = await this.programsService.findByAcademicDepartment(departmentId, queryDto);
-        return result;
-    }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.programsService.remove(id);
+  }
 
-    @Get(':id')
-    async findOne(
-        @Param('id') id: string,
-        @Query('populate') populate: boolean = true,
-        @Req() req: Request,
-    ) {
-        const result = await this.programsService.findOne(id, populate);
-        return result;
-    }
-
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    @Patch(':id')
-    update(
-        @Param('id') id: string,
-        @Body() updateProgramDto: UpdateProgramDto
-    ) {
-        return this.programsService.update(id, updateProgramDto);
-    }
-
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.programsService.remove(id);
-    }
-
-    @Post('compare')
-    comparePrograms(@Body() compareProgramsDto: CompareProgramsDto) {
-        return this.programsService.comparePrograms(compareProgramsDto);
-    }
+  @Post('compare')
+  comparePrograms(@Body() compareProgramsDto: CompareProgramsDto) {
+    return this.programsService.comparePrograms(compareProgramsDto);
+  }
 } 

@@ -8,6 +8,7 @@ import { AdmissionProgramsGateway } from './gateways/admission-programs.gateway'
 import { AdmissionProgram, AdmissionProgramSchema } from './schemas/admission-program.schema';
 import { AnalyticsModule } from 'src/analytics/analytics.module';
 import { ElasticsearchModule } from 'src/elasticsearch/elasticsearch.module';
+import { UniversityModelsModule } from 'src/universities/university-models.module';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
 
 @Module({
@@ -27,12 +28,13 @@ import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-his
     }),
     AnalyticsModule,
     ElasticsearchModule,
+    UniversityModelsModule,
   ],
   controllers: [AdmissionProgramsController],
   providers: [
     AdmissionProgramsService,
     AdmissionProgramsGateway,
-    SearchHistoryAnalyticsService,
+    // SearchHistoryAnalyticsService  // AnalyticsModule already provides this,
   ],
   exports: [AdmissionProgramsService],
 })

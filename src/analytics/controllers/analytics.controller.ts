@@ -1,8 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
-// src/analytics/dto/query-most-searched-majors.dto.ts
-import { QueryMostSearchedMajorsDto } from '../dto/query-most-searched-majors.dto';
-import { QueryMostSearchedUniversitiesDto } from '../dto/query-most-searched-universities.dto';
+import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
 
 @Controller('analytics')
 export class AnalyticsController {
@@ -18,7 +16,7 @@ export class AnalyticsController {
 
   @Get('most-searched-majors')
   async getMostSearchedMajors(
-    @Query() query: QueryMostSearchedMajorsDto,
+    @Query() query: QueryAnalyticsCommonDto,
     // @Req() req: Request,
   ) {
     return this.searchHistoryAnalyticsService.getMostSearchedMajors(query);
@@ -31,14 +29,12 @@ export class AnalyticsController {
   }
 
   @Get('most-searched-programs')
-  async getMostSearchedPrograms(@Query('limit') limit: number = 10) {
-    return this.searchHistoryAnalyticsService.getMostSearchedPrograms(limit);
+  async getMostSearchedPrograms(@Query() query: QueryAnalyticsCommonDto) {
+    return this.searchHistoryAnalyticsService.getMostSearchedPrograms(query);
   }
 
   @Get('most-searched-universities')
-  async getMostSearchedUniversities(
-    @Query() query: QueryMostSearchedUniversitiesDto,
-  ) {
+  async getMostSearchedUniversities(@Query() query: QueryAnalyticsCommonDto) {
     return this.searchHistoryAnalyticsService.getMostSearchedUniversities(
       query,
     );

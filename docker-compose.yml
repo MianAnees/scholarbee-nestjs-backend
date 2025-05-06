@@ -22,19 +22,13 @@ services:
       - ELASTICSEARCH_URL=https://elasticsearch:9200
       - ELASTICSEARCH_USERNAME=elastic
       - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - PORT=3000
     networks:
       - scholarbee-network
-      - elastic-start-local_default
     restart: unless-stopped
     env_file:
       - .env
-      - .env.v2
 
 networks:
   scholarbee-network:
     driver: bridge
-  elastic-start-local_default:
-    external: true
-
-volumes:
-  elasticsearch-data: 

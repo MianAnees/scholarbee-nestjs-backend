@@ -15,9 +15,10 @@ import { MappingRegistryService } from './services/mapping-registry.service';
           apiKey: configService.get('elasticsearch.apiKey'),
         },
         tls: {
-          rejectUnauthorized: false
+          // requestCert: true,
+          // rejectUnauthorized: false,
         },
-        maxRetries: 3,
+        maxRetries: 0, // TODO: Change to 3
         requestTimeout: 10000,
       }),
       inject: [ConfigService],

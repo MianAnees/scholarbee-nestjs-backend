@@ -1,0 +1,40 @@
+import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
+import { AuthGuard } from '@nestjs/passport';
+import { ResourceProtectionStrategyEnum } from 'src/auth/strategies/strategy.enum';
+
+/**
+ * This guard is used to protect resources that are only accessible to authenticated users.
+ * This prevents the controller from being called if the user is not authenticated. (Auth Token is not found or expired)
+ */
+@Injectable()
+export class ResourceProtectionGuard extends AuthGuard(ResourceProtectionStrategyEnum.JwtV2) {
+    canActivate(context: ExecutionContext) {
+        return super.canActivate(context);
+    }
+
+    handleRequest(err, user, info) {
+        // check if the user is authenticated
+        if (err || !user) {
+
+            console.log(` ResourceProtectionGuard: handleRequest:`, { err, user, info })
+
+            // check if the token is not found
+            if (info.message === 'No auth token') {
+                throw new UnauthorizedException('Token not found');
+            } else if (info instanceof JsonWebTokenError) {
+                // check if info is an instance of Error
+                if (info instanceof TokenExpiredError) {
+                    throw new UnauthorizedException('Token expired');
+                } else if (info.message.includes('malformed')) {
+                    throw new UnauthorizedException('Token malformed');
+                } else if (info.message.includes('invalid signature')) {
+                    throw new UnauthorizedException('Invalid signature; Ensure that correct token is used');
+                }
+            }
+
+            throw err || new UnauthorizedException('Authentication required');
+        }
+        return user;
+    }
+} 

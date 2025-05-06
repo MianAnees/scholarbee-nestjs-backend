@@ -29,7 +29,7 @@ export class User {
     @Prop()
     father_profession?: string;
 
-    @Prop({ 
+    @Prop({
         type: String,
         enum: FatherLivingStatusEnum
     })
@@ -142,6 +142,10 @@ export class User {
 
     @Prop()
     hash: string;
+
+    // refresh token hash
+    @Prop({ default: null })
+    refreshTokenHash: string;
 
     @Prop({ default: 0 })
     loginAttempts: number;

@@ -63,7 +63,11 @@ export class ElasticsearchService {
       });
       return true;
     } catch (error) {
-      this.logger.error(`Error indexing document: ${error.message}`, error.stack);
+      this.logger.error(`Error indexing document: ${error.message}`, {
+        index,
+        id,
+        document,
+      });
       return false;
     }
   }
@@ -79,7 +83,10 @@ export class ElasticsearchService {
       });
       return result;
     } catch (error) {
-      this.logger.error(`Error searching index: ${error.message}`, error.stack);
+      this.logger.error(`Error searching index: ${error.message}`, {
+        index,
+        query,
+      });
       throw error;
     }
   }

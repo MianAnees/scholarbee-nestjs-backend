@@ -22,6 +22,8 @@ export class SearchHistoryAnalyticsService {
    * Log a user event to Elasticsearch
    */
   async indexDocument(searchHistory: ISearchHistory): Promise<boolean> {
+    
+    this.logger.log(`🔍 Indexing document`, searchHistory);
     try {
       const document = {
         ...searchHistory,

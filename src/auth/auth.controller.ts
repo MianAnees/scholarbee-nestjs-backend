@@ -1,13 +1,16 @@
-import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus, Param, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LoginDto } from './dto/login.dto';
-import { SignupDto } from './dto/signup.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Request, UseGuards } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { AuthService, SanitizedUser } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginDto } from './dto/login.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SignupDto } from './dto/signup.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LocalAuthGuard } from './guards/local-auth.guard';
+import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
+import { ResourceProtectionGuard } from './guards/resource-protection.guard';
+import { RefreshAuthenticationGuard } from 'src/auth/guards/refresh-authentication.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -16,14 +19,31 @@ export class AuthController {
         private usersService: UsersService
     ) { }
 
-    @UseGuards(LocalAuthGuard)
+
+    @UseGuards(LocalAuthenticationGuard)
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    async login(@Request() req, @Body() loginDto: LoginDto) {
+    async login_v2(@Request() req) {
+        // REVIEW: How to add type here
 
-        console.log('Login attempt for:', loginDto.email);
         return this.authService.login(req.user);
     }
+
+    @UseGuards(ResourceProtectionGuard)
+    @Post('logout')
+    @HttpCode(HttpStatus.OK)
+    async logout_v2(@Request() req) {
+        return this.authService.logout(req.user);
+    }
+
+
+    @UseGuards(RefreshAuthenticationGuard)
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    async refreshToken(@Request() req) {
+        return this.authService.refreshToken(req.user);
+    }
+
 
     @Post('signup')
     @HttpCode(HttpStatus.OK)
@@ -78,17 +98,5 @@ export class AuthController {
             hasSalt: !!user.salt,
             saltType: user.salt ? (user.salt.substring(0, 10) + '...') : 'none'
         };
-    }
-
-    @Post('direct-login')
-    @HttpCode(HttpStatus.OK)
-    async directLogin(@Body() loginDto: LoginDto) {
-        console.log('Direct login attempt for:', loginDto.email);
-
-        // Manually validate the user
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
-
-        // If validation passes, generate token and return response
-        return this.authService.login(user);
     }
 } 

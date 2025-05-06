@@ -11,6 +11,12 @@ export interface EnvValidationSchema {
     JWT_SECRET: string;
     JWT_EXPIRATION: string;
 
+    LOGIN_JWT_SECRET: string;
+    LOGIN_JWT_EXPIRATION_SEC: number;
+
+    REFRESH_JWT_SECRET: string;
+    REFRESH_JWT_EXPIRATION_SEC: number;
+
     // App Settings
     PORT: number;
     NODE_ENV: string;
@@ -73,6 +79,12 @@ export const envValidationSchema = Joi.object<EnvValidationSchema>({
     // JWT
     JWT_SECRET: Joi.string().required(),
     JWT_EXPIRATION: Joi.string().required(),
+
+    LOGIN_JWT_SECRET: Joi.string().required(),
+    LOGIN_JWT_EXPIRATION_SEC: Joi.number().required(),
+
+    REFRESH_JWT_SECRET: Joi.string().required(),
+    REFRESH_JWT_EXPIRATION_SEC: Joi.number().required(),
 
     // App Settings
     PORT: Joi.number().default(3010),

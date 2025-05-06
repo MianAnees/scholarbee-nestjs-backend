@@ -23,6 +23,12 @@ const configuration = () => {
         jwt: {
             secret: parsedEnv.JWT_SECRET,
             expiration: parsedEnv.JWT_EXPIRATION,
+
+            loginSecret: parsedEnv.LOGIN_JWT_SECRET,
+            loginExpiration: parsedEnv.LOGIN_JWT_EXPIRATION_SEC,
+
+            refreshSecret: parsedEnv.REFRESH_JWT_SECRET,
+            refreshExpiration: parsedEnv.REFRESH_JWT_EXPIRATION_SEC,
         },
 
         elasticsearch: {

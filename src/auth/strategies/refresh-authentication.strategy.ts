@@ -1,13 +1,12 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IConfiguration } from 'src/config/configuration';
-import { RefreshAuthenticationStrategyEnum, ResourceProtectionStrategyEnum } from 'src/auth/strategies/strategy.enum';
-import { AccessTokenPayload, AuthService, RefreshTokenPayload } from 'src/auth/auth.service';
+import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { AuthService, RefreshTokenPayload } from 'src/auth/auth.service';
+import { RefreshAuthenticationStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { IConfiguration } from 'src/config/configuration';
 import { UsersService } from 'src/users/users.service';
-import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class RefreshAuthenticationStrategy extends PassportStrategy(Strategy, RefreshAuthenticationStrategyEnum.RefreshV2) {

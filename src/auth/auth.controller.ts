@@ -20,50 +20,30 @@ export class AuthController {
     ) { }
 
 
-    @UseGuards(LocalAuthGuard)
-    @Post('login')
-    @HttpCode(HttpStatus.OK)
-    async login(@Request() req, @Body() loginDto: LoginDto) {
-        // REVIEW: How is exp and message being sent to the client from this endpoint?
-
-        console.log('Login attempt for:', loginDto.email);
-        // Receives the validated user and transforms it into a token
-        return this.authService.login(req.user);
-    }
-
     @UseGuards(LocalAuthenticationGuard)
-    @Post('login_v2')
+    @Post('login')
     @HttpCode(HttpStatus.OK)
     async login_v2(@Request() req) {
         // REVIEW: How to add type here
 
-        return this.authService.login_v2(req.user);
+        return this.authService.login(req.user);
     }
 
     @UseGuards(ResourceProtectionGuard)
     @Post('logout')
     @HttpCode(HttpStatus.OK)
     async logout_v2(@Request() req) {
-        return this.authService.logout_v2(req.user);
+        return this.authService.logout(req.user);
     }
 
 
     @UseGuards(RefreshAuthenticationGuard)
-    @Post('refresh_v2')
+    @Post('refresh')
     @HttpCode(HttpStatus.OK)
     async refreshToken(@Request() req) {
-        return this.authService.refreshToken_v2(req.user);
+        return this.authService.refreshToken(req.user);
     }
 
-
-    @UseGuards(ResourceProtectionGuard)
-    @Get('protected_v2')
-    protected_v2(@Request() req) {
-        return {
-            message: 'You are protected',
-            user: req.user
-        };
-    }
 
     @Post('signup')
     @HttpCode(HttpStatus.OK)
@@ -119,17 +99,4 @@ export class AuthController {
             saltType: user.salt ? (user.salt.substring(0, 10) + '...') : 'none'
         };
     }
-
-    @Post('direct-login')
-    @HttpCode(HttpStatus.OK)
-    async directLogin(@Body() loginDto: LoginDto) {
-        console.log('Direct login attempt for:', loginDto.email);
-
-        // Manually validate the user
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
-
-        // If validation passes, generate token and return response
-        return this.authService.login(user);
-    }
-
 } 

@@ -11,7 +11,6 @@ import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
 import { ResourceProtectionGuard } from './guards/resource-protection.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalAuthenticationStrategy } from './strategies/local-authentication.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
 import { ResourceProtectionStrategy } from './strategies/resource-protection.strategy';
 
 @Module({
@@ -32,7 +31,6 @@ import { ResourceProtectionStrategy } from './strategies/resource-protection.str
     providers: [
         AuthService,
         JwtStrategy,
-        LocalStrategy,
 
         ResourceProtectionStrategy,
         LocalAuthenticationStrategy,

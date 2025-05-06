@@ -31,43 +31,6 @@ export class AuthService {
         private configService: ConfigService<IConfiguration>
     ) { }
 
-    async validateUser(email: string, password: string): Promise<any> {
-        try {
-            // Find user by email
-            console.log('Validating user with email:', email);
-            const user = await this.usersService.findByEmail(email);
-
-            if (!user) {
-                console.log('No user found with email:', email);
-                throw new BadRequestException('Invalid email or password.');
-            }
-
-            console.log('User found:', {
-                email: user.email,
-                hasHash: !!user.hash
-            });
-
-            // Use the schema's comparePassword method
-            const isMatch = await user.comparePassword(password);
-            console.log('Password match result:', isMatch);
-
-            // Return user without sensitive data if password matches
-            if (isMatch) {
-                console.log('Password matched successfully');
-                const userObject = user.toObject();
-                delete userObject.hash;
-                delete userObject.salt;
-                delete userObject.password;
-                return userObject;
-            }
-
-            console.log('Password did not match');
-            throw new BadRequestException('Invalid email or password.');
-        } catch (error) {
-            console.error('Login error:', error);
-            throw error;
-        }
-    }
     private async sanitizeUser(user: UserDocument): Promise<SanitizedUser> {
         const userObject = user.toObject<UserWithoutComparePassword>();
         const { hash, salt, password, ...userObjectWithoutSensitiveData } = userObject;
@@ -129,13 +92,6 @@ export class AuthService {
         };
     }
 
-    /**
-     * Validate the received JWT token and return the payload
-     */
-    async validateToken_v1(token: string) {
-        const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token);
-        return payload;
-    }
 
     async validateRefreshToken(userId: string, token: string): Promise<User> {
 
@@ -153,27 +109,9 @@ export class AuthService {
         return user;
     }
 
-    /**
-     * Login user and return the token
-     */
-    async login_v1(loginDto: LoginDto) {
-
-        // Validate user and get user data
-        const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
-
-        // Tokenize user
-        const { accessToken, refreshToken } = await this.generateTokens(sanitizedUser);
-
-        return {
-            accessToken,
-            refreshToken,
-            userId: sanitizedUser._id,
-            username: sanitizedUser.email,
-        };
-    }
 
     // V2: Passport Local Strategy validation
-    async validateUser_v2(email: string, password: string): Promise<any> {
+    async validateUser(email: string, password: string): Promise<any> {
 
         // You can customize this logic for v2 as needed
         const user = await this.usersService.findByEmail(email);
@@ -191,9 +129,7 @@ export class AuthService {
     /**
      * Receives the validated user and transforms it into a token
      */
-    async login_v2(user: SanitizedUser) {
-        // REVIEW: validation of user and getting a sanitized user object logic is handled in the local-v2.strategy.ts
-        // const sanitizedUser = await this.validateAndGetUserData_v1(loginDto);
+    async login(user: SanitizedUser) {
 
         // Tokenize user
         const { accessToken, refreshToken } = await this.generateTokens(user);
@@ -213,14 +149,14 @@ export class AuthService {
         };
     }
 
-    async logout_v2(user: SanitizedUser) {
+    async logout(user: SanitizedUser) {
         // Revoke the refresh token
         await this.usersService.updateUser(user._id, { refreshTokenHash: null });
         return { message: 'Successfully signed out' };
     }
 
 
-    async refreshToken_v2(user: UserDocument) {
+    async refreshToken(user: UserDocument) {
 
         const sanitizedUser = await this.sanitizeUser(user);
 
@@ -241,76 +177,6 @@ export class AuthService {
         };
     }
 
-
-    async login(user: any) {
-        // Create JWT payload
-        const payload = {
-            id: user._id,
-            collection: 'users',
-            email: user.email,
-            user_type: user.user_type
-        };
-
-        // Generate token with 7-day expiry
-        const token = this.jwtService.sign(payload);
-
-        // Calculate expiry timestamp for response
-        const expiry = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7 days
-
-        // Get creator info if available
-        let createdBy = null;
-        if (user.createdBy) {
-            try {
-                const creator = await this.usersService.findById(user.createdBy);
-                if (creator) {
-                    createdBy = {
-                        id: creator._id,
-                        first_name: creator.first_name,
-                        last_name: creator.last_name,
-                        phone_number: creator.phone_number,
-                        user_type: creator.user_type,
-                        created_at: creator.created_at,
-                        _verified: creator._verified,
-                        email: creator.email,
-                        educational_backgrounds: creator.educational_backgrounds || [],
-                        national_id_card: creator.national_id_card || {},
-                        isProfileCompleted: creator.isProfileCompleted || false,
-                        current_stage: creator.current_stage || 0,
-                        verifyToken: creator.verifyToken || '',
-                        loginAttempts: creator.loginAttempts || 0
-                    };
-                }
-            } catch (error) {
-                console.error('Error fetching creator info:', error);
-            }
-        }
-
-        // Format response to match required structure
-        return {
-            exp: expiry,
-            message: "Auth Passed",
-            token,
-            user: {
-                id: user._id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                user_type: user.user_type,
-                educational_backgrounds: user.educational_backgrounds || [],
-                national_id_card: user.national_id_card || {},
-                created_at: user.createdAt || user.created_at,
-                _verified: user._verified || false,
-                isProfileCompleted: user.isProfileCompleted || false,
-                createdBy,
-                campus_id: user?.campus_id,
-                email: user.email,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                current_stage: user.current_stage || 0,
-                verifyToken: user.verifyToken || '',
-                loginAttempts: user.loginAttempts || 0
-            }
-        };
-    }
 
     async forgotPassword(email: string) {
         const user = await this.usersService.findByEmail(email);

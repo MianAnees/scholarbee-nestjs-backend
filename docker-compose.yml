@@ -10,7 +10,7 @@ services:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     ports:
-      - "3000:3000"
+      - "3000:3000" 
     command: npm run start:dev
     environment:
       - NODE_ENV=development
@@ -19,6 +19,7 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION}
       - FRONTEND_URL=${FRONTEND_URL}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - PORT=3000
     networks:
       - scholarbee-network
     restart: unless-stopped

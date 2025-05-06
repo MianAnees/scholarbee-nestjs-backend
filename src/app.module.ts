@@ -32,7 +32,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: '.env.v2',
+      envFilePath: '.env',
       isGlobal: true,
       expandVariables: true, // enables variable-expansion in .env files i.e. ${env1}+${env2}
       load: [configuration], // the return of this will be directly accessible from the configService
@@ -46,7 +46,9 @@ import { AnalyticsModule } from './analytics/analytics.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       // ? Even though configService has access to both the configuration and the env-vars, as a best practice, we should only access the values from the configuration object instead of the env-vars.
-      useFactory: (configService: ConfigService<IConfiguration & EnvValidationSchema>) => ({
+      useFactory: (
+        configService: ConfigService<IConfiguration & EnvValidationSchema>,
+      ) => ({
         uri: configService.get('database.uri', { infer: true })!,
       }),
     }),

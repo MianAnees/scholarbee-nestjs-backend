@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';
 import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
@@ -28,7 +28,7 @@ export class AdmissionProgramsController {
     private readonly admissionProgramsService: AdmissionProgramsService,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Post()
   create(
     @Body() createAdmissionProgramDto: CreateAdmissionProgramDto,
@@ -36,7 +36,7 @@ export class AdmissionProgramsController {
   ) {
     return this.admissionProgramsService.create(
       createAdmissionProgramDto,
-      req.user.userId,
+      req.user.sub,
     );
   }
 
@@ -53,7 +53,7 @@ export class AdmissionProgramsController {
     return this.admissionProgramsService.findOne(id, populate);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -62,34 +62,28 @@ export class AdmissionProgramsController {
     return this.admissionProgramsService.update(id, updateAdmissionProgramDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.admissionProgramsService.remove(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Post(':id/favorites')
   addToFavorites(@Param('id') id: string, @Req() req) {
-    return this.admissionProgramsService.addToFavorites(id, req.user.userId);
+    return this.admissionProgramsService.addToFavorites(id, req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Delete(':id/favorites')
   removeFromFavorites(@Param('id') id: string, @Req() req) {
-    return this.admissionProgramsService.removeFromFavorites(
-      id,
-      req.user.userId,
-    );
+    return this.admissionProgramsService.removeFromFavorites(id, req.user.sub);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ResourceProtectionGuard)
   @Get('user/favorites')
   findFavorites(@Req() req, @Query() queryDto: QueryAdmissionProgramDto) {
-    return this.admissionProgramsService.findFavorites(
-      req.user.userId,
-      queryDto,
-    );
+    return this.admissionProgramsService.findFavorites(req.user.sub, queryDto);
   }
 
   @Get('with-filters')

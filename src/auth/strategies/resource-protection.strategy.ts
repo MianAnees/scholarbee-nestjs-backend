@@ -1,11 +1,10 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IConfiguration } from 'src/config/configuration';
-import { AuthStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AccessTokenPayload } from 'src/auth/auth.service';
-import { JsonWebTokenError, TokenExpiredError } from '@nestjs/jwt';
+import { AuthStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { IConfiguration } from 'src/config/configuration';
 
 @Injectable()
 export class ResourceProtectionStrategy extends PassportStrategy(
@@ -25,4 +24,4 @@ export class ResourceProtectionStrategy extends PassportStrategy(
     // Customize the payload for v2 as needed
     return payload;
   }
-} 
+}

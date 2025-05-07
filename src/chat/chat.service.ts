@@ -8,6 +8,9 @@ import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { ConfigService } from '@nestjs/config';
+import { IConfiguration } from 'src/config/configuration';
+import { EnvValidationSchema } from 'src/config';
 
 @Injectable()
 export class ChatService {
@@ -16,6 +19,7 @@ export class ChatService {
         @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
+        private readonly configService: ConfigService<IConfiguration & EnvValidationSchema>
     ) { }
 
     async createConversation(createConversationDto: CreateConversationDto, userId: string): Promise<Conversation> {
@@ -177,7 +181,7 @@ export class ChatService {
     private isSessionValid(lastMessage: MessageDocument, now: Date): boolean {
         if (!lastMessage) return false;
         const diffMs = now.getTime() - new Date(lastMessage.created_at).getTime();
-        return diffMs < 60 * 60 * 1000; // 1 hour
+        return diffMs < this.configService.get('app.chatSessionTimeout', { infer: true });
     }
 
     // Helper: Get last message in conversation

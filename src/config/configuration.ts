@@ -42,6 +42,7 @@ const configuration = () => {
             port: parsedEnv.PORT || 3010,
             nodeEnv: parsedEnv.NODE_ENV,
             payloadSecret: parsedEnv.PAYLOAD_SECRET,
+            chatSessionTimeout: parsedEnv.CHAT_SESSION_TIMEOUT
         },
         s3: {
             endpoint: parsedEnv.S3_ENDPOINT,

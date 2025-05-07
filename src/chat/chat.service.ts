@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, now, Types } from 'mongoose';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
@@ -172,6 +172,58 @@ export class ChatService {
 
         return { message: 'Conversation deleted successfully' };
     }
+
+    // Helper: Check if session is valid (last message from student and <1hr old)
+    private isSessionValid(lastMessage: MessageDocument, now: Date): boolean {
+        if (!lastMessage) return false;
+        const diffMs = now.getTime() - new Date(lastMessage.created_at).getTime();
+        return diffMs < 60 * 60 * 1000; // 1 hour
+    }
+
+    // Helper: Get last message in conversation
+    private async getLastMessage(conversationId: Types.ObjectId): Promise<MessageDocument | null> {
+        return this.messageModel.findOne({ conversation_id: conversationId })
+            .sort({ created_at: -1 })
+            .exec();
+    }
+
+    // Helper: Get last student message in conversation (optionally for a session)
+    private async getLastStudentMessage(conversationId: Types.ObjectId, sessionId?: number): Promise<MessageDocument | null> {
+        const query: any = { conversation_id: conversationId, sender_type: 'user' };
+        if (sessionId !== undefined) query.sessionId = sessionId;
+        return this.messageModel.findOne(query).sort({ created_at: -1 }).exec();
+    }
+
+    // Helper: Get first student message in session
+    private async getFirstStudentMessageInSession(conversationId: Types.ObjectId, sessionId: number): Promise<MessageDocument | null> {
+        return this.messageModel.findOne({ conversation_id: conversationId, sender_type: 'user', sessionId })
+            .sort({ created_at: 1 })
+            .exec();
+    }
+
+    // Helper: Is this the first campus reply in the session?
+    private async isFirstCampusReplyInSession(conversationId: Types.ObjectId, sessionId: number): Promise<boolean> {
+        const count = await this.messageModel.countDocuments({ conversation_id: conversationId, sender_type: 'campus', sessionId });
+        return count === 0;
+    }
+
+    // Helper: Get current sessionId (max sessionId in messages for this conversation)
+    // TODO: is the sessionId a suffix extension of the conversationId? If not, should we make it a suffix extension of the conversationId? i.e. conversationId-sessionId => conversationId-1, conversationId-2, etc.
+    private async getCurrentSessionId(conversationId: Types.ObjectId): Promise<number | null> {
+    // REVIEW: could also be received through the sessionId of the last message of the conversation
+        const lastMsg = await this.messageModel.findOne({ conversation_id: conversationId })
+            .sort({ sessionId: -1 })
+            .exec();
+        return lastMsg?.sessionId ?? null;
+    }
+
+
+    // Helper: Calculate response time in ms
+    private calculateResponseTime(start: Date, end: Date): number {
+        return end.getTime() - start.getTime();
+    }
+
+
     /**
      * * How to "check for session validity" (a session is always started from a student message)
      * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
@@ -205,6 +257,7 @@ export class ChatService {
      * ? isExistingSessionInvalid:
      *   ? isSentByStudent, 
      *       -   update sessionsCount
+     *       -   update sessionId
      *   ? isSentByCampus,
      *       -   do nothing;
      * 
@@ -220,34 +273,85 @@ export class ChatService {
             if (!Types.ObjectId.isValid(userId)) {
                 throw new BadRequestException(`Invalid user ID: ${userId}`);
             }
-
             if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
                 throw new BadRequestException(`Invalid conversation ID: ${createMessageDto.conversation_id}`);
             }
-
-            // Find the conversation
-            const conversation = await this.conversationModel.findById(
-                new Types.ObjectId(createMessageDto.conversation_id)
-            );
-
-            if (!conversation) {
+            const conversationId = new Types.ObjectId(createMessageDto.conversation_id);
+            const currentConversation = await this.conversationModel.findById(conversationId);
+            if (!currentConversation) {
                 throw new NotFoundException(`Conversation with ID ${createMessageDto.conversation_id} not found`);
             }
 
-            // Determine the correct sender_id based on sender_type
-            let senderId: Types.ObjectId;
 
-            if (senderType === 'user') {
-                // For user messages, sender_id is the user's ID
-                senderId = new Types.ObjectId(userId);
-            } else {
-                // For campus messages, sender_id should be the campus_id from the conversation
-                senderId = conversation.campus_id;
+
+            // Get current time
+            const curMsgTime = new Date();
+            // Get last message in this conversation
+            const lastMessage = await this.getLastMessage(conversationId);
+
+            // Check session validity
+            const sessionValid = this.isSessionValid(lastMessage, curMsgTime);
+            const isSentByUser = senderType === 'user';
+            let isNewSession = sessionValid && isSentByUser;
+
+
+            let sessionId = await this.getCurrentSessionId(conversationId);
+
+
+            if (sessionValid && senderType === 'campus') {
+                // Possibly a campus reply to a student message in the current session
+
+                const isFirstCampusReplyInSession = await this.isFirstCampusReplyInSession(conversationId, sessionId);
+                if (isFirstCampusReplyInSession) {
+
+                    // Find first student message in this session
+                    const firstStudentMsg = await this.getFirstStudentMessageInSession(conversationId, sessionId);
+                    if (!firstStudentMsg) throw new NotFoundException('First student message not found in this session');
+
+
+                    // update average response time (of the current session)
+                    const currentResponseTime = this.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
+
+
+                    // Update avgResponseTime
+                    let newAvgResponseTime = currentResponseTime; // default value is the current response time
+
+                    // check if avgResponseTime and sessionsCount exist in the conversation already
+                    const existingAvgResponseTime = currentConversation?.avgResponseTime;
+                    const existingSessionsCount = currentConversation?.sessionsCount;
+                    const isPrevAvgExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
+
+                    // if avgResponseTime and sessionsCount exist, calculate the new avgResponseTime
+                    if (isPrevAvgExists) {
+                        const totalResponseTime = existingAvgResponseTime * existingSessionsCount;
+
+                        const newTotalResponseTime = totalResponseTime + currentResponseTime;
+                        newAvgResponseTime = newTotalResponseTime / existingSessionsCount;
+                    }
+                }
             }
 
+            else if (!sessionValid && senderType === 'user') {
+            // New session
+
+                // update sessionsCount
+                sessionId += 1;
+                // Update sessionsCount
+                // TODO: Defer the updates by keeping a record object stored globally and update it at the end of the service
+                await this.conversationModel.findByIdAndUpdate(conversationId, { $inc: { sessionsCount: 1 } });
+            }
+
+
+            // Determine the correct sender_id based on sender_type
+            let senderId: Types.ObjectId;
+            if (senderType === 'user') {
+                senderId = new Types.ObjectId(userId);
+            } else {
+                senderId = currentConversation.campus_id;
+            }
             // Create message object
             const messageData: any = {
-                conversation_id: new Types.ObjectId(createMessageDto.conversation_id),
+                conversation_id: conversationId,
                 sender_id: senderId,
                 sender_type: senderType,
                 sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
@@ -255,36 +359,26 @@ export class ChatService {
                 is_read_by_user: senderType === 'user',
                 is_read_by_campus: senderType === 'campus',
                 attachments: createMessageDto.attachments || [],
-                created_at: new Date()
+                created_at: curMsgTime,
+                sessionId,
             };
-
-
-
-
-
-            // If this is a campus message, store the user who replied
             if (senderType === 'campus') {
                 messageData.replied_by_user_id = new Types.ObjectId(userId);
             }
-
             // Create new message
             const newMessage = new this.messageModel(messageData);
-
-            // Save the message
             const savedMessage = await newMessage.save();
-
             // Update conversation with last message info
             await this.conversationModel.findByIdAndUpdate(
-                createMessageDto.conversation_id,
+                conversationId,
                 {
                     last_message: createMessageDto.content,
-                    last_message_time: new Date(),
+                    last_message_time: curMsgTime,
                     last_message_sender: senderType,
                     is_read_by_user: senderType === 'user',
                     is_read_by_campus: senderType === 'campus'
                 }
             );
-
             return savedMessage;
         } catch (error) {
             if (error instanceof BadRequestException || error instanceof NotFoundException) {

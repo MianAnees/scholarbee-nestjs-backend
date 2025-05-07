@@ -172,7 +172,48 @@ export class ChatService {
 
         return { message: 'Conversation deleted successfully' };
     }
-
+    /**
+     * * How to "check for session validity" (a session is always started from a student message)
+     * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
+     * 
+     * * How to "update average response time" 
+     * get the existing sessionsCount 
+     * TODO: calculate the current session's responseTime
+     * TODO: check if responseTime exists in the conversation already
+     * ? isResponseTimeExists,
+     *      calculate the avgResponseTime ((prevAvg * prevCount + currentResponseTime) / newCount) and update field
+     * ? isResponseTimeNotExists,
+     *   -   store the current session's response as averageResponseTime
+     * 
+     * * How to "calculate the current session's responseTime"
+     * get the first student message in this conversation
+     * TODO: timeDiff(currentMessageTime - timeOfFirstStudentMessageInThisSession)
+     * 
+     * 
+     * * On each new message
+     * TODO: get sender type of the message => senderType
+     * TODO: check for session validity
+     * ? isExistingSessionValid:
+     *   ? isSentByStudent (senderType === 'user'), 
+     *       1.2a.1 do nothing;
+     *   ? isSentByCampus,
+     *       TODO: check if this is the first message from campus in this session
+     *       ? isCurrentMessageTheFirstCampusMessageInSession,
+     *           TODO: update average response time
+     *       ? isCurrentMessageNotTheFirstCampusMessageInSession,
+     *       -   do nothing;
+     * ? isExistingSessionInvalid:
+     *   ? isSentByStudent, 
+     *       -   update sessionsCount
+     *   ? isSentByCampus,
+     *       -   do nothing;
+     * 
+     * 
+     * @param createMessageDto 
+     * @param userId 
+     * @param senderType 
+     * @returns 
+     */
     async createMessage(createMessageDto: CreateMessageDto, userId: string, senderType: 'user' | 'campus'): Promise<Message> {
         try {
             // Validate IDs
@@ -216,6 +257,10 @@ export class ChatService {
                 attachments: createMessageDto.attachments || [],
                 created_at: new Date()
             };
+
+
+
+
 
             // If this is a campus message, store the user who replied
             if (senderType === 'campus') {

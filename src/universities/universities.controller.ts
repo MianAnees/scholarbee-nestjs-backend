@@ -11,7 +11,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guard';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { QueryUniversityDto } from './dto/query-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
@@ -19,48 +19,50 @@ import { UniversitiesService } from './universities.service';
 
 @Controller('universities')
 export class UniversitiesController {
-    constructor(
-        private readonly universitiesService: UniversitiesService,
-    ) { }
+  constructor(private readonly universitiesService: UniversitiesService) {}
 
-    @UseGuards(JwtAuthGuard)
-    @Post()
-    create(@Body() createUniversityDto: CreateUniversityDto, @Req() req: Request) {
-        const userId = req.user['sub'];
-        return this.universitiesService.create(createUniversityDto, userId);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Post()
+  create(
+    @Body() createUniversityDto: CreateUniversityDto,
+    @Req() req: Request,
+  ) {
+    const userId = req.user['sub'];
+    return this.universitiesService.create(createUniversityDto, userId);
+  }
 
-    @Get()
-    async findAll(@Query() queryDto: QueryUniversityDto) {
-        const result = await this.universitiesService.findAll(queryDto);
+  @Get()
+  async findAll(@Query() queryDto: QueryUniversityDto) {
+    const result = await this.universitiesService.findAll(queryDto);
 
-        return result;
-    }
+    return result;
+  }
 
-    @Get('open-programs')
-    async findAllWithOpenPrograms(@Query() queryDto: QueryUniversityDto) {
-        const result = await this.universitiesService.findAllWithOpenPrograms(queryDto);
+  @Get('open-programs')
+  async findAllWithOpenPrograms(@Query() queryDto: QueryUniversityDto) {
+    const result =
+      await this.universitiesService.findAllWithOpenPrograms(queryDto);
 
-        return result;
-    }
+    return result;
+  }
 
-    @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.universitiesService.findOne(id);
-    }
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.universitiesService.findOne(id);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Patch(':id')
-    update(
-        @Param('id') id: string,
-        @Body() updateUniversityDto: UpdateUniversityDto,
-    ) {
-        return this.universitiesService.update(id, updateUniversityDto);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateUniversityDto: UpdateUniversityDto,
+  ) {
+    return this.universitiesService.update(id, updateUniversityDto);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.universitiesService.remove(id);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.universitiesService.remove(id);
+  }
 } 

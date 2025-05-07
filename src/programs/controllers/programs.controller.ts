@@ -16,7 +16,7 @@ import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-his
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
 import { CreateProgramDto } from '../dto/create-program.dto';
@@ -31,7 +31,7 @@ export class ProgramsController {
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(ResourceProtectionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
   create(@Body() createProgramDto: CreateProgramDto) {
@@ -98,14 +98,14 @@ export class ProgramsController {
     return result;
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(ResourceProtectionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProgramDto: UpdateProgramDto) {
     return this.programsService.update(id, updateProgramDto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(ResourceProtectionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string) {

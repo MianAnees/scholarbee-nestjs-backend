@@ -9,37 +9,34 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
 import { ResourceProtectionGuard } from './guards/resource-protection.guard';
-import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalAuthenticationStrategy } from './strategies/local-authentication.strategy';
 import { ResourceProtectionStrategy } from './strategies/resource-protection.strategy';
 
 @Module({
-    imports: [
-        UsersModule,
-        PassportModule,
-        JwtModule.registerAsync({
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService<IConfiguration>) => ({
-                secret: configService.get('jwt.loginSecret', { infer: true }),
-                signOptions: {
-                    expiresIn:
-                        `${configService.get('jwt.loginExpiration', { infer: true })}s`
-                }, // Access token expires in 15 minutes
-            }),
-        })
-    ],
-    providers: [
-        AuthService,
-        JwtStrategy,
+  imports: [
+    UsersModule,
+    PassportModule,
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<IConfiguration>) => ({
+        secret: configService.get('jwt.loginSecret', { infer: true }),
+        signOptions: {
+          expiresIn: `${configService.get('jwt.loginExpiration', { infer: true })}s`,
+        }, // Access token expires in 15 minutes
+      }),
+    }),
+  ],
+  providers: [
+    AuthService,
 
-        ResourceProtectionStrategy,
-        LocalAuthenticationStrategy,
-        RefreshAuthenticationStrategy,
+    ResourceProtectionStrategy,
+    LocalAuthenticationStrategy,
+    RefreshAuthenticationStrategy,
 
-        LocalAuthenticationGuard,
-        ResourceProtectionGuard
-    ],
-    controllers: [AuthController],
-    exports: [AuthService],
+    LocalAuthenticationGuard,
+    ResourceProtectionGuard,
+  ],
+  controllers: [AuthController],
+  exports: [AuthService],
 })
-export class AuthModule { } 
+export class AuthModule {} 

@@ -1,17 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, now, Types, UpdateQuery } from 'mongoose';
-import { Conversation, ConversationDocument } from './schemas/conversation.schema';
-import { Message, MessageDocument } from './schemas/message.schema';
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { Model, Types, UpdateQuery } from 'mongoose';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
+import { User, UserDocument } from '../users/schemas/user.schema';
+import { ChatSessionService } from './chat-session.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
-import { ConfigService } from '@nestjs/config';
-import { IConfiguration } from 'src/config/configuration';
-import { EnvValidationSchema } from 'src/config';
-import { v4 as uuidv4 } from 'uuid';
+import { Conversation, ConversationDocument } from './schemas/conversation.schema';
+import { Message, MessageDocument } from './schemas/message.schema';
 
 @Injectable()
 export class ChatService {
@@ -20,7 +17,7 @@ export class ChatService {
         @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
-        private readonly configService: ConfigService<IConfiguration & EnvValidationSchema>
+        private readonly chatSessionService: ChatSessionService
     ) { }
 
     async createConversation(createConversationDto: CreateConversationDto, userId: string): Promise<Conversation> {
@@ -178,46 +175,6 @@ export class ChatService {
         return { message: 'Conversation deleted successfully' };
     }
 
-    // Helper: Check if session is valid (last message from student and <1hr old)
-    private isSessionValid(now: Date, lastMessageTime?: Date): boolean {
-        if (!lastMessageTime) return false;
-        const diffMs = now.getTime() - new Date(lastMessageTime).getTime();
-        const timeout = this.configService.get('app.chatSessionTimeout', { infer: true });
-
-        return diffMs < timeout;
-    }
-
-    // Helper: Get last message in conversation which belongs to a session
-    private async getLatestValidSessionMessage(conversationId: Types.ObjectId): Promise<MessageDocument | null> {
-        return this.messageModel.findOne({
-            conversation_id: conversationId,
-            // sessionId should be truthy
-            sessionId: { $exists: true, $ne: null }
-        })
-            .sort({ created_at: -1 })
-            .exec();
-    }
-
-
-    // Helper: Get first student message in session
-    private async getFirstStudentMessageInSession(conversationId: Types.ObjectId, sessionId: string): Promise<MessageDocument | null> {
-        return this.messageModel.findOne({ conversation_id: conversationId, sender_type: 'user', sessionId })
-            .sort({ created_at: 1 })
-            .exec();
-    }
-
-    // Helper: Is this the first campus reply in the session?
-    private async isFirstCampusReplyInSession(conversationId: Types.ObjectId, sessionId: string): Promise<boolean> {
-        const count = await this.messageModel.countDocuments({ conversation_id: conversationId, sender_type: 'campus', sessionId });
-        return count === 0;
-    }
-
-    // Helper: Calculate response time in ms
-    private calculateResponseTime(start: Date, end: Date): number {
-        return end.getTime() - start.getTime();
-    }
-
-
     /**
      * * How to "check for session validity" (a session is always started from a student message)
      * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
@@ -297,10 +254,10 @@ export class ChatService {
             }
 
             // Get last message in this conversation
-            const latestValidSessionMessage = await this.getLatestValidSessionMessage(conversationId);
+            const latestValidSessionMessage = await this.chatSessionService.getLatestValidSessionMessage(conversationId);
 
             // Check session validity
-            const sessionValid = this.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
+            const sessionValid = this.chatSessionService.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
             console.log(` sessionValid:`, {
                 sessionValid,
                 senderType,
@@ -327,21 +284,20 @@ export class ChatService {
             };
 
 
-
             if (sessionValid && senderType === 'campus') {
                 // Possibly a campus reply to a student message in the current session
 
-                const isFirstCampusReplyInSession = await this.isFirstCampusReplyInSession(conversationId, latestSessionId);
+                const isFirstCampusReplyInSession = await this.chatSessionService.isFirstCampusReplyInSession(conversationId, latestSessionId);
 
                 if (isFirstCampusReplyInSession) {
 
                     // Find first student message in this session
-                    const firstStudentMsg = await this.getFirstStudentMessageInSession(conversationId, latestSessionId);
+                    const firstStudentMsg = await this.chatSessionService.getFirstStudentMessageInSession(conversationId, latestSessionId);
                     if (!firstStudentMsg) throw new NotFoundException('First student message not found in this session');
 
 
                     // update average response time (of the current session)
-                    const currentResponseTime = this.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
+                    const currentResponseTime = this.chatSessionService.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
 
                     // check if avgResponseTime and sessionsCount exist in the conversation already
                     const existingAvgResponseTime = currentConversation?.avgResponseTime;
@@ -374,7 +330,7 @@ export class ChatService {
 
             else if (!sessionValid && senderType === 'user') {
                 // New session
-                const newSessionId = uuidv4();
+                const newSessionId = this.chatSessionService.generateSessionId(createMessageDto.conversation_id);
                 messageData = {
                     ...messageData,
                     sessionId: newSessionId

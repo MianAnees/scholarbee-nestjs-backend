@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, now, Types } from 'mongoose';
+import { Model, now, Types, UpdateQuery } from 'mongoose';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
@@ -272,70 +272,13 @@ export class ChatService {
             }
             const conversationId = new Types.ObjectId(createMessageDto.conversation_id);
             const currentConversation = await this.conversationModel.findById(conversationId);
+            console.log(` currentConversation:`, currentConversation)
             if (!currentConversation) {
                 throw new NotFoundException(`Conversation with ID ${createMessageDto.conversation_id} not found`);
             }
 
-
-
             // Get current time
             const curMsgTime = new Date();
-            // Get last message in this conversation
-            const latestValidSessionMessage = await this.getLatestValidSessionMessage(conversationId);
-
-            // Check session validity
-            const sessionValid = this.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
-            console.log(` sessionValid:`, {
-                sessionValid,
-                senderType,
-            })
-
-
-            // Default sessionId is the sessionId of the latest valid session message
-            let sessionId = latestValidSessionMessage?.sessionId;
-
-
-            if (sessionValid && senderType === 'campus') {
-                // Possibly a campus reply to a student message in the current session
-
-                const isFirstCampusReplyInSession = await this.isFirstCampusReplyInSession(conversationId, sessionId);
-                if (isFirstCampusReplyInSession) {
-
-                    // Find first student message in this session
-                    const firstStudentMsg = await this.getFirstStudentMessageInSession(conversationId, sessionId);
-                    if (!firstStudentMsg) throw new NotFoundException('First student message not found in this session');
-
-
-                    // update average response time (of the current session)
-                    const currentResponseTime = this.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
-
-
-                    // Update avgResponseTime
-                    let newAvgResponseTime = currentResponseTime; // default value is the current response time
-
-                    // check if avgResponseTime and sessionsCount exist in the conversation already
-                    const existingAvgResponseTime = currentConversation?.avgResponseTime;
-                    const existingSessionsCount = currentConversation?.sessionsCount;
-                    const isPrevAvgAndSessionCountExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
-
-                    // if avgResponseTime and sessionsCount exist, calculate the new avgResponseTime
-                    if (isPrevAvgAndSessionCountExists) {
-                        const totalResponseTime = existingAvgResponseTime * existingSessionsCount;
-
-                        const newTotalResponseTime = totalResponseTime + currentResponseTime;
-                        newAvgResponseTime = newTotalResponseTime / existingSessionsCount;
-                    }
-                }
-            }
-
-            else if (!sessionValid && senderType === 'user') {
-                // New session
-                sessionId = uuidv4();
-
-                // TODO: Defer the updates by keeping a record object stored globally and update it at the end of the service
-                await this.conversationModel.findByIdAndUpdate(conversationId, { $inc: { sessionsCount: 1 } });
-            }
-
 
             // Determine the correct sender_id based on sender_type
             let senderId: Types.ObjectId;
@@ -344,8 +287,33 @@ export class ChatService {
             } else {
                 senderId = currentConversation.campus_id;
             }
+
+            let conversationDocUpdate: UpdateQuery<ConversationDocument> = {
+                last_message: createMessageDto.content,
+                last_message_time: curMsgTime,
+                last_message_sender: senderType,
+                is_read_by_user: senderType === 'user',
+                is_read_by_campus: senderType === 'campus',
+            }
+
+            // Get last message in this conversation
+            const latestValidSessionMessage = await this.getLatestValidSessionMessage(conversationId);
+
+            // Check session validity
+            const sessionValid = this.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
+            console.log(` sessionValid:`, {
+                sessionValid,
+                senderType,
+                latestValidSessionMessage,
+                curMsgTime,
+            })
+
+
+            // Default sessionId is the sessionId of the latest valid session message
+            let latestSessionId = latestValidSessionMessage?.sessionId;
+
             // Create message object
-            const messageData: any = {
+            let messageData: Partial<MessageDocument> = {
                 conversation_id: conversationId,
                 sender_id: senderId,
                 sender_type: senderType,
@@ -355,8 +323,72 @@ export class ChatService {
                 is_read_by_campus: senderType === 'campus',
                 attachments: createMessageDto.attachments || [],
                 created_at: curMsgTime,
-                sessionId,
+                sessionId: latestSessionId,
             };
+
+
+
+            if (sessionValid && senderType === 'campus') {
+                // Possibly a campus reply to a student message in the current session
+
+                const isFirstCampusReplyInSession = await this.isFirstCampusReplyInSession(conversationId, latestSessionId);
+
+                if (isFirstCampusReplyInSession) {
+
+                    // Find first student message in this session
+                    const firstStudentMsg = await this.getFirstStudentMessageInSession(conversationId, latestSessionId);
+                    if (!firstStudentMsg) throw new NotFoundException('First student message not found in this session');
+
+
+                    // update average response time (of the current session)
+                    const currentResponseTime = this.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
+
+                    // check if avgResponseTime and sessionsCount exist in the conversation already
+                    const existingAvgResponseTime = currentConversation?.avgResponseTime;
+                    const existingSessionsCount = currentConversation?.sessionsCount;
+                    const isPrevAvgAndSessionCountExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
+
+                    // if prevAvgResponseTime exists, calculate the new avgResponseTime by taking into account the previous avgResponseTime and the current response time (and the number of sessions)
+                    if (isPrevAvgAndSessionCountExists) {
+                        // ? the session for which the avgResponseTime is being calculated has already started but that didn't take part in the calculation of the existing avgResponseTime. Therefore, we need to subtract 1 from the existing sessionsCount. `existingSessionsCount` is the total number of sessions including the current one.
+                        const sessionsCountBeforeCurrentSession = existingSessionsCount - 1;
+
+                        const existingTotalResponseTime = existingAvgResponseTime * sessionsCountBeforeCurrentSession;
+                        const newTotalResponseTime = existingTotalResponseTime + currentResponseTime;
+                        const newAvgResponseTime = newTotalResponseTime / existingSessionsCount;
+
+                        conversationDocUpdate = {
+                            ...conversationDocUpdate,
+                            avgResponseTime: newAvgResponseTime
+                        };
+                    }
+                    // if prevAvgResponseTime doesn't exist, store the current response time as averageResponseTime
+                    else {
+                        conversationDocUpdate = {
+                            ...conversationDocUpdate,
+                            avgResponseTime: currentResponseTime
+                        }
+                    }
+                }
+            }
+
+            else if (!sessionValid && senderType === 'user') {
+                // New session
+                const newSessionId = uuidv4();
+                messageData = {
+                    ...messageData,
+                    sessionId: newSessionId
+                }
+
+                // TODO: Defer the updates by keeping a record object stored globally and update it at the end of the service
+                conversationDocUpdate = {
+                    ...conversationDocUpdate,
+                    $inc: { sessionsCount: 1 }
+                };
+            }
+
+
+
             if (senderType === 'campus') {
                 messageData.replied_by_user_id = new Types.ObjectId(userId);
             }
@@ -366,13 +398,7 @@ export class ChatService {
             // Update conversation with last message info
             await this.conversationModel.findByIdAndUpdate(
                 conversationId,
-                {
-                    last_message: createMessageDto.content,
-                    last_message_time: curMsgTime,
-                    last_message_sender: senderType,
-                    is_read_by_user: senderType === 'user',
-                    is_read_by_campus: senderType === 'campus'
-                }
+                conversationDocUpdate
             );
             return savedMessage;
         } catch (error) {

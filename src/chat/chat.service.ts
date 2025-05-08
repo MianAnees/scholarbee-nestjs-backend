@@ -117,6 +117,40 @@ export class ChatService {
             .exec();
     }
 
+    async findAllConversationsPerEachCampus() {
+        return this.conversationModel.aggregate([
+            // Groups conversations by campus_id and counts them.
+            {
+                $group: {
+                    _id: '$campus_id',
+                    conversationCount: { $sum: 1 }
+                }
+            },
+            // Joins the campuses collection to get the campus name.
+            {
+                $lookup: {
+                    from: 'campuses',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'campus'
+                }
+            },
+            // Unwinds the campus object. (means that the campus object is flattened)
+            {
+                $unwind: '$campus'
+            },
+            // Projects the fields to be returned. (means that the fields that are not mentioned in the project will not be returned)
+            {
+                $project: {
+                    _id: 0,
+                    campus_id: '$_id',
+                    campusName: '$campus.name',
+                    conversationCount: 1
+                }
+            }
+        ]);
+    }
+
     async findConversation(id: string) {
         const conversation = await this.conversationModel.findById(id)
             .populate('user_id')

@@ -70,6 +70,11 @@ export class ChatController {
     }
   }
 
+  @Get('conversations/campus')
+  findAllConversationsPerEachCampus() {
+    return this.chatService.findAllConversationsPerEachCampus();
+  }
+
   @Get('conversations/campus/:campusId')
   findAllConversationsForCampus(
     @Param('campusId') campusId: string,

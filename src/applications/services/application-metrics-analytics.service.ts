@@ -1,12 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
+import { ConflictException, HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { IsDateString, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { Model, Types } from 'mongoose';
-import { University } from 'src/universities/schemas/university.schema';
-import { UniversityDocument } from 'src/universities/schemas/university.schema';
 import { QueryAnalyticsCommonDto } from 'src/analytics/dto/query-analytics.dto';
 import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
-import { IsEnum, IsString, IsDateString, IsNotEmpty } from 'class-validator';
+import { University, UniversityDocument } from 'src/universities/schemas/university.schema';
+import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 
 export class ApplicationMetricDto {
     @IsString()
@@ -178,9 +177,9 @@ export class ApplicationMetricsAnalyticsService {
                     }
                 }
             );
+
             if (searchResult.hits?.hits?.length > 0) {
-                this.logger.warn(`Duplicate event detected for userId: ${applicationMetric.userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`);
-                return false;
+                throw new ConflictException(`Duplicate event detected for userId: ${applicationMetric.userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`);
             }
 
             const document = {
@@ -193,12 +192,18 @@ export class ApplicationMetricsAnalyticsService {
                 undefined, // Let Elasticsearch generate the ID
                 document,
             );
+
         } catch (error) {
+            if (error instanceof HttpException) {
+                this.logger.error(error.message,);
+                throw error;
+            } 
+
             this.logger.error(
                 `Error indexing application metric: ${error.message}`,
                 error.stack,
             );
-            return false;
+            throw new HttpException(`Error indexing application metric: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 } 

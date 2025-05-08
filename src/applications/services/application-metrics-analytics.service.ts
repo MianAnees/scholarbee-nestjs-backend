@@ -6,34 +6,7 @@ import { QueryAnalyticsCommonDto } from 'src/analytics/dto/query-analytics.dto';
 import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
 import { University, UniversityDocument } from 'src/universities/schemas/university.schema';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
-
-export class ApplicationMetricDto {
-    @IsString()
-    @IsNotEmpty()
-    applicationId: string;
-
-    @IsEnum(ApplicationProgressStep)
-    step: ApplicationProgressStep;
-
-    @IsString()
-    @IsNotEmpty()
-    universityId: string;
-
-    @IsString()
-    @IsNotEmpty()
-    programId: string;
-
-    @IsDateString()
-    timestamp: string;
-
-    @IsString()
-    @IsNotEmpty()
-    eventType: string;
-
-    @IsString()
-    @IsNotEmpty()
-    userId: string;
-}
+import { ApplicationMetricDto } from 'src/applications/dto/application-analytics.dto';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -158,7 +131,7 @@ export class ApplicationMetricsAnalyticsService {
      * 3. To track the behavioral patterns
      * 4. To track the user frustration or confusion
      */
-    async indexApplicationMetric(applicationMetric: any): Promise<boolean> {
+    async indexApplicationMetric(applicationMetric: ApplicationMetricDto): Promise<boolean> {
         this.logger.log(`📊 Indexing application metric`, applicationMetric);
         try {
             // Check for duplicate by userId, programId, and step

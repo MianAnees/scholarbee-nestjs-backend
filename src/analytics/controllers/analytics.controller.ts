@@ -1,7 +1,8 @@
 import { Controller, Get, Query, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { ApplicationMetricsAnalyticsService, ApplicationMetricDto } from '../../applications/services/application-metrics-analytics.service';
+import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
+import { ApplicationMetricDto } from 'src/applications/dto/application-analytics.dto';
 
 @Controller('analytics')
 export class AnalyticsController {

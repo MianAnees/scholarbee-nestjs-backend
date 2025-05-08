@@ -1,11 +1,14 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
+import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
+import { ApplicationMetricDto } from 'src/applications/dto/application-analytics.dto';
 
 @Controller('analytics')
 export class AnalyticsController {
   constructor(
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
+    private readonly applicationMetricsAnalyticsService: ApplicationMetricsAnalyticsService,
   ) {}
 
   @Get('search-trends')
@@ -38,5 +41,20 @@ export class AnalyticsController {
     return this.searchHistoryAnalyticsService.getMostSearchedUniversities(
       query,
     );
+  }
+
+  @Get('application-metrics/most-popular-universities')
+  async getMostPopularUniversities(@Query() query: QueryAnalyticsCommonDto) {
+    return this.applicationMetricsAnalyticsService.getMostPopularUniversities(query);
+  }
+
+  @Get('application-metrics/application-progress')
+  async getApplicationProgress() {
+    return this.applicationMetricsAnalyticsService.getApplicationProgress();
+  }
+
+  @Post('application-metrics/index')
+  async indexApplicationMetric(@Body() applicationMetric: ApplicationMetricDto) {
+    return this.applicationMetricsAnalyticsService.indexApplicationMetric(applicationMetric);
   }
 }

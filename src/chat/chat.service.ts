@@ -151,6 +151,10 @@ export class ChatService {
         ]);
     }
 
+    /**
+     * * This function is used to find all conversations per each university
+     * REVIEW: In future, we can add further breakdown of how many conversations per each campus of every university are available
+     */
     async findAllConversationsPerEachUniversity() {
         return this.conversationModel.aggregate([
             // Use the `campus_id` field of the conversation document to add the matching campus document in the `campus` array

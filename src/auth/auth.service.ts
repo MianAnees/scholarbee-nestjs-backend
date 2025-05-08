@@ -9,21 +9,13 @@ import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { BetterOmit } from 'src/utils/typescript.utils';
 import { UsersService } from '../users/users.service';
 import { sendEmail } from '../utils/mail.config';
+import { AccessTokenPayload } from 'src/auth/types/auth.interface';
+import { RefreshTokenPayload } from 'src/auth/types/auth.interface';
 
 type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
     _id: string;
 };
 export type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
-
-export interface AccessTokenPayload extends SanitizedUser {
-  sub: string;
-  userId: string;
-}
-
-export interface RefreshTokenPayload {
-  userId: string;
-  sub: string;
-}
 
 @Injectable()
 export class AuthService {

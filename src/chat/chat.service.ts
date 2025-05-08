@@ -178,15 +178,21 @@ export class ChatService {
     }
 
     // Helper: Check if session is valid (last message from student and <1hr old)
-    private isSessionValid(lastMessage: MessageDocument, now: Date): boolean {
-        if (!lastMessage) return false;
-        const diffMs = now.getTime() - new Date(lastMessage.created_at).getTime();
-        return diffMs < this.configService.get('app.chatSessionTimeout', { infer: true });
+    private isSessionValid(now: Date, lastMessageTime?: Date): boolean {
+        if (!lastMessageTime) return false;
+        const diffMs = now.getTime() - new Date(lastMessageTime).getTime();
+        const timeout = this.configService.get('app.chatSessionTimeout', { infer: true });
+
+        return diffMs < timeout;
     }
 
-    // Helper: Get last message in conversation
-    private async getLastMessage(conversationId: Types.ObjectId): Promise<MessageDocument | null> {
-        return this.messageModel.findOne({ conversation_id: conversationId })
+    // Helper: Get last message in conversation which belongs to a session
+    private async getLatestValidSessionMessage(conversationId: Types.ObjectId): Promise<MessageDocument | null> {
+        return this.messageModel.findOne({
+            conversation_id: conversationId,
+            // sessionId should be truthy
+            sessionId: { $exists: true, $ne: null }
+        })
             .sort({ created_at: -1 })
             .exec();
     }
@@ -291,12 +297,14 @@ export class ChatService {
             // Get current time
             const curMsgTime = new Date();
             // Get last message in this conversation
-            const lastMessage = await this.getLastMessage(conversationId);
+            const latestValidSessionMessage = await this.getLatestValidSessionMessage(conversationId);
 
             // Check session validity
-            const sessionValid = this.isSessionValid(lastMessage, curMsgTime);
-            const isSentByUser = senderType === 'user';
-            let isNewSession = sessionValid && isSentByUser;
+            const sessionValid = this.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
+            console.log(` sessionValid:`, {
+                sessionValid,
+                senderType,
+            })
 
 
             let sessionId = await this.getCurrentSessionId(conversationId);
@@ -323,10 +331,10 @@ export class ChatService {
                     // check if avgResponseTime and sessionsCount exist in the conversation already
                     const existingAvgResponseTime = currentConversation?.avgResponseTime;
                     const existingSessionsCount = currentConversation?.sessionsCount;
-                    const isPrevAvgExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
+                    const isPrevAvgAndSessionCountExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
 
                     // if avgResponseTime and sessionsCount exist, calculate the new avgResponseTime
-                    if (isPrevAvgExists) {
+                    if (isPrevAvgAndSessionCountExists) {
                         const totalResponseTime = existingAvgResponseTime * existingSessionsCount;
 
                         const newTotalResponseTime = totalResponseTime + currentResponseTime;

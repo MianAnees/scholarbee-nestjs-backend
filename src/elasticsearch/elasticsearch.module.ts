@@ -4,20 +4,23 @@ import { ElasticsearchModule as NestElasticsearchModule } from '@nestjs/elastics
 import { ElasticsearchService } from './elasticsearch.service';
 import { ElasticsearchController } from './elasticsearch.controller';
 import { MappingRegistryService } from './services/mapping-registry.service';
+import { IConfiguration } from 'src/config/configuration';
+import { EnvValidationSchema } from 'src/config';
 
 @Module({
   imports: [
     NestElasticsearchModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        node: configService.get('elasticsearch.serverUrl'),
+      useFactory: async (configService: ConfigService<IConfiguration & EnvValidationSchema>) => ({
+        node: configService.get('elasticsearch.serverUrl', { infer: true }),
         auth: {
-          apiKey: configService.get('elasticsearch.apiKey'),
+          username: configService.get('elasticsearch.username', { infer: true }),
+          password: configService.get('elasticsearch.password', { infer: true }),
         },
-        tls: {
+        // tls: {
           // requestCert: true,
           // rejectUnauthorized: false,
-        },
+        // },
         maxRetries: 0, // TODO: Change to 3
         requestTimeout: 10000,
       }),

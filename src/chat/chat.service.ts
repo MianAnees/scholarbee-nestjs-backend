@@ -229,7 +229,6 @@ export class ChatService {
             }
             const conversationId = new Types.ObjectId(createMessageDto.conversation_id);
             const currentConversation = await this.conversationModel.findById(conversationId);
-            console.log(` currentConversation:`, currentConversation)
             if (!currentConversation) {
                 throw new NotFoundException(`Conversation with ID ${createMessageDto.conversation_id} not found`);
             }
@@ -245,29 +244,13 @@ export class ChatService {
                 senderId = currentConversation.campus_id;
             }
 
-            let conversationDocUpdate: UpdateQuery<ConversationDocument> = {
-                last_message: createMessageDto.content,
-                last_message_time: curMsgTime,
-                last_message_sender: senderType,
-                is_read_by_user: senderType === 'user',
-                is_read_by_campus: senderType === 'campus',
-            }
-
-            // Get last message in this conversation
-            const latestValidSessionMessage = await this.chatSessionService.getLatestValidSessionMessage(conversationId);
-
-            // Check session validity
-            const sessionValid = this.chatSessionService.isSessionValid(curMsgTime, latestValidSessionMessage?.created_at);
-            console.log(` sessionValid:`, {
-                sessionValid,
+            // Delegate all session logic to ChatSessionService
+            const sessionResult = await this.chatSessionService.handleSessionOnMessage({
+                conversation: currentConversation,
                 senderType,
-                latestValidSessionMessage,
                 curMsgTime,
-            })
-
-
-            // Default sessionId is the sessionId of the latest valid session message
-            let latestSessionId = latestValidSessionMessage?.sessionId;
+                conversationId
+            });
 
             // Create message object
             let messageData: Partial<MessageDocument> = {
@@ -280,81 +263,27 @@ export class ChatService {
                 is_read_by_campus: senderType === 'campus',
                 attachments: createMessageDto.attachments || [],
                 created_at: curMsgTime,
-                sessionId: latestSessionId,
+                sessionId: sessionResult.sessionId,
             };
-
-
-            if (sessionValid && senderType === 'campus') {
-                // Possibly a campus reply to a student message in the current session
-
-                const isFirstCampusReplyInSession = await this.chatSessionService.isFirstCampusReplyInSession(conversationId, latestSessionId);
-
-                if (isFirstCampusReplyInSession) {
-
-                    // Find first student message in this session
-                    const firstStudentMsg = await this.chatSessionService.getFirstStudentMessageInSession(conversationId, latestSessionId);
-                    if (!firstStudentMsg) throw new NotFoundException('First student message not found in this session');
-
-
-                    // update average response time (of the current session)
-                    const currentResponseTime = this.chatSessionService.calculateResponseTime(firstStudentMsg.created_at, curMsgTime);
-
-                    // check if avgResponseTime and sessionsCount exist in the conversation already
-                    const existingAvgResponseTime = currentConversation?.avgResponseTime;
-                    const existingSessionsCount = currentConversation?.sessionsCount;
-                    const isPrevAvgAndSessionCountExists = existingAvgResponseTime > 0 && existingSessionsCount > 0;
-
-                    // if prevAvgResponseTime exists, calculate the new avgResponseTime by taking into account the previous avgResponseTime and the current response time (and the number of sessions)
-                    if (isPrevAvgAndSessionCountExists) {
-                        // ? the session for which the avgResponseTime is being calculated has already started but that didn't take part in the calculation of the existing avgResponseTime. Therefore, we need to subtract 1 from the existing sessionsCount. `existingSessionsCount` is the total number of sessions including the current one.
-                        const sessionsCountBeforeCurrentSession = existingSessionsCount - 1;
-
-                        const existingTotalResponseTime = existingAvgResponseTime * sessionsCountBeforeCurrentSession;
-                        const newTotalResponseTime = existingTotalResponseTime + currentResponseTime;
-                        const newAvgResponseTime = newTotalResponseTime / existingSessionsCount;
-
-                        conversationDocUpdate = {
-                            ...conversationDocUpdate,
-                            avgResponseTime: newAvgResponseTime
-                        };
-                    }
-                    // if prevAvgResponseTime doesn't exist, store the current response time as averageResponseTime
-                    else {
-                        conversationDocUpdate = {
-                            ...conversationDocUpdate,
-                            avgResponseTime: currentResponseTime
-                        }
-                    }
-                }
-            }
-
-            else if (!sessionValid && senderType === 'user') {
-                // New session
-                const newSessionId = this.chatSessionService.generateSessionId(createMessageDto.conversation_id);
-                messageData = {
-                    ...messageData,
-                    sessionId: newSessionId
-                }
-
-                // TODO: Defer the updates by keeping a record object stored globally and update it at the end of the service
-                conversationDocUpdate = {
-                    ...conversationDocUpdate,
-                    $inc: { sessionsCount: 1 }
-                };
-            }
-
-
 
             if (senderType === 'campus') {
                 messageData.replied_by_user_id = new Types.ObjectId(userId);
             }
+
             // Create new message
             const newMessage = new this.messageModel(messageData);
             const savedMessage = await newMessage.save();
-            // Update conversation with last message info
+            // Update conversation with last message info and session updates
             await this.conversationModel.findByIdAndUpdate(
                 conversationId,
-                conversationDocUpdate
+                {
+                    last_message: createMessageDto.content,
+                    last_message_time: curMsgTime,
+                    last_message_sender: senderType,
+                    is_read_by_user: senderType === 'user',
+                    is_read_by_campus: senderType === 'campus',
+                    ...sessionResult.conversationDocUpdate
+                }
             );
             return savedMessage;
         } catch (error) {

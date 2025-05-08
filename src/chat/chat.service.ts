@@ -151,6 +151,50 @@ export class ChatService {
         ]);
     }
 
+    async findAllConversationsPerEachUniversity() {
+        return this.conversationModel.aggregate([
+            // Use the `campus_id` field of the conversation document to add the matching campus document in the `campus` array
+            // REVIEW: Why didn't we just populate the `campus` field instead of using $lookup?
+            {
+                $lookup: {
+                    from: 'campuses',
+                    localField: 'campus_id',
+                    foreignField: '_id',
+                    as: 'campus'
+                }
+            },
+            // Flattens the `campus` array by splitting remaining fields into separate documents with each element of the array. (If there is only one element in the array, the flattening will not increase the number of documents in the output and will only return one document with `campus` array converted to a single object.)
+            { $unwind: '$campus' },
+            // Group by university_id
+            {
+                $group: {
+                    // _id: '$campus.university_id', // ! This will fail if the university_id is not an ObjectId
+                    _id: { $toObjectId: '$campus.university_id' }, // ensures than each university_id is converted to an ObjectId otherwise the following lookup will fail
+                    conversationCount: { $sum: 1 }, // for each university, count the number of conversations in the `campus` group by counting, 1 for each conversation grouped
+                },
+            },
+            // Retrieves the university info (name) from the `universities` collection
+            {
+                $lookup: {
+                    from: 'universities',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'university'
+                }
+            },
+            { $unwind: '$university' },
+            // Project the result
+            {
+                $project: {
+                    _id: 0,
+                    university_id: '$_id',
+                    universityName: '$university.name',
+                    conversationCount: 1
+                }
+            }
+        ]);
+    }
+
     async findConversation(id: string) {
         const conversation = await this.conversationModel.findById(id)
             .populate('user_id')

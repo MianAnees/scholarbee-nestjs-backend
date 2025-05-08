@@ -154,7 +154,6 @@ export class ChatService {
     async findAllConversationsPerEachUniversity() {
         return this.conversationModel.aggregate([
             // Use the `campus_id` field of the conversation document to add the matching campus document in the `campus` array
-            // REVIEW: Why didn't we just populate the `campus` field instead of using $lookup?
             {
                 $lookup: {
                     from: 'campuses',

@@ -1,7 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { ApplicationMetricsAnalyticsService } from '../../applications/services/application-metrics-analytics.service';
+import { ApplicationMetricsAnalyticsService, ApplicationMetricDto } from '../../applications/services/application-metrics-analytics.service';
 
 @Controller('analytics')
 export class AnalyticsController {
@@ -50,5 +50,10 @@ export class AnalyticsController {
   @Get('application-metrics/application-progress')
   async getApplicationProgress() {
     return this.applicationMetricsAnalyticsService.getApplicationProgress();
+  }
+
+  @Post('application-metrics/index')
+  async indexApplicationMetric(@Body() applicationMetric: ApplicationMetricDto) {
+    return this.applicationMetricsAnalyticsService.indexApplicationMetric(applicationMetric);
   }
 }

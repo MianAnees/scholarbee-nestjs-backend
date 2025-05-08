@@ -6,6 +6,35 @@ import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
 import { QueryAnalyticsCommonDto } from 'src/analytics/dto/query-analytics.dto';
 import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
+import { IsEnum, IsString, IsDateString, IsNotEmpty } from 'class-validator';
+
+export class ApplicationMetricDto {
+    @IsString()
+    @IsNotEmpty()
+    applicationId: string;
+
+    @IsEnum(ApplicationProgressStep)
+    step: ApplicationProgressStep;
+
+    @IsString()
+    @IsNotEmpty()
+    universityId: string;
+
+    @IsString()
+    @IsNotEmpty()
+    programId: string;
+
+    @IsDateString()
+    timestamp: string;
+
+    @IsString()
+    @IsNotEmpty()
+    eventType: string;
+
+    @IsString()
+    @IsNotEmpty()
+    userId: string;
+}
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -118,6 +147,58 @@ export class ApplicationMetricsAnalyticsService {
                 error.stack,
             );
             return {};
+        }
+    }
+
+    /**
+     * Index an application metric event to Elasticsearch, avoiding duplicates by userId, programId, and step
+     * 
+     * REVIEW: Down the line, we might want to add sessionId (generated each time a user visits the application even if they have already started an application) to the index to for following reasons:
+     * 1. To track the time taken to complete a step
+     * 2. To track the drop-off points
+     * 3. To track the behavioral patterns
+     * 4. To track the user frustration or confusion
+     */
+    async indexApplicationMetric(applicationMetric: any): Promise<boolean> {
+        this.logger.log(`📊 Indexing application metric`, applicationMetric);
+        try {
+            // Check for duplicate by userId, programId, and step
+            const searchResult = await this.elasticsearchService.search(
+                this.APPLICATION_METRICS_INDEX,
+                {
+                    size: 1,
+                    query: {
+                        bool: {
+                            must: [
+                                { term: { userId: applicationMetric.userId } },
+                                { term: { programId: applicationMetric.programId } },
+                                { term: { step: applicationMetric.step } }
+                            ]
+                        }
+                    }
+                }
+            );
+            if (searchResult.hits?.hits?.length > 0) {
+                this.logger.warn(`Duplicate event detected for userId: ${applicationMetric.userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`);
+                return false;
+            }
+
+            const document = {
+                ...applicationMetric,
+                timestamp: applicationMetric.timestamp || new Date(),
+            };
+
+            return await this.elasticsearchService.indexDocument(
+                this.APPLICATION_METRICS_INDEX,
+                undefined, // Let Elasticsearch generate the ID
+                document,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error indexing application metric: ${error.message}`,
+                error.stack,
+            );
+            return false;
         }
     }
 } 

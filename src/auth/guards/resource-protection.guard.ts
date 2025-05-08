@@ -23,12 +23,12 @@ export class ResourceProtectionGuard extends AuthGuard(
   handleRequest(err, user, info, context) {
     // check if the user is authenticated
     if (err || !user) {
-      console.log(` ResourceProtectionGuard: handleRequest:`, {
-        err,
-        user,
-        info,
-        context,
-      });
+      // console.log(` ResourceProtectionGuard: handleRequest:`, {
+      //   err,
+      //   user,
+      //   info,
+      //   context,
+      // });
 
       // check if the token is not found
       if (info.message === 'No auth token') {

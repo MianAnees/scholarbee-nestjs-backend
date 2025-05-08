@@ -197,12 +197,6 @@ export class ChatService {
             .exec();
     }
 
-    // Helper: Get last student message in conversation (optionally for a session)
-    private async getLastStudentMessage(conversationId: Types.ObjectId, sessionId?: number): Promise<MessageDocument | null> {
-        const query: any = { conversation_id: conversationId, sender_type: 'user' };
-        if (sessionId !== undefined) query.sessionId = sessionId;
-        return this.messageModel.findOne(query).sort({ created_at: -1 }).exec();
-    }
 
     // Helper: Get first student message in session
     private async getFirstStudentMessageInSession(conversationId: Types.ObjectId, sessionId: number): Promise<MessageDocument | null> {

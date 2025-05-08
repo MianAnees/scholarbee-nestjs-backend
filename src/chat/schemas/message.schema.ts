@@ -43,8 +43,8 @@ export class Message {
     @Prop({ type: MongooseSchema.Types.Mixed })
     sender: any;
 
-    @Prop({ type: Number, default: 0 })
-    sessionId: number;
+    @Prop({ type: String, default: null })
+    sessionId: string;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message); 

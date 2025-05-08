@@ -11,6 +11,7 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { ConfigService } from '@nestjs/config';
 import { IConfiguration } from 'src/config/configuration';
 import { EnvValidationSchema } from 'src/config';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ChatService {
@@ -199,28 +200,17 @@ export class ChatService {
 
 
     // Helper: Get first student message in session
-    private async getFirstStudentMessageInSession(conversationId: Types.ObjectId, sessionId: number): Promise<MessageDocument | null> {
+    private async getFirstStudentMessageInSession(conversationId: Types.ObjectId, sessionId: string): Promise<MessageDocument | null> {
         return this.messageModel.findOne({ conversation_id: conversationId, sender_type: 'user', sessionId })
             .sort({ created_at: 1 })
             .exec();
     }
 
     // Helper: Is this the first campus reply in the session?
-    private async isFirstCampusReplyInSession(conversationId: Types.ObjectId, sessionId: number): Promise<boolean> {
+    private async isFirstCampusReplyInSession(conversationId: Types.ObjectId, sessionId: string): Promise<boolean> {
         const count = await this.messageModel.countDocuments({ conversation_id: conversationId, sender_type: 'campus', sessionId });
         return count === 0;
     }
-
-    // Helper: Get current sessionId (max sessionId in messages for this conversation)
-    // TODO: is the sessionId a suffix extension of the conversationId? If not, should we make it a suffix extension of the conversationId? i.e. conversationId-sessionId => conversationId-1, conversationId-2, etc.
-    private async getCurrentSessionId(conversationId: Types.ObjectId): Promise<number | null> {
-    // REVIEW: could also be received through the sessionId of the last message of the conversation
-        const lastMsg = await this.messageModel.findOne({ conversation_id: conversationId })
-            .sort({ sessionId: -1 })
-            .exec();
-        return lastMsg?.sessionId ?? null;
-    }
-
 
     // Helper: Calculate response time in ms
     private calculateResponseTime(start: Date, end: Date): number {
@@ -301,7 +291,8 @@ export class ChatService {
             })
 
 
-            let sessionId = await this.getCurrentSessionId(conversationId);
+            // Default sessionId is the sessionId of the latest valid session message
+            let sessionId = latestValidSessionMessage?.sessionId;
 
 
             if (sessionValid && senderType === 'campus') {
@@ -338,11 +329,9 @@ export class ChatService {
             }
 
             else if (!sessionValid && senderType === 'user') {
-            // New session
+                // New session
+                sessionId = uuidv4();
 
-                // update sessionsCount
-                sessionId += 1;
-                // Update sessionsCount
                 // TODO: Defer the updates by keeping a record object stored globally and update it at the end of the service
                 await this.conversationModel.findByIdAndUpdate(conversationId, { $inc: { sessionsCount: 1 } });
             }

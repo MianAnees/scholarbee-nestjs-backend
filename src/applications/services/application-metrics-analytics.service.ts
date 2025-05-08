@@ -5,6 +5,7 @@ import { Model, Types } from 'mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
 import { QueryAnalyticsCommonDto } from 'src/analytics/dto/query-analytics.dto';
+import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -74,6 +75,49 @@ export class ApplicationMetricsAnalyticsService {
                 error.stack,
             );
             return [];
+        }
+    }
+
+    /**
+     * Get number of applications started vs completed
+     */
+    async getApplicationProgress(): Promise<{ [key: string]: number }> {
+        // Map enum values to aggregation names
+        const stepAggNames = {
+            [ApplicationProgressStep.APPLICATION_START]: 'application_started',
+            [ApplicationProgressStep.APPLICATION_COMPLETE]: 'application_completed',
+            [ApplicationProgressStep.PROFILE_SELF]: 'profile_self',
+            [ApplicationProgressStep.PROFILE_CONTACT]: 'profile_contact',
+            [ApplicationProgressStep.PROFILE_EDUCATION]: 'profile_education',
+            [ApplicationProgressStep.PROFILE_DOCS]: 'profile_docs',
+            [ApplicationProgressStep.APPLICATION_PROGRAM_SELECTION]: 'application_program_selection',
+        };
+
+        const esQuery = {
+            size: 0,
+            aggs: Object.entries(stepAggNames).reduce((acc, [step, aggName]) => {
+                acc[aggName] = { filter: { term: { step } } };
+                return acc;
+            }, {} as Record<string, any>),
+        };
+
+        try {
+            const response = await this.elasticsearchService.search(
+                this.APPLICATION_METRICS_INDEX,
+                esQuery
+            );
+            // Map the response to the aggregation names
+            const result: { [key: string]: number } = {};
+            Object.values(stepAggNames).forEach((aggName) => {
+                result[aggName] = Number(response.aggregations[aggName]?.doc_count || 0);
+            });
+            return result;
+        } catch (error) {
+            this.logger.error(
+                `Error getting application started vs completed: ${error.message}`,
+                error.stack,
+            );
+            return {};
         }
     }
 } 

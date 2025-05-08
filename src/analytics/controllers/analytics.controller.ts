@@ -46,4 +46,9 @@ export class AnalyticsController {
   async getMostPopularUniversities(@Query() query: QueryAnalyticsCommonDto) {
     return this.applicationMetricsAnalyticsService.getMostPopularUniversities(query);
   }
+
+  @Get('application-metrics/application-progress')
+  async getApplicationProgress() {
+    return this.applicationMetricsAnalyticsService.getApplicationProgress();
+  }
 }

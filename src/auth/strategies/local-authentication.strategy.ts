@@ -17,6 +17,13 @@ export class LocalAuthenticationStrategy extends PassportStrategy(
     });
   }
 
+  /**
+   * This method verifies the user's credentials and returns the user object.
+   * The actual payload for tokens is generated and signed in the `auth.service.login` method.
+   * @param email 
+   * @param password 
+   * @returns 
+   */
   async validate(email: string, password: string) {
     const user = await this.authService.validateAndGetUserData_v1({
       email,

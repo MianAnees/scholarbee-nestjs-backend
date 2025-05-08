@@ -21,6 +21,7 @@ export interface EnvValidationSchema {
     PORT: number;
     NODE_ENV: string;
     PAYLOAD_SECRET: string;
+    CHAT_SESSION_TIMEOUT: number;
 
     // S3 Configuration
     S3_ENDPOINT: string;
@@ -90,6 +91,7 @@ export const envValidationSchema = Joi.object<EnvValidationSchema>({
     PORT: Joi.number().default(3010),
     NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
     PAYLOAD_SECRET: Joi.string().required(),
+    CHAT_SESSION_TIMEOUT: Joi.number().default(1 * 60 * 60 * 1000), // 1 hour
 
     // S3 Configuration
     S3_ENDPOINT: Joi.string().required().uri(),

@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AuthService, RefreshTokenPayload } from 'src/auth/auth.service';
+import { AuthService, } from 'src/auth/auth.service';
 import { AuthStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { RefreshTokenPayload } from 'src/auth/types/auth.interface';
 import { IConfiguration } from 'src/config/configuration';
 import { UsersService } from 'src/users/users.service';
 

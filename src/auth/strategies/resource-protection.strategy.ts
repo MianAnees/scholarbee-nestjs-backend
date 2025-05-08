@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AccessTokenPayload } from 'src/auth/auth.service';
 import { AuthStrategyEnum } from 'src/auth/strategies/strategy.enum';
+import { AccessTokenPayload } from 'src/auth/types/auth.interface';
 import { IConfiguration } from 'src/config/configuration';
 
 @Injectable()
@@ -19,9 +19,7 @@ export class ResourceProtectionStrategy extends PassportStrategy(
     });
   }
 
-  // TODO: How to handle the error (to show the expiry error to user)
   async validate(payload: AccessTokenPayload) {
-    // Customize the payload for v2 as needed
     return payload;
   }
 }

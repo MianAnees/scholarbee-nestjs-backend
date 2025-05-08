@@ -9,6 +9,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ChatSessionService } from './chat-session.service';
 
 @Module({
     imports: [
@@ -28,7 +29,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         }),
     ],
     controllers: [ChatController],
-    providers: [ChatService, ChatGateway],
-    exports: [ChatService, ChatGateway],
+    providers: [ChatService, ChatGateway, ChatSessionService],
+    exports: [ChatService, ChatGateway, ChatSessionService],
 })
 export class ChatModule { } 

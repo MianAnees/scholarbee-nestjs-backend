@@ -1,13 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Conversation, ConversationDocument } from './schemas/conversation.schema';
-import { Message, MessageDocument } from './schemas/message.schema';
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { Model, Types, UpdateQuery } from 'mongoose';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
+import { User, UserDocument } from '../users/schemas/user.schema';
+import { ChatSessionService } from './chat-session.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { Conversation, ConversationDocument } from './schemas/conversation.schema';
+import { Message, MessageDocument } from './schemas/message.schema';
 
 @Injectable()
 export class ChatService {
@@ -16,6 +17,7 @@ export class ChatService {
         @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
+        private readonly chatSessionService: ChatSessionService
     ) { }
 
     async createConversation(createConversationDto: CreateConversationDto, userId: string): Promise<Conversation> {
@@ -173,40 +175,86 @@ export class ChatService {
         return { message: 'Conversation deleted successfully' };
     }
 
+    /**
+     * * How to "check for session validity" (a session is always started from a student message)
+     * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
+     * 
+     * * How to "update average response time" 
+     * get the existing sessionsCount 
+     * TODO: calculate the current session's responseTime
+     * TODO: check if responseTime exists in the conversation already
+     * ? isResponseTimeExists,
+     *      calculate the avgResponseTime ((prevAvg * prevCount + currentResponseTime) / newCount) and update field
+     * ? isResponseTimeNotExists,
+     *   -   store the current session's response as averageResponseTime
+     * 
+     * * How to "calculate the current session's responseTime"
+     * get the first student message in this conversation
+     * TODO: timeDiff(currentMessageTime - timeOfFirstStudentMessageInThisSession)
+     * 
+     * 
+     * * On each new message
+     * TODO: get sender type of the message => senderType
+     * TODO: check for session validity
+     * ? isExistingSessionValid:
+     *   ? isSentByStudent (senderType === 'user'), 
+     *       1.2a.1 do nothing;
+     *   ? isSentByCampus,
+     *       TODO: check if this is the first message from campus in this session
+     *       ? isCurrentMessageTheFirstCampusMessageInSession,
+     *           TODO: update average response time
+     *       ? isCurrentMessageNotTheFirstCampusMessageInSession,
+     *       -   do nothing;
+     * ? isExistingSessionInvalid:
+     *   ? isSentByStudent, 
+     *       -   update sessionsCount
+     *       -   update sessionId
+     *   ? isSentByCampus,
+     *       -   do nothing;
+     * 
+     * 
+     * @param createMessageDto 
+     * @param userId 
+     * @param senderType 
+     * @returns 
+     */
     async createMessage(createMessageDto: CreateMessageDto, userId: string, senderType: 'user' | 'campus'): Promise<Message> {
         try {
             // Validate IDs
             if (!Types.ObjectId.isValid(userId)) {
                 throw new BadRequestException(`Invalid user ID: ${userId}`);
             }
-
             if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
                 throw new BadRequestException(`Invalid conversation ID: ${createMessageDto.conversation_id}`);
             }
-
-            // Find the conversation
-            const conversation = await this.conversationModel.findById(
-                new Types.ObjectId(createMessageDto.conversation_id)
-            );
-
-            if (!conversation) {
+            const conversationId = new Types.ObjectId(createMessageDto.conversation_id);
+            const currentConversation = await this.conversationModel.findById(conversationId);
+            if (!currentConversation) {
                 throw new NotFoundException(`Conversation with ID ${createMessageDto.conversation_id} not found`);
             }
 
+            // Get current time
+            const curMsgTime = new Date();
+
             // Determine the correct sender_id based on sender_type
             let senderId: Types.ObjectId;
-
             if (senderType === 'user') {
-                // For user messages, sender_id is the user's ID
                 senderId = new Types.ObjectId(userId);
             } else {
-                // For campus messages, sender_id should be the campus_id from the conversation
-                senderId = conversation.campus_id;
+                senderId = currentConversation.campus_id;
             }
 
+            // Delegate all session logic to ChatSessionService
+            const sessionResult = await this.chatSessionService.handleSessionOnMessage({
+                conversation: currentConversation,
+                senderType,
+                curMsgTime,
+                conversationId
+            });
+
             // Create message object
-            const messageData: any = {
-                conversation_id: new Types.ObjectId(createMessageDto.conversation_id),
+            let messageData: Partial<MessageDocument> = {
+                conversation_id: conversationId,
                 sender_id: senderId,
                 sender_type: senderType,
                 sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
@@ -214,32 +262,29 @@ export class ChatService {
                 is_read_by_user: senderType === 'user',
                 is_read_by_campus: senderType === 'campus',
                 attachments: createMessageDto.attachments || [],
-                created_at: new Date()
+                created_at: curMsgTime,
+                sessionId: sessionResult.sessionId,
             };
 
-            // If this is a campus message, store the user who replied
             if (senderType === 'campus') {
                 messageData.replied_by_user_id = new Types.ObjectId(userId);
             }
 
             // Create new message
             const newMessage = new this.messageModel(messageData);
-
-            // Save the message
             const savedMessage = await newMessage.save();
-
-            // Update conversation with last message info
+            // Update conversation with last message info and session updates
             await this.conversationModel.findByIdAndUpdate(
-                createMessageDto.conversation_id,
+                conversationId,
                 {
                     last_message: createMessageDto.content,
-                    last_message_time: new Date(),
+                    last_message_time: curMsgTime,
                     last_message_sender: senderType,
                     is_read_by_user: senderType === 'user',
-                    is_read_by_campus: senderType === 'campus'
+                    is_read_by_campus: senderType === 'campus',
+                    ...sessionResult.conversationDocUpdate
                 }
             );
-
             return savedMessage;
         } catch (error) {
             if (error instanceof BadRequestException || error instanceof NotFoundException) {

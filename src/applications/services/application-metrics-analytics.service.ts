@@ -21,10 +21,11 @@ export class ApplicationMetricsAnalyticsService {
 
     /**
      * Get most popular universities receiving applications
+     * TODO: Could be expanded to include 'unique users', etc
      */
     async getMostPopularUniversities(
         queryDto: QueryAnalyticsCommonDto,
-    ): Promise<Array<{ university_id: string; university: string; count: number }>> {
+    ) {
         try {
             const response = await this.elasticsearchService.search(
                 this.APPLICATION_METRICS_INDEX,
@@ -65,7 +66,7 @@ export class ApplicationMetricsAnalyticsService {
                 return {
                     university_id: bucket.key,
                     university: matchedUniversity ? matchedUniversity.name : 'Unknown',
-                    count: bucket.doc_count,
+                    applications_count: bucket.doc_count,
                 };
             });
 
@@ -81,8 +82,9 @@ export class ApplicationMetricsAnalyticsService {
 
     /**
      * Get number of applications started vs completed
+     * TODO: Could be expanded to include 'unique users', 'unique programs', 'overall completion rate over time' etc.
      */
-    async getApplicationProgress(): Promise<{ [key: string]: number }> {
+    async getOverallMetrics() {
         // Map enum values to aggregation names
         const stepAggNames = {
             [ApplicationProgressStep.APPLICATION_START]: 'application_started',
@@ -108,10 +110,17 @@ export class ApplicationMetricsAnalyticsService {
                 esQuery
             );
             // Map the response to the aggregation names
-            const result: { [key: string]: number } = {};
+            const result: {
+                progress_events_count: {
+                    [key: string]: number
+                }
+            } = {
+                progress_events_count: {}
+            };
             Object.values(stepAggNames).forEach((aggName) => {
-                result[aggName] = Number(response.aggregations[aggName]?.doc_count || 0);
+                result.progress_events_count[aggName] = Number(response.aggregations[aggName]?.doc_count || 0);
             });
+
             return result;
         } catch (error) {
             this.logger.error(

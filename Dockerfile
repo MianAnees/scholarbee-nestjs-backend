@@ -18,8 +18,7 @@ RUN npm run build
 FROM node:18-alpine AS production
 
 # Set NODE_ENV
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+ENV NODE_ENV=production
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -32,9 +31,10 @@ RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy built application from development stage
 COPY --from=development /usr/src/app/dist ./dist
+COPY --from=development /usr/src/app/node_modules ./node_modules
 
 # Expose API port (handles both HTTP and WebSockets)
 EXPOSE 3010
 
 # Start the server
-CMD ["node", "dist/main"] 
+CMD ["node", "dist/src/main"] 

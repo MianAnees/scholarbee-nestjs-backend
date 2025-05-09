@@ -149,9 +149,18 @@ export class SearchHistoryAnalyticsService {
           };
         });
 
-      const universityObjectIds = aggregationResponse.buckets.map(
-        (bucket) => new Types.ObjectId(bucket.key),
-      );
+
+      const universityObjectIds: Types.ObjectId[] = [];
+      for (const bucket of aggregationResponse.buckets) {
+        try {
+          universityObjectIds.push(new Types.ObjectId(bucket.key));
+        } catch (error) {
+          this.logger.error(
+            `University id is not valid while getting most searched universities: ${error.message}`,
+            error.stack,
+          );
+        }
+      }
 
       // convert the university_id to university name using mongoose
       const universityDetailList = await this.universityModel
@@ -168,7 +177,7 @@ export class SearchHistoryAnalyticsService {
         );
       }
 
-      let goodResp = [];
+      let finalResponse = [];
 
       // get a list of aggregation response with the relevant university name and university_id
       for (const bucket of aggregationResponse.buckets) {
@@ -186,7 +195,7 @@ export class SearchHistoryAnalyticsService {
             throw new Error('Invalid university_id');
           }
 
-          goodResp.push({
+          finalResponse.push({
             university_id: bucket.key,
             university: matchedUniversity.name,
             count: bucket.doc_count,
@@ -199,7 +208,7 @@ export class SearchHistoryAnalyticsService {
         }
       }
 
-      return goodResp;
+      return finalResponse;
     } catch (error) {
       this.logger.error(
         `Error getting most searched universities: ${error.message}`,

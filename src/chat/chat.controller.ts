@@ -20,6 +20,7 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guard';
 import { ChatGateway } from './chat.gateway';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { AuthReq } from '../auth/decorators/auth-req.decorator';
 
 @Controller('chat')
 @UseGuards(ResourceProtectionGuard)
@@ -128,7 +129,7 @@ export class ChatController {
   @Post('messages/user')
   async createUserMessage(
     @Body() createMessageDto: CreateMessageDto,
-    @Req() req: AuthenticatedRequest, // TODO: Is this authenticated request?
+    @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
       const userId = req.user.sub;

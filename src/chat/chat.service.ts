@@ -123,7 +123,7 @@ export class ChatService {
             {
                 $group: {
                     _id: '$campus_id',
-                    conversationCount: { $sum: 1 }
+                    conversation_count: { $sum: 1 }
                 }
             },
             // Joins the campuses collection to get the campus name.
@@ -144,8 +144,8 @@ export class ChatService {
                 $project: {
                     _id: 0,
                     campus_id: '$_id',
-                    campusName: '$campus.name',
-                    conversationCount: 1
+                    campus_name: '$campus.name',
+                    conversation_count: 1
                 }
             }
         ]);
@@ -173,7 +173,7 @@ export class ChatService {
                 $group: {
                     // _id: '$campus.university_id', // ! This will fail if the university_id is not an ObjectId
                     _id: { $toObjectId: '$campus.university_id' }, // ensures than each university_id is converted to an ObjectId otherwise the following lookup will fail
-                    conversationCount: { $sum: 1 }, // for each university, count the number of conversations in the `campus` group by counting, 1 for each conversation grouped
+                    conversation_count: { $sum: 1 }, // for each university, count the number of conversations in the `campus` group by counting, 1 for each conversation grouped
                 },
             },
             // Retrieves the university info (name) from the `universities` collection
@@ -191,8 +191,8 @@ export class ChatService {
                 $project: {
                     _id: 0,
                     university_id: '$_id',
-                    universityName: '$university.name',
-                    conversationCount: 1
+                    university_name: '$university.name',
+                    conversation_count: 1
                 }
             }
         ]);

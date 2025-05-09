@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, IsMongoId } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsMongoId, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FilterAdmissionProgramDto {
@@ -28,6 +28,7 @@ export class FilterAdmissionProgramDto {
 
     @IsOptional()
     @IsString()
+    @MinLength(1)
     university?: string;
 
     @IsOptional()

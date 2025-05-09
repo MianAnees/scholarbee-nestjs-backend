@@ -12,7 +12,7 @@ export class UserEventLoggerService {
   /**
    * Log a user event to Elasticsearch
    */
-  async logEvent(event: UserEvent): Promise<boolean> {
+  async logEvent(event: UserEvent) {
     try {
       const document = {
         ...event,

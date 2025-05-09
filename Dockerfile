@@ -17,7 +17,7 @@ RUN npm run build
 
 FROM node:18-alpine AS production
 
-# Set NODE_ENV
+# Set NODE_ENV (set to production by default; can be overridden by passing --build-arg NODE_ENV=development)
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
@@ -34,7 +34,8 @@ RUN npm install --omit=dev --legacy-peer-deps
 COPY --from=development /usr/src/app/dist ./dist
 
 # Expose API port (handles both HTTP and WebSockets)
-EXPOSE 3000
+EXPOSE 3010
 
 # Start the server
-CMD ["node", "dist/main"] 
+# ! Don't change this to `node dist/src/main`.
+CMD ["npm", "run", "start:prod"]

@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { FatherLivingStatusEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
+
 
 // Add the comparePassword method to the interface
 export interface UserDocument extends User, Document {
@@ -27,8 +29,11 @@ export class User {
     @Prop()
     father_profession?: string;
 
-    @Prop({ enum: ['alive', 'deceased'] })
-    father_status?: string;
+    @Prop({
+        type: String,
+        enum: FatherLivingStatusEnum
+    })
+    father_status?: FatherLivingStatusEnum;
 
     @Prop()
     father_income?: string;
@@ -137,6 +142,10 @@ export class User {
 
     @Prop()
     hash: string;
+
+    // refresh token hash
+    @Prop({ default: null })
+    refreshTokenHash: string;
 
     @Prop({ default: 0 })
     loginAttempts: number;

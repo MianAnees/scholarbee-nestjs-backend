@@ -28,6 +28,13 @@ export class Conversation {
 
     @Prop({ type: String, enum: ['user', 'campus'], default: 'user' })
     last_message_sender: string;
+
+    @Prop({ type: Number, default: 0 })
+    avgResponseTime: number;
+
+    @Prop({ type: Number, default: 0 })
+    sessionsCount: number;
+
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

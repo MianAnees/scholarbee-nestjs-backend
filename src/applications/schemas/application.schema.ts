@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { EsEntity, EsField } from 'es-mapping-ts';
+import { BaseEntity } from 'src/common/entities/base.entity';
 
 export type ApplicationDocument = Application & Document;
 
@@ -114,4 +116,4 @@ export class Application {
     departments: Department[];
 }
 
-export const ApplicationSchema = SchemaFactory.createForClass(Application); 
+export const ApplicationSchema = SchemaFactory.createForClass(Application);

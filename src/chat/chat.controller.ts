@@ -20,7 +20,7 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guard';
 import { ChatGateway } from './chat.gateway';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { AuthReq } from '../auth/decorators/auth-req.decorator';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 
 @Controller('chat')
 @UseGuards(ResourceProtectionGuard)
@@ -33,7 +33,7 @@ export class ChatController {
   @Post('conversations')
   async createConversation(
     @Body() createConversationDto: CreateConversationDto,
-    @Req() req: AuthenticatedRequest,
+    @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
       // Get user ID from JWT token
@@ -84,7 +84,7 @@ export class ChatController {
   @Get('conversations/campus/:campusId')
   findAllConversationsForCampus(
     @Param('campusId') campusId: string,
-    @Req() req: AuthenticatedRequest,
+    @AuthReq() req: AuthenticatedRequest,
   ) {
     // Here you would typically check if the user has admin rights for this campus
     // This is a placeholder for your authorization logic
@@ -171,7 +171,7 @@ export class ChatController {
   @Post('messages/campus')
   async createCampusMessage(
     @Body() createMessageDto: CreateMessageDto,
-    @Req() req: AuthenticatedRequest,
+    @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
       // Get user info from token

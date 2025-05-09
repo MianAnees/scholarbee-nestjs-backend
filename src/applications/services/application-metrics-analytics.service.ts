@@ -131,7 +131,7 @@ export class ApplicationMetricsAnalyticsService {
      * 3. To track the behavioral patterns
      * 4. To track the user frustration or confusion
      */
-    async indexApplicationMetric(applicationMetric: ApplicationMetricDto): Promise<boolean> {
+    async registerApplicationMetricEvent(applicationMetric: ApplicationMetricDto) {
         this.logger.log(`📊 Indexing application metric`, applicationMetric);
         try {
             // Check for duplicate by userId, programId, and step

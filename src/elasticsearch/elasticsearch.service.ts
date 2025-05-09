@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { ConfigService } from '@nestjs/config';
 import { IConfiguration } from 'src/config/configuration';
@@ -54,21 +54,31 @@ export class ElasticsearchService {
     index: string,
     id: string,
     document: Record<string, any>,
-  ): Promise<boolean> {
+  ) {
     try {
       await this.elasticsearchService.index({
         index,
         id,
         body: document,
       });
-      return true;
+
+      return {
+        success: true,
+        message: 'Document indexed successfully',
+        data: {
+          index: index,
+          id: id,
+          document: document,
+        }
+      };
     } catch (error) {
       this.logger.error(`Error indexing document: ${error.message}`, {
         index,
         id,
         document,
       });
-      return false;
+
+      throw new HttpException(`Error indexing document: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

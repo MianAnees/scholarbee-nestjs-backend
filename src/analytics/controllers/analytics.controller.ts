@@ -1,14 +1,16 @@
-import { Controller, Get, Query, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common';
-import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
-import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApplicationMetricDto } from 'src/applications/dto/application-analytics.dto';
+import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
+import { ChatAnalyticsService } from 'src/chat/chat-analytics.service';
+import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
+import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
 
 @Controller('analytics')
 export class AnalyticsController {
   constructor(
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
     private readonly applicationMetricsAnalyticsService: ApplicationMetricsAnalyticsService,
+    private readonly chatAnalyticsService: ChatAnalyticsService,
   ) {}
 
   @Get('search-trends')
@@ -53,8 +55,20 @@ export class AnalyticsController {
     return this.applicationMetricsAnalyticsService.getApplicationProgress();
   }
 
-  @Post('application-metrics/index')
-  async indexApplicationMetric(@Body() applicationMetric: ApplicationMetricDto) {
-    return this.applicationMetricsAnalyticsService.indexApplicationMetric(applicationMetric);
+  @Post('application-metrics/register-event')
+  async registerApplicationMetricEvent(@Body() applicationMetric: ApplicationMetricDto) {
+    return this.applicationMetricsAnalyticsService.registerApplicationMetricEvent(applicationMetric);
   }
+
+
+  @Get('chat/conversations/campus')
+  findAllConversationsPerEachCampus() {
+    return this.chatAnalyticsService.findAllConversationsPerEachCampus();
+  }
+
+  @Get('chat/conversations/university')
+  findAllConversationsPerEachUniversity() {
+    return this.chatAnalyticsService.findAllConversationsPerEachUniversity();
+  }
+
 }

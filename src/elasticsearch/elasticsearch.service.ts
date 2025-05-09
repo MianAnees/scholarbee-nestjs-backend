@@ -17,9 +17,13 @@ export class ElasticsearchService {
    */
   async indexExists(index: string): Promise<boolean> {
     try {
-      return await this.elasticsearchService.indices.exists({ index });
+      const response = await this.elasticsearchService.indices.exists({ index });
+      if (typeof response === 'object' && 'body' in response) {
+        return !!response.body;
+      }
+      return response as unknown as boolean;
     } catch (error) {
-      this.logger.error(`Error checking if index exists: ${error.message}`, error.stack);
+      this.logger.error(`Error checking if index ${index} exists: ${error.message}`);
       return false;
     }
   }
@@ -164,10 +168,22 @@ export class ElasticsearchService {
    */
   async bulk(operations: any[]): Promise<boolean> {
     try {
-      const response = await this.elasticsearchService.bulk({ body: operations });
-      return !response.errors;
+      if (operations.length === 0) {
+        return true;
+      }
+
+      const response = await this.elasticsearchService.bulk({
+        refresh: true,
+        body: operations,
+      });
+
+      if (typeof response === 'object' && 'body' in response) {
+        return !(response.body?.errors || false);
+      }
+
+      return !(response as any).errors;
     } catch (error) {
-      this.logger.error(`Error performing bulk operation: ${error.message}`, error.stack);
+      this.logger.error(`Error performing bulk operation: ${error.message}`);
       return false;
     }
   }

@@ -28,6 +28,7 @@ import { MediaManagementModule } from './media-management/media-management.modul
 import { configuration, EnvValidationSchema, envValidationSchema } from 'src/config';
 import { IConfiguration } from 'src/config/configuration';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     BlogPostsModule,
     MediaManagementModule,
     AnalyticsModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

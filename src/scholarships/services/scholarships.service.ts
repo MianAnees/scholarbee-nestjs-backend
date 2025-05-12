@@ -105,11 +105,15 @@ export class ScholarshipsService {
 
         let query = this.scholarshipModel.find(filter);
 
+        console.log('🍎🍎🍎🍎🍎🍎🍎');
+
         if (populate) {
-            query = query
-                .populate('university_id')
-                // .populate('country')
-                .populate('region');
+          console.log('🍌🍌🍌🍌🍌');
+          query = query
+            .populate('university_id')
+            // .populate('country')
+            .populate('region')
+            .populate('organization_id');
         }
 
         const [scholarships, total] = await Promise.all([

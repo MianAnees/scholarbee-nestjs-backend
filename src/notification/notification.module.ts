@@ -3,8 +3,8 @@ import { NotificationGateway } from './notification.gateway';
 import { NotificationController } from './notification.controller';
 
 @Module({
-  providers: [NotificationGateway],
   controllers: [NotificationController],
+  providers: [NotificationGateway],
   exports: [NotificationGateway],
 })
 export class NotificationModule {}

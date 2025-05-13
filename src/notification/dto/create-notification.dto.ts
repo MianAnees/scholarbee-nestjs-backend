@@ -1,24 +1,45 @@
-import { IsString, IsNotEmpty, IsIn, MaxLength, IsEnum } from 'class-validator';
-import { NotificationType } from '../schemas/notification.schema';
+import {
+  IsString,
+  IsNotEmpty,
+  MaxLength,
+  IsBoolean,
+  ValidateNested,
+  IsArray,
+  IsOptional,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-// the scope will be used to populate the userIds field in the notification document. It will not be stored as is.
-enum NotificationScope {
-  ALL = 'all', // will be sent to all users
-  CAMPUS_ADMINS = 'campus_admins', // will be sent to campus admins
-  SUPER_ADMINS = 'super_admins', // will be sent to super admins
-  STUDENTS = 'students', // will be sent to students
+export class RecipientDto {
+  @IsString()
+  @IsNotEmpty()
+  recipientId: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isRead?: boolean;
+}
+
+export class AudienceDto {
+  // TODO: Ensure that the audienceType is one of the allowed values i.e. the real collection names in the database e.g. University.name, Campus.name, User.name
+  @IsString()
+  @IsNotEmpty()
+  audienceType: string; // e.g., 'user', 'university', 'campus'
+
+  @IsBoolean()
+  isGlobal: boolean;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecipientDto)
+  @IsOptional()
+  recipients?: RecipientDto[];
 }
 
 export class CreateNotificationDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsEnum(NotificationScope)
-  scope: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsEnum(NotificationType)
-  type: string;
+  // type is currently disabled in the schema
+  // @IsString()
+  // @IsNotEmpty()
+  // type: string;
 
   @IsString()
   @IsNotEmpty()
@@ -28,4 +49,8 @@ export class CreateNotificationDto {
   @IsString()
   @IsNotEmpty()
   message: string;
+
+  @ValidateNested()
+  @Type(() => AudienceDto)
+  audience: AudienceDto;
 }

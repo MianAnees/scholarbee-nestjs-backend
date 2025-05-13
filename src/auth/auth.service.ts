@@ -36,7 +36,7 @@ export class AuthService {
   /**
    * Validate user and get user data after removing sensitive information
    */
-  async validateAndGetUserData_v1(loginDto: LoginDto): Promise<SanitizedUser> {
+  async validateUser(loginDto: LoginDto): Promise<SanitizedUser> {
     // Check if user exists
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
@@ -102,21 +102,6 @@ export class AuthService {
     }
 
     return user;
-  }
-
-  // V2: Passport Local Strategy validation
-  async validateUser(email: string, password: string): Promise<any> {
-    // You can customize this logic for v2 as needed
-    const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) return null;
-    // Remove sensitive info for v2
-    const userObject = user.toObject();
-    delete userObject.hash;
-    delete userObject.salt;
-    delete userObject.password;
-    return userObject;
   }
 
   /**

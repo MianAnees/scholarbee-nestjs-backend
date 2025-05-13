@@ -9,6 +9,8 @@ import { SignupDto } from './dto/signup.dto';
 import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
 import { ResourceProtectionGuard } from './guards/resource-protection.guard';
 import { RefreshAuthenticationGuard } from 'src/auth/guards/refresh-authentication.guard';
+import { LoginRequest } from './types/auth.interface';
+import { LoginReq } from './decorators/auth-req.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -20,16 +22,14 @@ export class AuthController {
   @UseGuards(LocalAuthenticationGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login_v2(@Request() req) {
-    // REVIEW: How to add type here
-
+  async login(@LoginReq() req: LoginRequest) {
     return this.authService.login(req.user);
   }
 
   @UseGuards(ResourceProtectionGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout_v2(@Request() req) {
+  async logout(@Request() req) {
     return this.authService.logout(req.user);
   }
 

@@ -1,10 +1,18 @@
-import { Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationGateway } from './notification.gateway';
-import { SubscribeMessage } from '@nestjs/websockets';
+import { NotificationService } from './services/notfication.service';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
+@UseGuards(ResourceProtectionGuard)
 @Controller('notifications')
 export class NotificationController {
-  constructor(private readonly notificationGateway: NotificationGateway) {}
+  constructor(
+    private readonly notificationGateway: NotificationGateway,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Post('test/global')
   sendGlobalTestNotification() {
@@ -27,5 +35,16 @@ export class NotificationController {
     };
     this.notificationGateway.emitNotificationToUser(userId, notification);
     return { success: true };
+  }
+
+  @Post('create')
+  async createNotification(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createNotificationDto: CreateNotificationDto,
+  ) {
+    const notification = await this.notificationService.createNotification(
+      createNotificationDto,
+    );
+    return notification;
   }
 }

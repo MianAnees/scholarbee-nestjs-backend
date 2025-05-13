@@ -5,7 +5,6 @@ interface Connection {
   socketId: string;
 }
 
-@Injectable()
 export class SocketStoreService {
   private readonly connectionsUserToSocket = new Map<string, string>();
   private readonly connectionsSocketToUser = new Map<string, string>();

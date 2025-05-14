@@ -70,9 +70,9 @@ export class UniversitiesService {
         queryDto: QueryUniversityDto,
         overrideFilter: RootFilterQuery<UniversityDocument> = {}
     ) {
-        const {page,limit,order,sortBy, name:nameSearch} =queryDto;
+        const { page, limit, sortOrder, sortBy, name: nameSearch } = queryDto;
         const skip = (page - 1) * limit;
-        const sort = { [sortBy]: order };
+        const sort = { [sortBy]: sortOrder };
 
         if (nameSearch){
             overrideFilter = {

@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Exclude } from 'class-transformer';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class PaginationDto {
@@ -12,9 +12,18 @@ export class PaginationDto {
   @IsNumber()
   limit?: number = 10;
 
+  @Exclude()
   @Expose()
   get skip(): number {
-    return (this.page - 1) * this.limit;
+    if (
+      typeof this.page === 'number' &&
+      typeof this.limit === 'number' &&
+      this.page > 0 &&
+      this.limit > 0
+    ) {
+      return (this.page - 1) * this.limit;
+    }
+    return 0;
   }
 
   @IsOptional()

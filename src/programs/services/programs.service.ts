@@ -596,6 +596,7 @@ export class ProgramsService {
     return this.findAll({
       ...queryDto,
       campus_ids: campusIds,
+      skip: queryDto.skip,
     });
   }
 } 

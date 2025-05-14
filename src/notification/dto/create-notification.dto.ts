@@ -1,29 +1,40 @@
-import {
-  IsString,
-  IsNotEmpty,
-  MaxLength,
-  IsBoolean,
-  ValidateNested,
-  IsArray,
-  IsOptional,
-} from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { Types } from 'mongoose';
+import { IsObjectId, ParseObjectId } from 'nestjs-object-id';
+import { AudienceType } from '../schemas/notification.schema';
+import {
+  IsAudienceMutuallyExclusive,
+  NotificationAudience,
+} from './notification.validator';
 
 export class RecipientDto {
-  @IsString()
+  @IsObjectId()
+  @ParseObjectId()
   @IsNotEmpty()
-  recipientId: string;
+  id: Types.ObjectId;
 
   @IsBoolean()
   @IsOptional()
-  isRead?: boolean;
+  isRead?: boolean = false;
 }
 
-export class AudienceDto {
+export class AudienceDto implements NotificationAudience {
   // TODO: Ensure that the audienceType is one of the allowed values i.e. the real collection names in the database e.g. University.name, Campus.name, User.name
   @IsString()
   @IsNotEmpty()
-  audienceType: string; // e.g., 'user', 'university', 'campus'
+  @IsEnum(AudienceType)
+  audienceType: AudienceType;
 
   @IsBoolean()
   isGlobal: boolean;
@@ -50,7 +61,10 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   message: string;
 
+  @IsAudienceMutuallyExclusive()
   @ValidateNested()
+  @IsObject()
+  @IsNotEmpty()
   @Type(() => AudienceDto)
   audience: AudienceDto;
 }

@@ -7,9 +7,9 @@ import { FatherLivingStatusEnum } from 'src/student-scholarships/schemas/student
 // typescript namespace with all the user type enums
 export namespace UserNS {
     export enum UserType {
-        Student = 'Student',
-        Admin = 'Admin',
-        // Campus_Admin = 'Campus_Admin'
+      Student = 'Student',
+      Admin = 'Admin',
+      Campus_Admin = 'Campus_Admin',
     }
 }
 

@@ -36,6 +36,7 @@ export class Notification {
   @Prop({
     type: {
       audienceType: { type: String, required: true }, // e.g., 'user', 'university', 'campus'
+      // ! For Global notifications, recipients is not present
       isGlobal: { type: Boolean, required: true }, // true if for all of this type
       recipients: { type: [RecipientSchema], required: false }, // Only present if isGlobal is false
     },

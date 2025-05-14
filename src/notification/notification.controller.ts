@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationGateway } from './notification.gateway';
@@ -46,5 +46,13 @@ export class NotificationController {
       createNotificationDto,
     );
     return notification;
+  }
+
+  @Get('unread')
+  async getUnreadNotifications(@AuthReq() authReq: AuthenticatedRequest) {
+    const notifications = await this.notificationService.getUnreadNotifications(
+      authReq.user,
+    );
+    return notifications;
   }
 }

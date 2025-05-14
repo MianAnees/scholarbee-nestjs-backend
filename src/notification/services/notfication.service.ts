@@ -1,16 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, RootFilterQuery } from 'mongoose';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { UserNS } from 'src/users/schemas/user.schema';
+import { CreateNotificationDto } from '../dto/create-notification.dto';
 import {
   Notification,
   NotificationDocument,
 } from '../schemas/notification.schema';
-import { CreateNotificationDto } from '../dto/create-notification.dto';
-import {
-  AccessTokenPayload,
-  AuthenticatedRequest,
-} from 'src/auth/types/auth.interface';
-import { UserNS } from 'src/users/schemas/user.schema';
+
+// ! Temporary DTO for getting notifications
+export class GetNotificationDto extends PaginationDto {
+  user_id: string;
+  campus_id: string;
+  university_id: string;
+}
 
 @Injectable()
 export class NotificationService {
@@ -21,37 +26,43 @@ export class NotificationService {
 
   // Creates a new notification for a user
   async createNotification(
+    user: AuthenticatedRequest['user'],
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
-    const notification = new this.notificationModel(createNotificationDto);
-    return notification.save();
+    try {
+      const notification = new this.notificationModel(createNotificationDto);
+      return notification.save();
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
   }
 
-  private async getUnreadUserGlobalNotifications(): Promise<Notification[]> {
-    /* 
-    - Query Notification collection where:
-    - audience.audienceType == 'user'
-    - audience.isGlobal == true
-- For each notification:
-    - Check if recipients array contains an entry for userId with isRead == false
-    - OR (if no recipients array, treat as unread for all users)
-- Return list of matching notifications
-     */
-    return [];
+  private getUnreadUserGlobalNotificationsQuery(
+    query: RootFilterQuery<NotificationDocument>,
+  ): RootFilterQuery<NotificationDocument> {
+    return {
+      ...query,
+      audience: {
+        // ...query.audience,
+        audienceType: 'user',
+        isGlobal: true,
+      },
+    };
   }
-  private async getUnreadUserSpecificNotifications(
+
+  private getUnreadUserSpecificNotificationsQuery(
+    query: RootFilterQuery<NotificationDocument>,
     userId: string,
-  ): Promise<Notification[]> {
-    /* 
-    - Query Notification collection where:
-    - audience.audienceType == 'user'
-    - audience.isGlobal == false
-    - audience.recipients contains an entry with:
-        - recipientId == userId
-        - isRead == false
-    - Return list of matching notifications
-     */
-    return [];
+  ): RootFilterQuery<NotificationDocument> {
+    return {
+      audience: {
+        audienceType: 'user',
+        isGlobal: false, // gets the non-global notifications
+        recipients: {
+          $elemMatch: { id: userId, isRead: false },
+        },
+      },
+    };
   }
   private async getUnreadCampusGlobalNotifications(): Promise<Notification[]> {
     /* 
@@ -124,11 +135,15 @@ export class NotificationService {
    */
   async getUnreadNotifications(user: AuthenticatedRequest['user']) {
     let notifications: Notification[] = [];
+    let query: RootFilterQuery<NotificationDocument> = {};
 
     if (user.user_type == UserNS.UserType.Student) {
-      const globalNotifications = await this.getUnreadUserGlobalNotifications();
+      const globalNotifications =
+        await this.getUnreadUserGlobalNotificationsQuery(query);
+
       const specificNotifications =
-        await this.getUnreadUserSpecificNotifications(user._id);
+        await this.getUnreadUserSpecificNotificationsQuery(query, user._id);
+
       notifications.push(...globalNotifications, ...specificNotifications);
     }
 
@@ -153,6 +168,104 @@ export class NotificationService {
         ...universitySpecificNotifications,
       );
     }
+
+    return notifications;
+  }
+
+  async getUnreadUserNotifications(user: AuthenticatedRequest['user']) {
+    let query: RootFilterQuery<NotificationDocument> = {};
+    // let notifications: Notification[] = [];
+
+    const globalUserNotificationsQuery =
+      await this.getUnreadUserGlobalNotificationsQuery(query);
+
+    const getSpecificNotificationsQuery =
+      await this.getUnreadUserSpecificNotificationsQuery(query, user._id);
+
+    const specificNotifications = await this.notificationModel.find(
+      getSpecificNotificationsQuery,
+    );
+
+    const notifications = [
+      ...globalUserNotificationsQuery,
+      ...specificNotifications,
+    ];
+
+    return notifications;
+  }
+
+  async getUserNotifications({
+    userId,
+    unread,
+    global,
+  }: {
+    userId: string;
+    unread?: boolean;
+    global?: boolean;
+  }) {
+    let match: any = {};
+
+    // If any filter is provided, build the match accordingly
+    if (unread !== undefined || global !== undefined) {
+      // Start with base for user
+      if (global === true) {
+        // Only global notifications
+        match = {
+          'audience.audienceType': 'User',
+          'audience.isGlobal': true,
+        };
+        if (unread === true) {
+          // For global, unread means all (since no recipients array)
+          // So, no extra filter needed
+        }
+      } else if (global === false) {
+        // Only specific notifications
+        match = {
+          'audience.audienceType': 'User',
+          'audience.isGlobal': false,
+          'audience.recipients': unread === true
+            ? { $elemMatch: { id: userId, isRead: false } }
+            : { $elemMatch: { id: userId } },
+        };
+      } else if (unread === true) {
+        // Both global and specific, but only unread
+        match = {
+          $or: [
+            {
+              'audience.audienceType': 'User',
+              'audience.isGlobal': true,
+            },
+            {
+              'audience.audienceType': 'User',
+              'audience.isGlobal': false,
+              'audience.recipients': { $elemMatch: { id: userId, isRead: false } },
+            },
+          ],
+        };
+      }
+      // else: only global or only specific, already handled above
+    } else {
+      // No filters: return all notifications for user (global and specific)
+      match = {
+        $or: [
+          {
+            'audience.audienceType': 'User',
+            'audience.isGlobal': true,
+          },
+          {
+            'audience.audienceType': 'User',
+            'audience.isGlobal': false,
+            'audience.recipients': { $elemMatch: { id: userId } },
+          },
+        ],
+      };
+    }
+
+    // Run aggregation or find
+    const notifications = await this.notificationModel
+      .find(match)
+      .sort({ createdAt: -1 })
+      .exec();
 
     return notifications;
   }

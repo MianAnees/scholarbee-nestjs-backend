@@ -17,7 +17,7 @@ export type NotificationDocument = Notification & Document;
 @Schema({ _id: false })
 export class Recipient {
   @Prop({ type: String, required: true, refPath: 'audience.audienceType' })
-  recipientId: string; // The id of the user, campus, university, etc.
+  id: string; // The id of the user, campus, university, etc.
 
   @Prop({ type: Boolean, default: false })
   isRead: boolean; // Read status for this recipient
@@ -25,14 +25,20 @@ export class Recipient {
 
 export const RecipientSchema = SchemaFactory.createForClass(Recipient);
 
+export enum AudienceType {
+  User = 'User', // User.name
+  University = 'University', // University.name
+  Campus = 'Campus', // Campus.name
+}
+
 @Schema({ _id: false })
 export class Audience {
   @Prop({
     type: String,
     required: true,
-    enum: [User.name, University.name, Campus.name],
+    enum: [AudienceType.User, AudienceType.University, AudienceType.Campus],
   })
-  audienceType: string;
+  audienceType: AudienceType;
 
   // ! For Global notifications, recipients is not present
   @Prop({ type: Boolean, required: true })
@@ -59,5 +65,33 @@ export class Notification {
   audience: Audience;
 }
 
-export const NotificationSchema = SchemaFactory.createForClass(Notification);
+const NotificationSchema = SchemaFactory.createForClass(Notification);
+
+// Add custom validation for mutual exclusivity
+NotificationSchema.pre('validate', function (next) {
+  // @ts-ignore
+  const doc = this as Notification;
+  if (
+    doc.audience.isGlobal &&
+    doc.audience.recipients &&
+    doc.audience.recipients.length > 0
+  ) {
+    return next(
+      new Error('If isGlobal is true, recipients must be undefined or empty.'),
+    );
+  }
+  if (
+    !doc.audience.isGlobal &&
+    (!doc.audience.recipients || doc.audience.recipients.length === 0)
+  ) {
+    return next(
+      new Error(
+        'If isGlobal is false, recipients must be provided and not empty.',
+      ),
+    );
+  }
+  next();
+});
+
+export { NotificationSchema };
 

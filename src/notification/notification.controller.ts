@@ -1,10 +1,20 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { QueryNotificationDto } from './dto/query-notification.dto';
 
 @UseGuards(ResourceProtectionGuard)
 @Controller('notifications')
@@ -43,16 +53,23 @@ export class NotificationController {
     @Body() createNotificationDto: CreateNotificationDto,
   ) {
     const notification = await this.notificationService.createNotification(
+      authReq.user,
       createNotificationDto,
     );
     return notification;
   }
 
-  @Get('unread')
-  async getUnreadNotifications(@AuthReq() authReq: AuthenticatedRequest) {
-    const notifications = await this.notificationService.getUnreadNotifications(
-      authReq.user,
-    );
-    return notifications;
+  @Get()
+  async getUserNotifications(
+    @Req() req,
+    @Query() queryDto: QueryNotificationDto,
+  ) {
+    const userId = req.user._id;
+    return this.notificationService.getUserNotifications({
+      userId,
+      unread: queryDto.unread,
+      global: queryDto.global,
+      ...queryDto,
+    });
   }
 }

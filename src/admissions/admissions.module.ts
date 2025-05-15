@@ -6,26 +6,18 @@ import { AdmissionsController } from './controllers/admissions.controller';
 import { AdmissionsService } from './services/admissions.service';
 import { AdmissionsGateway } from './gateways/admissions.gateway';
 import { Admission, AdmissionSchema } from './schemas/admission.schema';
+import { IConfiguration } from 'src/config/configuration';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: Admission.name, schema: AdmissionSchema }
-        ]),
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET'),
-                signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION', '1d') },
-            }),
-        }),
-    ],
-    controllers: [AdmissionsController],
-    providers: [
-        AdmissionsService,
-        AdmissionsGateway
-    ],
-    exports: [AdmissionsService]
+  imports: [
+    MongooseModule.forFeature([
+      { name: Admission.name, schema: AdmissionSchema },
+    ]),
+    AuthModule,
+  ],
+  controllers: [AdmissionsController],
+  providers: [AdmissionsService, AdmissionsGateway],
+  exports: [AdmissionsService],
 })
-export class AdmissionsModule { } 
+export class AdmissionsModule {} 

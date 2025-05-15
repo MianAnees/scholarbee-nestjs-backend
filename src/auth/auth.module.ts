@@ -37,6 +37,6 @@ import { ResourceProtectionStrategy } from './strategies/resource-protection.str
     ResourceProtectionGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {} 

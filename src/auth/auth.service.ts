@@ -34,6 +34,21 @@ export class AuthService {
   }
 
   /**
+   * Verify the auth access token for the logged in user.
+   * Used to authenticate the user in the websocket connections
+   */
+  async verifyAuthToken(token: unknown): Promise<AccessTokenPayload> {
+    if (!token || typeof token !== 'string') {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    const decoded = this.jwtService.verify(token, {
+      secret: this.configService.get('jwt.loginSecret', { infer: true }),
+    });
+    return decoded;
+  }
+
+  /**
    * Validate user and get user data after removing sensitive information
    */
   async validateUser(loginDto: LoginDto): Promise<SanitizedUser> {

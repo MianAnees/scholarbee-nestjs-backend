@@ -7,87 +7,90 @@ import {
     SubscribeMessage,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
+import { AuthService } from 'src/auth/auth.service';
 
 @WebSocketGateway({
-    cors: {
-        origin: '*', // For development - change to specific origins in production
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
-    namespace: 'chat',
-    transports: ['websocket', 'polling'], // Allow both WebSocket and polling
+  cors: {
+    origin: '*', // For development - change to specific origins in production
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  namespace: 'chat',
+  transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
-    @WebSocketServer()
-    server: Server;
+export class ChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
+  @WebSocketServer()
+  server: Server;
 
-    private readonly logger = new Logger(ChatGateway.name);
+  private readonly logger = new Logger(ChatGateway.name);
 
-    constructor(
-        private readonly chatService: ChatService,
-        private readonly jwtService: JwtService,
-    ) {
-        this.logger.log('ChatGateway created');
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,
+    private readonly authService: AuthService,
+  ) {
+    this.logger.log('ChatGateway created');
+  }
+
+  afterInit(server: Server) {
+    this.logger.log('WebSocket Gateway initialized');
+  }
+
+  async handleConnection(client: Socket) {
+    try {
+      const authTokenPayload = await this.authService.verifyAuthToken(
+        client.handshake.query.token,
+      );
+      const userId = authTokenPayload._id;
+
+      // Store the user ID with the socket
+      // REVIEW: Why do we need to store the user ID in the client data?
+      client.data.userId = userId;
+
+      this.logger.log(`Client connected: ${client.id}, User: ${userId}`);
+
+      // Join a room specific to this user
+      client.join(`user_${userId}`);
+
+      // Notify the client of successful connection
+      client.emit('connection_established', {
+        message: 'Successfully connected to chat server',
+        userId: userId,
+      });
+    } catch (error) {
+      client.disconnect();
+
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      } else {
+        this.logger.error(`Connection error: ${error.message}`);
+      }
     }
+  }
 
-    afterInit(server: Server) {
-        this.logger.log('WebSocket Gateway initialized');
-    }
+  handleDisconnect(client: Socket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
+  }
 
-    async handleConnection(client: Socket) {
-        try {
-            const token = client.handshake.query.token as string;
-            if (!token) {
-                this.logger.error('No token provided');
-                client.disconnect();
-                return;
-            }
+  // Method to emit events from outside the gateway
+  emitToConversation(conversationId: string, event: string, data: any) {
+    this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
+    console.log('Emitting event:', event, 'to conversation:', conversationId);
 
-            // Verify the token
-            const payload = this.jwtService.verify(token);
-            const userId = payload.id;
+    // Broadcast to all clients
+    this.server.emit(conversationId, {
+      ...data,
+    });
+  }
 
-            // Store the user ID with the socket
-            client.data.userId = userId;
-
-            this.logger.log(`Client connected: ${client.id}, User: ${userId}`);
-
-            // Join a room specific to this user
-            client.join(`user_${userId}`);
-
-            // Notify the client of successful connection
-            client.emit('connection_established', {
-                message: 'Successfully connected to chat server',
-                userId: userId
-            });
-
-        } catch (error) {
-            this.logger.error(`Connection error: ${error.message}`);
-            client.disconnect();
-        }
-    }
-
-    handleDisconnect(client: Socket) {
-        this.logger.log(`Client disconnected: ${client.id}`);
-    }
-
-    // Method to emit events from outside the gateway
-    emitToConversation(conversationId: string, event: string, data: any) {
-        this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
-        console.log('Emitting event:', event, 'to conversation:', conversationId);
-
-        // Broadcast to all clients
-        this.server.emit(conversationId, {
-            ...data
-        });
-    }
-
-    // @SubscribeMessage('message')
-    // handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
-    //     this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
-    //     this.server.to(payload.conversationId).emit('message', payload.message);
-    // }
+  // @SubscribeMessage('message')
+  // handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
+  //     this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
+  //     this.server.to(payload.conversationId).emit('message', payload.message);
+  // }
 }

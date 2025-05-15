@@ -13,6 +13,7 @@ import { Server, Socket } from 'socket.io';
 import { SocketStoreService } from 'src/common/services/socket-store.service';
 import { IConfiguration } from 'src/config/configuration';
 import { NotificationEvent } from './notification.types';
+import { AuthService } from 'src/auth/auth.service';
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -31,6 +32,7 @@ export class NotificationGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<IConfiguration>,
+    private readonly authService: AuthService,
   ) {}
 
   // subscribe to join
@@ -47,7 +49,7 @@ export class NotificationGateway
     this.socketStoreService = new SocketStoreService();
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`Notification client connected: ${client.id}`);
     const token = client.handshake.query.token;
 
@@ -61,16 +63,12 @@ export class NotificationGateway
     // verify the token
     try {
       // TODO: Type the payload of the access token as the same type as the AccessTokenPayload
-      const payload = this.jwtService.verify(token, {
-        secret: this.configService.get('jwt.secret', {
-          infer: true,
-        }),
-      });
+      const payload = await this.authService.verifyAuthToken(token);
 
       client.data.user = payload;
 
       this.socketStoreService.addConnection({
-        userId: payload.id,
+        userId: payload._id,
         socketId: client.id,
       });
     } catch (err) {

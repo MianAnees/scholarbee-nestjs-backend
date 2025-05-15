@@ -24,6 +24,7 @@ export interface AuthenticatedRequest extends Request {
 
 export interface AuthenticatedSocket extends Socket {
   data: {
+    // user: AccessTokenPayload;
     user: Awaited<ReturnType<ResourceProtectionStrategy['validate']>>;
   };
 }

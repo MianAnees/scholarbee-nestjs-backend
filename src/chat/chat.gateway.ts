@@ -1,16 +1,18 @@
-import {
-    WebSocketGateway,
-    WebSocketServer,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnGatewayInit,
-    SubscribeMessage,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ChatService } from './chat.service';
+import {
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
+  WebSocketGateway,
+  WebSocketServer
+} from '@nestjs/websockets';
+import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
+import { WsJwtGuard } from 'src/auth/guards/ws-jwt.guard';
+import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
+import { AuthGateway } from 'src/common/services/auth-gateway.service';
+import { ChatService } from './chat.service';
 
 @WebSocketGateway({
   cors: {
@@ -21,19 +23,21 @@ import { AuthService } from 'src/auth/auth.service';
   namespace: 'chat',
   transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
+@UseGuards(WsJwtGuard)
 export class ChatGateway
+  extends AuthGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
   @WebSocketServer()
   server: Server;
 
-  private readonly logger = new Logger(ChatGateway.name);
-
+  // Only inject the services needed for this gateway
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
-    private readonly authService: AuthService,
+    authService: AuthService, // Do not redeclare as private/protected, just pass to super
   ) {
+    super(authService);
     this.logger.log('ChatGateway created');
   }
 
@@ -41,40 +45,26 @@ export class ChatGateway
     this.logger.log('WebSocket Gateway initialized');
   }
 
-  async handleConnection(client: Socket) {
-    try {
-      const authTokenPayload = await this.authService.verifyAuthToken(
-        client.handshake.query.token,
-      );
-      const userId = authTokenPayload._id;
+  // Custom logic for authenticated connections
+  protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
+    this.logger.log(
+      `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
+    );
 
-      // Store the user ID with the socket
-      // REVIEW: Why do we need to store the user ID in the client data?
-      client.data.userId = userId;
+    // Join a room specific to this user
+    authSocket.join(`user_${authSocket.data.user._id}`);
 
-      this.logger.log(`Client connected: ${client.id}, User: ${userId}`);
-
-      // Join a room specific to this user
-      client.join(`user_${userId}`);
-
-      // Notify the client of successful connection
-      client.emit('connection_established', {
-        message: 'Successfully connected to chat server',
-        userId: userId,
-      });
-    } catch (error) {
-      client.disconnect();
-
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      } else {
-        this.logger.error(`Connection error: ${error.message}`);
-      }
-    }
+    // Notify the client of successful connection
+    authSocket.emit('connection_established', {
+      message: 'Successfully connected to chat server',
+      userId: authSocket.data.user._id,
+    });
   }
 
-  handleDisconnect(client: Socket) {
+  // Custom logic for disconnects
+  protected onAuthenticatedDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    // ... your custom logic here ...
   }
 
   // Method to emit events from outside the gateway
@@ -94,3 +84,5 @@ export class ChatGateway
   //     this.server.to(payload.conversationId).emit('message', payload.message);
   // }
 }
+
+// Note: In the base AuthGateway, authService and logger are marked as protected so that child classes can access them if needed (e.g., for logging or advanced authentication logic). If you want to restrict access to only the base class, use private. However, protected is more flexible for extensible base classes.

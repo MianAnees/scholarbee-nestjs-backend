@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { CreateNotificationDto } from '../dto/create-notification.dto';
-import { NotificationDocument } from '../schemas/notification.schema';
+import {
+  NotificationDocument,
+  Notification,
+} from '../schemas/notification.schema';
 import {
   NotificationQuery,
   QueryNotificationDto,

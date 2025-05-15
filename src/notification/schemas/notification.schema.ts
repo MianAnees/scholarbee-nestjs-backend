@@ -4,7 +4,6 @@ import { Campus } from 'src/campuses/schemas/campus.schema';
 import { University } from 'src/universities/schemas/university.schema';
 import { User } from 'src/users/schemas/user.schema';
 
-export type NotificationDocument = Notification & Document;
 
 // export enum NotificationType {
 //   APPLICATION_REJECTED = 'application/rejected',
@@ -93,5 +92,6 @@ NotificationSchema.pre('validate', function (next) {
   next();
 });
 
-export { NotificationSchema };
+type NotificationDocument = Notification & Document;
 
+export { NotificationSchema, type NotificationDocument };

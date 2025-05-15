@@ -9,6 +9,10 @@ import {
   Notification,
   NotificationDocument,
 } from '../schemas/notification.schema';
+import {
+  NotificationQuery,
+  QueryNotificationDto,
+} from '../dto/query-notification.dto';
 
 // ! Temporary DTO for getting notifications
 export class GetNotificationDto extends PaginationDto {
@@ -194,64 +198,28 @@ export class NotificationService {
     return notifications;
   }
 
-  async getUserNotifications({
-    userId,
-    unread,
-    global,
-  }: {
-    userId: string;
-    unread?: boolean;
-    global?: boolean;
-  }) {
-    let match: any = {};
+  private getUserNotificationsQuery(
+    userId: string,
+    queryDto: Pick<QueryNotificationDto, 'read_status' | 'scope'>,
+  ): RootFilterQuery<NotificationDocument> {
+    const { read_status, scope } = queryDto;
 
-    // If any filter is provided, build the match accordingly
-    if (unread !== undefined || global !== undefined) {
-      // Start with base for user
-      if (global === true) {
-        // Only global notifications
-        match = {
-          'audience.audienceType': 'User',
-          'audience.isGlobal': true,
-        };
-        if (unread === true) {
-          // For global, unread means all (since no recipients array)
-          // So, no extra filter needed
-        }
-      } else if (global === false) {
-        // Only specific notifications
-        match = {
-          'audience.audienceType': 'User',
-          'audience.isGlobal': false,
-          'audience.recipients': unread === true
-            ? { $elemMatch: { id: userId, isRead: false } }
-            : { $elemMatch: { id: userId } },
-        };
-      } else if (unread === true) {
-        // Both global and specific, but only unread
-        match = {
-          $or: [
-            {
-              'audience.audienceType': 'User',
-              'audience.isGlobal': true,
-            },
-            {
-              'audience.audienceType': 'User',
-              'audience.isGlobal': false,
-              'audience.recipients': { $elemMatch: { id: userId, isRead: false } },
-            },
-          ],
-        };
-      }
-      // else: only global or only specific, already handled above
-    } else {
+    let match: RootFilterQuery<NotificationDocument> = {};
+
+    // 1. read_status: NotificationReadStatus.ANY, scope: NotificationScope.ALL
+    if (
+      read_status === NotificationQuery.ReadStatus.ANY &&
+      scope === NotificationQuery.Scope.ALL
+    ) {
       // No filters: return all notifications for user (global and specific)
       match = {
         $or: [
+          // Global notifications
           {
             'audience.audienceType': 'User',
             'audience.isGlobal': true,
           },
+          // Specific notifications (irrespective of read status)
           {
             'audience.audienceType': 'User',
             'audience.isGlobal': false,
@@ -261,10 +229,73 @@ export class NotificationService {
       };
     }
 
+    // 2. read_status: NotificationReadStatus.ANY, scope: NotificationScope.GLOBAL
+    if (
+      read_status === NotificationQuery.ReadStatus.ANY &&
+      scope === NotificationQuery.Scope.GLOBAL
+    ) {
+      // Only global notifications irrespective of read status
+      match = {
+        'audience.audienceType': 'User',
+        'audience.isGlobal': true,
+      };
+    }
+
+    // 3. read_status: NotificationReadStatus.ANY, scope: NotificationScope.SPECIFIC
+    if (
+      read_status === NotificationQuery.ReadStatus.ANY &&
+      scope === NotificationQuery.Scope.SPECIFIC
+    ) {
+      // Only specific notifications irrespective of read status
+      match = {
+        'audience.audienceType': 'User',
+        'audience.isGlobal': false,
+        'audience.recipients': { $elemMatch: { id: userId } },
+      };
+    }
+
+    // 4. read_status: NotificationReadStatus.UNREAD, scope: NotificationScope.GLOBAL
+    if (
+      read_status === NotificationQuery.ReadStatus.UNREAD &&
+      scope === NotificationQuery.Scope.GLOBAL
+    ) {
+      // Only global notifications
+      match = {
+        'audience.audienceType': 'User',
+        'audience.isGlobal': true,
+        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
+      };
+    }
+
+    // 5. read_status: NotificationReadStatus.UNREAD, scope: NotificationScope.SPECIFIC
+    if (
+      read_status === NotificationQuery.ReadStatus.UNREAD &&
+      scope === NotificationQuery.Scope.SPECIFIC
+    ) {
+      match = {
+        'audience.audienceType': 'User',
+        'audience.isGlobal': false,
+        'audience.recipients': { $elemMatch: { id: userId, isRead: false } },
+      };
+    }
+
+    return match;
+  }
+
+  async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
+    const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
+
+    const match = this.getUserNotificationsQuery(userId, {
+      read_status,
+      scope,
+    });
+
     // Run aggregation or find
     const notifications = await this.notificationModel
       .find(match)
-      .sort({ createdAt: -1 })
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(limit)
       .exec();
 
     return notifications;

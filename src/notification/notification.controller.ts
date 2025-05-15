@@ -61,15 +61,10 @@ export class NotificationController {
 
   @Get()
   async getUserNotifications(
-    @Req() req,
+    @AuthReq() authReq: AuthenticatedRequest,
     @Query() queryDto: QueryNotificationDto,
   ) {
-    const userId = req.user._id;
-    return this.notificationService.getUserNotifications({
-      userId,
-      unread: queryDto.unread,
-      global: queryDto.global,
-      ...queryDto,
-    });
+    const userId = authReq.user._id;
+    return this.notificationService.getUserNotifications(userId, queryDto);
   }
 }

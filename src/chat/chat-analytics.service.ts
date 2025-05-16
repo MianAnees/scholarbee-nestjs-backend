@@ -48,8 +48,8 @@ export class ChatAnalyticsService {
   }
 
   /**
-   * * This function is used to find all conversations per each university
-   * REVIEW: In future, we can add further breakdown of how many conversations per each campus of every university are available
+   * Returns the number of conversations and total sessions (sum of sessionsCount) per university
+   * @returns Array<{ university_id, university_name, conversation_count, conversation_sessions_count }>
    */
   async findAllConversationsPerEachUniversity() {
     return this.conversationModel.aggregate([
@@ -67,9 +67,11 @@ export class ChatAnalyticsService {
       // Group by university_id
       {
         $group: {
-          // _id: '$campus.university_id', // ! This will fail if the university_id is not an ObjectId
-          _id: { $toObjectId: '$campus.university_id' }, // ensures than each university_id is converted to an ObjectId otherwise the following lookup will fail
-          conversation_count: { $sum: 1 }, // for each university, count the number of conversations in the `campus` group by counting, 1 for each conversation grouped
+          _id: { $toObjectId: '$campus.university_id' },
+          conversation_count: { $sum: 1 },
+          conversation_sessions_count: {
+            $sum: { $ifNull: ['$sessionsCount', 0] },
+          },
         },
       },
       // Retrieves the university info (name) from the `universities` collection
@@ -89,6 +91,7 @@ export class ChatAnalyticsService {
           university_id: '$_id',
           university_name: '$university.name',
           conversation_count: 1,
+          conversation_sessions_count: 1,
         },
       },
     ]);

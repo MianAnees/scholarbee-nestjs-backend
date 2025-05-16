@@ -265,7 +265,7 @@ export class ChatAnalyticsService {
           },
         },
       },
-      { $sort: { averageResponseTime: 1 } },
+      { $sort: { averageResponseTime: 1, university_name: 1 } },
       { $limit: limit },
     ]);
     return results;
@@ -317,7 +317,7 @@ export class ChatAnalyticsService {
           },
         },
       },
-      { $sort: { averageResponseTime: 1 } },
+      { $sort: { averageResponseTime: 1, campus_name: 1 } },
       { $limit: limit },
     ]);
     return results;

@@ -1,5 +1,6 @@
 import { EsEntity, EsField } from 'es-mapping-ts';
-import { BaseEntity } from 'src/common/entities/base.entity';
+import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
+import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
 
 
 // -----------------------------------------------------------------------------
@@ -14,15 +15,9 @@ import { BaseEntity } from 'src/common/entities/base.entity';
 // -----------------------------------------------------------------------------
 
 @EsEntity({
-  index: 'application_metrics',
+  index: ES_INDICES.APPLICATION_METRICS,
 })
-export class ApplicationMetricsEntity extends BaseEntity {
-  /**
-   * Step in the application process (enum).
-   * - 'keyword' type for exact match and aggregations.
-   */
-  @EsField({ type: 'keyword' })
-  step: string;
+export class ApplicationMetricsMappingEntity extends BaseMappingEntity {
 
   /**
    * University identifier.
@@ -32,18 +27,18 @@ export class ApplicationMetricsEntity extends BaseEntity {
   universityId: string;
 
   /**
-   * Program identifier.
-   * - 'keyword' type for exact match and aggregations.
-   */
-  @EsField({ type: 'keyword' })
-  programId: string;
-
-  /**
    * Campus identifier.
    * - 'keyword' type for exact match and aggregations.
    */
   @EsField({ type: 'keyword' })
   campusId: string;
+
+  /**
+   * Program identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  programId: string;
 
   /**
    * Admission program identifier.
@@ -53,13 +48,6 @@ export class ApplicationMetricsEntity extends BaseEntity {
   admissionProgramId: string;
 
   /**
-   * Timestamp of the event.
-   * - 'date' type for time series analytics.
-   */
-  @EsField({ type: 'date' })
-  timestamp: Date;
-
-  /**
    * Event type (e.g., 'navigate').
    * - 'keyword' type for exact match and aggregations.
    */
@@ -67,14 +55,22 @@ export class ApplicationMetricsEntity extends BaseEntity {
   eventType: string;
 
   /**
+   * Step in the application process (enum).
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  step: string;
+
+  /**
    * User identifier.
    * - 'keyword' type for exact match and aggregations.
    */
   @EsField({ type: 'keyword' })
   userId: string;
+
 }
 
-export const applicationMetricsMappings = {
+export const applicationMetricsRawMappings = {
   properties: {
     universityId: { type: 'keyword' },
     campusId: { type: 'keyword' },
@@ -85,15 +81,5 @@ export const applicationMetricsMappings = {
     userId: { type: 'keyword' },
     timestamp: { type: 'date' },
   },
-}; 
+};
 
-
-export enum ApplicationProgressStep {
-    APPLICATION_START = 'application/start',
-    PROFILE_SELF = 'profile/self',
-    PROFILE_CONTACT = 'profile/contact',
-    PROFILE_EDUCATION = 'profile/education',
-    PROFILE_DOCS = 'profile/docs',
-    APPLICATION_PROGRAM_SELECTION = 'application/program_selection',
-    APPLICATION_COMPLETE = 'application/complete',
-}

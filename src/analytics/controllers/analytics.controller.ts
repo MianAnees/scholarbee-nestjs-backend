@@ -9,10 +9,10 @@ import {
   Param,
 } from '@nestjs/common';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
-import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
-import { ChatAnalyticsService } from 'src/chat/chat-analytics.service';
+import { ApplicationMetricsAnalyticsService } from 'src/analytics/services/application-metrics.analytics.service';
+import { ChatAnalyticsService } from 'src/analytics/services/chat.analytics.service';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { SearchHistoryAnalyticsService } from '../services/search-history-analytics.service';
+import { SearchHistoryAnalyticsService } from '../services/search-history.analytics.service';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';

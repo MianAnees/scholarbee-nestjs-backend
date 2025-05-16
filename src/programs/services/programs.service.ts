@@ -6,11 +6,11 @@ import { CreateProgramDto } from '../dto/create-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import {
   SearchResourceEnum,
   UserTypeEnum,
-} from 'src/analytics/schemas/search-history.entity';
+} from 'src/elasticsearch/mappings/search-history.mapping';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 
 @Injectable()

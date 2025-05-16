@@ -11,8 +11,8 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { SearchResourceEnum, UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
+import { SearchResourceEnum, UserTypeEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';

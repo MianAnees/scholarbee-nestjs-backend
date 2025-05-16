@@ -1,10 +1,11 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
+import { HttpException, HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { IConfiguration } from 'src/config/configuration';
+import { DEFAULT_INDEX_SETTINGS } from 'src/elasticsearch/config/es-indexing-settings.config';
 
 @Injectable()
-export class ElasticsearchService {
+export class ElasticsearchService implements OnModuleInit {
   private readonly logger = new Logger(ElasticsearchService.name);
 
   constructor(
@@ -48,6 +49,58 @@ export class ElasticsearchService {
     }
   }
 
+
+  private async initializeIfRequired({
+    index,
+    mapping,
+  }: {
+    index: string;
+    mapping: Record<string, any>;
+  }) {
+    const exists = await this.indexExists(index);
+    if (!exists) {
+      await this.createIndex(index, DEFAULT_INDEX_SETTINGS, mapping);
+      this.logger.log(`"${index}" index created`);
+      return true;
+    }
+    this.logger.log(`"${index}" index already exists`);
+    return false;
+  }
+
+
+  /**
+   * Initialize analytics-related indices (i.e. search logs and user events)
+   */
+  private async initializeIndices() {
+    try {
+      /* 
+      ? Loop over the indices you want to initialize on startup
+      // In each loop, call the initializeIfRequired function with correct index and mapping
+       */
+
+      // const indicesToInitialize = [
+      //   { index: ES_INDICES.SEARCH_HISTORY, mapping: searchHistoryRawMappings },
+      //   { index: ES_INDICES.APPLICATION_METRICS, mapping: applicationMetricsRawMappings },
+      // ];
+
+      // for (const index of indicesToInitialize) {
+      //   await this.initializeIfRequired(index);
+      // }
+
+    } catch (error) {
+      this.logger.error(
+        `Error initializing Analytics Elasticsearch indices: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  async onModuleInit() {
+    await this.initializeIndices();
+  }
+
+
+
   /**
    * Index a document
    */
@@ -57,10 +110,15 @@ export class ElasticsearchService {
     document: Record<string, any>,
   ) {
     try {
+      const documentWithTimestamp = {
+        ...document,
+        timestamp: new Date(),
+      };
+
       await this.elasticsearchService.index({
         index,
         id,
-        body: document,
+        body: documentWithTimestamp,
       });
 
       return {
@@ -69,7 +127,7 @@ export class ElasticsearchService {
         data: {
           index: index,
           id: id,
-          document: document,
+          document: documentWithTimestamp,
         }
       };
     } catch (error) {

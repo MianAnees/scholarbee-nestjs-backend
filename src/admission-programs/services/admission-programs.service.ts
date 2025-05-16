@@ -6,10 +6,10 @@ import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
-import { SearchResourceEnum } from 'src/analytics/schemas/search-history.entity';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
+import { SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
-import { UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
+import { UserTypeEnum } from 'src/elasticsearch/mappings/search-history.mapping';
 
 @Injectable()
 export class AdmissionProgramsService {

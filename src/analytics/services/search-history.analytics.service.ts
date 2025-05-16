@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
-import { ISearchHistory } from '../schemas/search-history.entity';
+import { ISearchHistory } from '../../elasticsearch/mappings/search-history.mapping';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';

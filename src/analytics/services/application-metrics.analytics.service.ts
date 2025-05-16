@@ -3,10 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { IsDateString, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { Model, Types } from 'mongoose';
 import { QueryAnalyticsCommonDto } from 'src/analytics/dto/query-analytics.dto';
-import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
 import { University, UniversityDocument } from 'src/universities/schemas/university.schema';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
+import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -17,7 +17,7 @@ export class ApplicationMetricsAnalyticsService {
     private readonly elasticsearchService: ElasticsearchService,
     @InjectModel(University.name)
     private universityModel: Model<UniversityDocument>,
-  ) {}
+  ) { }
 
   /**
    * Get most popular universities receiving applications

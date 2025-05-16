@@ -1,10 +1,10 @@
 import { EsEntity, EsField } from 'es-mapping-ts';
-import { BaseEntity } from '../../common/entities/base.entity';
+import { BaseMappingEntity } from '../../elasticsearch/mappings/base.mapping';
 
 @EsEntity({
   index: 'universities'
 })
-export class UniversityEntity extends BaseEntity {
+export class UniversityEntity extends BaseMappingEntity {
   @EsField({
     type: 'text',
     analyzer: 'english',

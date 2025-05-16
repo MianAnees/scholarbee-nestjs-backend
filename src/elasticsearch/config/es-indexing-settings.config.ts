@@ -1,12 +1,3 @@
-/**
- * Default Elasticsearch indices names
- */
-export enum ES_INDICES {
-  PROGRAMS = 'programs',
-  UNIVERSITIES = 'universities',
-  SEARCH_LOGS = 'search_logs',
-  USER_EVENTS = 'user-events',
-}
 
 /**
  * Default settings for indices

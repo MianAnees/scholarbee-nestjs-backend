@@ -11,12 +11,15 @@ export class MappingRegistryService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      // Get all mappings from decorated entities
+      // 1. Get all mappings from decorated entities
       const mappings = EsMappingService.getInstance().getMappings();
-      
-      // Store mappings for later use
+      this.logger.log(`Mappings found: `);
+      console.log(` mappings:`, mappings)
+
+      // 2. Store and apply mappings
       for (const mapping of mappings) {
         this.mappings.set(mapping.index, mapping);
+        await this.applyMapping(mapping.index); // Apply mapping at startup
         this.logger.log(`Registered mapping for index: ${mapping.index}`);
       }
     } catch (error) {
@@ -24,7 +27,7 @@ export class MappingRegistryService implements OnModuleInit {
         `Error registering Elasticsearch mappings: ${error.message}`,
         error.stack,
       );
-      throw error; // Re-throw to prevent application startup if mappings are critical
+      throw error;
     }
   }
 

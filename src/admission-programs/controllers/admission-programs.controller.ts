@@ -19,7 +19,7 @@ import { AdmissionProgramsService } from '../services/admission-programs.service
 import {
   SearchResourceEnum,
   UserTypeEnum,
-} from 'src/analytics/schemas/search-history.entity';
+} from 'src/elasticsearch/mappings/search-history.mapping';
 import { Request } from 'express';
 
 @Controller('admission-programs')

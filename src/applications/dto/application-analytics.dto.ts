@@ -5,7 +5,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
+import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 
 export class ApplicationMetricRegisterEventDto {
   @IsEnum(ApplicationProgressStep)

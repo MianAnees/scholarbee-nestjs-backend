@@ -170,6 +170,7 @@ export class ApplicationMetricsAnalyticsService {
         this.APPLICATION_METRICS_INDEX,
         esQuery,
       );
+
       // Map the response to the aggregation names
       const result: {
         progress_events_count: {
@@ -180,7 +181,7 @@ export class ApplicationMetricsAnalyticsService {
       };
       Object.values(stepAggNames).forEach((aggName) => {
         result.progress_events_count[aggName] = Number(
-          response.aggregations[aggName]?.doc_count || 0,
+          response.body.aggregations[aggName]?.doc_count || 0,
         );
       });
 
@@ -226,7 +227,7 @@ export class ApplicationMetricsAnalyticsService {
         },
       );
 
-      if (searchResult.hits?.hits?.length > 0) {
+      if (searchResult.body.hits?.hits?.length > 0) {
         this.logger.warn(
           `Duplicate event detected for userId: ${userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`,
         );
@@ -236,15 +237,11 @@ export class ApplicationMetricsAnalyticsService {
         // );
       }
 
-      const document = {
-        ...applicationMetric,
-        timestamp: new Date(),
-      };
 
       return await this.elasticsearchService.indexDocument(
         this.APPLICATION_METRICS_INDEX,
         undefined, // Let Elasticsearch generate the ID
-        document,
+        applicationMetric,
       );
     } catch (error) {
       if (error instanceof HttpException) {

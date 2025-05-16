@@ -54,7 +54,7 @@ export class ElasticsearchService {
 
 
   /**
-   * Index a document
+   * Indexes a document and automatically adds a timestamp to the document
    */
   async indexDocument(
     index: string,
@@ -96,7 +96,7 @@ export class ElasticsearchService {
   /**
    * Search an index
    */
-  async search(index: string, query: any): Promise<any> {
+  async search(index: string, query: Record<string, any>) {
     try {
       const result = await this.elasticsearchService.search({
         index,

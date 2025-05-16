@@ -43,9 +43,9 @@ export class ElasticsearchController {
   @Post('search/:index')
   async search(
     @Param('index') index: string,
-    @Body() query: any,
+    @Body() query: Record<string, unknown>,
   ) {
-    return await this.elasticsearchService.search(index, query);
+    return await this.elasticsearchService.search(index, query)
   }
 
   @Delete('index/:index/document/:id')

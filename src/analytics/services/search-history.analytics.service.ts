@@ -31,15 +31,10 @@ export class SearchHistoryAnalyticsService {
   async indexDocument(searchHistory: ISearchHistory) {
     this.logger.log(`🔍 Indexing document`, searchHistory);
     try {
-      const document = {
-        ...searchHistory,
-        timestamp: searchHistory.timestamp || new Date(),
-      };
-
       return await this.elasticsearchService.indexDocument(
         this.SEARCH_HISTORY_INDEX,
         undefined, // Let Elasticsearch generate the ID
-        document,
+        searchHistory,
       );
     } catch (error) {
       this.logger.error(

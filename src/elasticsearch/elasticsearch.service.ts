@@ -8,7 +8,7 @@ import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
 import { searchHistoryRawMappings } from 'src/elasticsearch/mappings/search-history.mapping';
 
 @Injectable()
-export class ElasticsearchService implements OnModuleInit {
+export class ElasticsearchService {
   private readonly logger = new Logger(ElasticsearchService.name);
 
   constructor(
@@ -51,58 +51,6 @@ export class ElasticsearchService implements OnModuleInit {
       return false;
     }
   }
-
-
-  private async initializeIfRequired({
-    index,
-    mapping,
-  }: {
-    index: string;
-    mapping: Record<string, any>;
-  }) {
-    const exists = await this.indexExists(index);
-    if (!exists) {
-      await this.createIndex(index, DEFAULT_INDEX_SETTINGS, mapping);
-      this.logger.log(`"${index}" index created`);
-      return true;
-    }
-    this.logger.log(`"${index}" index already exists`);
-    return false;
-  }
-
-
-  /**
-   * Initialize analytics-related indices (i.e. search logs and user events)
-   */
-  private async initializeIndices() {
-    try {
-      /* 
-      ? Loop over the indices you want to initialize on startup
-      // In each loop, call the initializeIfRequired function with correct index and mapping
-       */
-
-      const indicesToInitialize = [
-        { name: ES_INDICES.SEARCH_HISTORY, mapping: searchHistoryRawMappings },
-        { name: ES_INDICES.APPLICATION_METRICS, mapping: applicationMetricsRawMappings },
-      ];
-
-      for (const index of indicesToInitialize) {
-        console.log(`Mapping for ${index.name}:`, index.mapping);
-        // await this.initializeIfRequired(index);
-      }
-
-    } catch (error) {
-      this.logger.error(
-        `Error initializing Analytics Elasticsearch indices: ${error.message}`,
-        error.stack,
-      );
-    }
-  }
-
-  async onModuleInit() {
-    await this.initializeIndices();
-  }
-
 
 
   /**

@@ -127,6 +127,7 @@ export class ChatAnalyticsService {
     return {
       totalChatSessionsCount,
       averageResponseTime,
+      totalChats: conversations.length,
     };
   }
 

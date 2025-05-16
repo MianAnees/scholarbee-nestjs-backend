@@ -25,9 +25,50 @@ export class ApplicationMetricsAnalyticsService {
    */
   async getMostPopularUniversities(queryDto: QueryAnalyticsCommonDto) {
     try {
+      const must: any[] = [];
+      const must_not: any[] = [
+        { term: { universityId: '' } },
+        {
+          bool: {
+            must_not: { exists: { field: 'universityId' } },
+          },
+        },
+      ];
+
+      if (queryDto.time_range === 'weekly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1w/w',
+              lte: 'now/w',
+            },
+          },
+        });
+      } else if (queryDto.time_range === 'monthly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1M/M',
+              lte: 'now/M',
+            },
+          },
+        });
+      }
+
+      const query: any = {
+        bool: {
+          must,
+          must_not,
+        },
+      };
+
       const response = await this.elasticsearchService.search(
         this.APPLICATION_METRICS_INDEX,
         {
+          query:
+            Object.keys(must).length || Object.keys(must_not).length
+              ? query
+              : undefined,
           aggs: {
             top_universities: {
               terms: {
@@ -40,11 +81,28 @@ export class ApplicationMetricsAnalyticsService {
         },
       );
 
-      const aggregationResponse = response.aggregations.top_universities as {
-        buckets: { key: string; doc_count: number }[];
-      };
+      if (
+        !response.body ||
+        !response.body.aggregations ||
+        !response.body.aggregations.top_universities ||
+        !response.body.aggregations.top_universities.buckets ||
+        !Array.isArray(response.body.aggregations.top_universities.buckets) ||
+        response.body.aggregations.top_universities.buckets.length === 0
+      ) {
+        throw new HttpException(
+          'No aggregation data (top_universities) found in Elasticsearch response.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
 
-      const universityObjectIds = aggregationResponse.buckets.map(
+      const aggregationResponseBuckets =
+        response.body.aggregations.top_universities.buckets.filter(
+          (bucket) =>
+            typeof bucket.key === 'string' &&
+            Types.ObjectId.isValid(bucket.key),
+        );
+
+      const universityObjectIds = aggregationResponseBuckets.map(
         (bucket) => new Types.ObjectId(bucket.key),
       );
 
@@ -57,7 +115,7 @@ export class ApplicationMetricsAnalyticsService {
         this.logger.warn('Some university IDs could not be resolved to names.');
       }
 
-      const result = aggregationResponse.buckets.map((bucket) => {
+      const result = aggregationResponseBuckets.map((bucket) => {
         const matchedUniversity = universityDetailList.find(
           (university) => university._id.toString() === bucket.key,
         );

@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
 import { ApplicationMetricsAnalyticsService } from 'src/applications/services/application-metrics-analytics.service';
@@ -83,5 +84,10 @@ export class AnalyticsController {
   @Get('chat/conversations/university')
   findAllConversationsPerEachUniversity() {
     return this.chatAnalyticsService.findAllConversationsPerEachUniversity();
+  }
+
+  @Get('chat/response/campus/:campusId')
+  async getCampusChatResponseAnalytics(@Param('campusId') campusId: string) {
+    return this.chatAnalyticsService.getCampusChatResponseAnalytics(campusId);
   }
 }

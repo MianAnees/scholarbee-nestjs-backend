@@ -106,7 +106,7 @@ export class ChatAnalyticsService {
    * @param campusId string (campus ObjectId)
    * @returns { totalChatSessionsCount: number, averageResponseTime: number }
    */
-  async getCampusChatResponseAnalytics(campusId: string) {
+  async getResponseAnalyticsForSpecificCampus(campusId: string) {
     // Only include active conversations
     const conversations = await this.conversationModel.find(
       {
@@ -144,7 +144,7 @@ export class ChatAnalyticsService {
    * @param universityId string (university ObjectId)
    * @returns { totalChatSessionsCount: number, averageResponseTime: number, campuses: Array<{ campus_id, campus_name, totalChatSessionsCount, averageResponseTime }> }
    */
-  async getUniversityChatResponseAnalytics(universityId: string) {
+  async getResponseAnalyticsForSpecificUniversity(universityId: string) {
     // Aggregate per campus for the university
     const campuses = await this.conversationModel.aggregate([
       { $match: { is_active: true } },

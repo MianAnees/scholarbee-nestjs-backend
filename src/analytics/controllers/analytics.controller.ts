@@ -87,15 +87,19 @@ export class AnalyticsController {
   }
 
   @Get('chat/response/campus/:campusId')
-  async getCampusChatResponseAnalytics(@Param('campusId') campusId: string) {
-    return this.chatAnalyticsService.getCampusChatResponseAnalytics(campusId);
+  async getResponseAnalyticsForSpecificCampus(
+    @Param('campusId') campusId: string,
+  ) {
+    return this.chatAnalyticsService.getResponseAnalyticsForSpecificCampus(
+      campusId,
+    );
   }
 
   @Get('chat/response/university/:universityId')
-  async getUniversityChatResponseAnalytics(
+  async getResponseAnalyticsForSpecificUniversity(
     @Param('universityId') universityId: string,
   ) {
-    return this.chatAnalyticsService.getUniversityChatResponseAnalytics(
+    return this.chatAnalyticsService.getResponseAnalyticsForSpecificUniversity(
       universityId,
     );
   }

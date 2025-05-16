@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { EsMappingService } from 'es-mapping-ts';
 import { ElasticsearchService } from '../elasticsearch.service';
 
+
 @Injectable()
 export class MappingRegistryService implements OnModuleInit {
   private readonly logger = new Logger(MappingRegistryService.name);
@@ -12,15 +13,34 @@ export class MappingRegistryService implements OnModuleInit {
   async onModuleInit() {
     try {
       // 1. Get all mappings from decorated entities
-      const mappings = EsMappingService.getInstance().getMappings();
-      this.logger.log(`Mappings found: `);
-      console.log(` mappings:`, mappings)
+      const mappings = EsMappingService.getInstance().getMappings() as unknown as Array<{
+        esmapping: {
+          body: {
+            properties: Record<string, any>;
+          },
+          index: string;
+        },
+        properties: Record<string, any>;
+        readonly: boolean;
+      }>;
+
+
 
       // 2. Store and apply mappings
       for (const mapping of mappings) {
-        this.mappings.set(mapping.index, mapping);
-        await this.applyMapping(mapping.index); // Apply mapping at startup
-        this.logger.log(`Registered mapping for index: ${mapping.index}`);
+        const currentIndex = mapping.esmapping.index;
+        const currentMapping = mapping.esmapping;
+
+        // Skip if the mapping is already registered
+        if (!currentIndex) {
+          this.logger.error(`Index is not defined. Skipping mapping`);
+          continue;
+        }
+
+
+        this.mappings.set(currentIndex, currentMapping);
+        await this.applyMapping(currentIndex); // Apply mapping at startup
+        this.logger.log(`Registered mapping for index: ${currentIndex}`);
       }
     } catch (error) {
       this.logger.error(

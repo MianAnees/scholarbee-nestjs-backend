@@ -1,6 +1,5 @@
 import { EsEntity, EsField } from 'es-mapping-ts';
 
-@EsEntity()
 export class BaseMappingEntity {
   @EsField({
     type: 'date'

@@ -12,11 +12,12 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
+import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {
   private readonly logger = new Logger(SearchHistoryAnalyticsService.name);
-  private readonly SEARCH_HISTORY_INDEX = 'search_history';
+  private readonly SEARCH_HISTORY_INDEX = ES_INDICES.SEARCH_HISTORY;
 
   constructor(
     private readonly elasticsearchService: ElasticsearchService,

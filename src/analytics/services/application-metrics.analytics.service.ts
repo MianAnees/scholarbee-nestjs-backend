@@ -7,11 +7,12 @@ import { University, UniversityDocument } from 'src/universities/schemas/univers
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
 import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
+import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
   private readonly logger = new Logger(ApplicationMetricsAnalyticsService.name);
-  private readonly APPLICATION_METRICS_INDEX = 'application_metrics';
+  private readonly APPLICATION_METRICS_INDEX = ES_INDICES.APPLICATION_METRICS;
 
   constructor(
     private readonly elasticsearchService: ElasticsearchService,

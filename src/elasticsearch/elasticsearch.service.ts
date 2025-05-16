@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { IConfiguration } from 'src/config/configuration';
 import { DEFAULT_INDEX_SETTINGS } from 'src/elasticsearch/config/es-indexing-settings.config';
+import { applicationMetricsRawMappings } from 'src/elasticsearch/mappings/application-metrics.mapping';
+import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
+import { searchHistoryRawMappings } from 'src/elasticsearch/mappings/search-history.mapping';
 
 @Injectable()
 export class ElasticsearchService implements OnModuleInit {
@@ -78,14 +81,15 @@ export class ElasticsearchService implements OnModuleInit {
       // In each loop, call the initializeIfRequired function with correct index and mapping
        */
 
-      // const indicesToInitialize = [
-      //   { index: ES_INDICES.SEARCH_HISTORY, mapping: searchHistoryRawMappings },
-      //   { index: ES_INDICES.APPLICATION_METRICS, mapping: applicationMetricsRawMappings },
-      // ];
+      const indicesToInitialize = [
+        { name: ES_INDICES.SEARCH_HISTORY, mapping: searchHistoryRawMappings },
+        { name: ES_INDICES.APPLICATION_METRICS, mapping: applicationMetricsRawMappings },
+      ];
 
-      // for (const index of indicesToInitialize) {
-      //   await this.initializeIfRequired(index);
-      // }
+      for (const index of indicesToInitialize) {
+        console.log(`Mapping for ${index.name}:`, index.mapping);
+        // await this.initializeIfRequired(index);
+      }
 
     } catch (error) {
       this.logger.error(

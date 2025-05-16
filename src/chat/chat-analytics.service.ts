@@ -129,4 +129,77 @@ export class ChatAnalyticsService {
       averageResponseTime,
     };
   }
+
+  /**
+   * Returns total chat sessions count and average response time for all conversations of all campuses of a specific university,
+   * along with a breakdown per campus (campus_id, campus_name, totalChatSessionsCount, averageResponseTime)
+   * @param universityId string (university ObjectId)
+   * @returns { totalChatSessionsCount: number, averageResponseTime: number, campuses: Array<{ campus_id, campus_name, totalChatSessionsCount, averageResponseTime }> }
+   */
+  async getUniversityChatResponseAnalytics(universityId: string) {
+    // Aggregate per campus for the university
+    const campuses = await this.conversationModel.aggregate([
+      { $match: { is_active: true } },
+      {
+        $lookup: {
+          from: 'campuses',
+          localField: 'campus_id',
+          foreignField: '_id',
+          as: 'campus',
+        },
+      },
+      { $unwind: '$campus' },
+      { $match: { 'campus.university_id': universityId } },
+      {
+        $group: {
+          _id: '$campus_id',
+          campus_name: { $first: '$campus.name' },
+          totalChatSessionsCount: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+          totalWeightedResponseTime: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$avgResponseTime', 0] },
+                { $ifNull: ['$sessionsCount', 0] },
+              ],
+            },
+          },
+          totalSessions: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          campus_id: '$_id',
+          campus_name: 1,
+          totalChatSessionsCount: 1,
+          averageResponseTime: {
+            $cond: [
+              { $gt: ['$totalSessions', 0] },
+              { $divide: ['$totalWeightedResponseTime', '$totalSessions'] },
+              0,
+            ],
+          },
+        },
+      },
+    ]);
+
+    // Calculate overall stats
+    let totalChatSessionsCount = 0;
+    let totalWeightedResponseTime = 0;
+    let totalSessions = 0;
+    for (const campus of campuses) {
+      totalChatSessionsCount += campus.totalChatSessionsCount;
+      totalWeightedResponseTime +=
+        campus.averageResponseTime * campus.totalChatSessionsCount;
+      totalSessions += campus.totalChatSessionsCount;
+    }
+    const averageResponseTime =
+      totalSessions > 0 ? totalWeightedResponseTime / totalSessions : 0;
+
+    return {
+      totalChatSessionsCount,
+      averageResponseTime,
+      campuses,
+    };
+  }
 }

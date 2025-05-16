@@ -1,93 +1,76 @@
-import {
-    WebSocketGateway,
-    WebSocketServer,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnGatewayInit,
-    SubscribeMessage,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import {
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
+  WebSocketGateway,
+  WebSocketServer
+} from '@nestjs/websockets';
+import { Server } from 'socket.io';
+import { AuthService } from 'src/auth/auth.service';
+import { WsJwtGuard } from 'src/auth/guards/ws-jwt.guard';
+import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { ChatService } from './chat.service';
+import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 
 @WebSocketGateway({
-    cors: {
-        origin: '*', // For development - change to specific origins in production
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
-    namespace: 'chat',
-    transports: ['websocket', 'polling'], // Allow both WebSocket and polling
+  cors: {
+    origin: '*', // For development - change to specific origins in production
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  namespace: 'chat',
+  transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
-    @WebSocketServer()
-    server: Server;
+@UseGuards(WsJwtGuard)
+export class ChatGateway extends AuthenticatedGateway {
+  // @WebSocketServer()
+  // server: Server;
 
-    private readonly logger = new Logger(ChatGateway.name);
+  // Only inject the services needed for this gateway
+  constructor(
+    private readonly chatService: ChatService,
+    protected readonly authService: AuthService, // Do not redeclare as private/protected, just pass to super
+  ) {
+    super(authService);
+  }
 
-    constructor(
-        private readonly chatService: ChatService,
-        private readonly jwtService: JwtService,
-    ) {
-        this.logger.log('ChatGateway created');
-    }
+  protected onAuthenticatedInit(server: Server): void {
+    this.logger.log('ChatGateway initialized');
+  }
 
-    afterInit(server: Server) {
-        this.logger.log('WebSocket Gateway initialized');
-    }
+  // Custom logic for authenticated connections
+  protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
+    this.logger.log(
+      `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
+    );
 
-    async handleConnection(client: Socket) {
-        try {
-            const token = client.handshake.query.token as string;
-            if (!token) {
-                this.logger.error('No token provided');
-                client.disconnect();
-                return;
-            }
+    // Join a room specific to this user
+    authSocket.join(`user_${authSocket.data.user._id}`);
 
-            // Verify the token
-            const payload = this.jwtService.verify(token);
-            const userId = payload.id;
+    // Notify the client of successful connection
+    authSocket.emit('connection_established', {
+      message: 'Successfully connected to chat server',
+      userId: authSocket.data.user._id,
+    });
+  }
 
-            // Store the user ID with the socket
-            client.data.userId = userId;
+  // Custom logic for disconnects
+  protected onAuthenticatedDisconnect(client: AuthenticatedSocket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
+    // ... your custom logic here ...
+  }
 
-            this.logger.log(`Client connected: ${client.id}, User: ${userId}`);
+  // Method to emit events from outside the gateway
+  emitToConversation(conversationId: string, event: string, data: any) {
+    this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
+    console.log('Emitting event:', event, 'to conversation:', conversationId);
 
-            // Join a room specific to this user
-            client.join(`user_${userId}`);
-
-            // Notify the client of successful connection
-            client.emit('connection_established', {
-                message: 'Successfully connected to chat server',
-                userId: userId
-            });
-
-        } catch (error) {
-            this.logger.error(`Connection error: ${error.message}`);
-            client.disconnect();
-        }
-    }
-
-    handleDisconnect(client: Socket) {
-        this.logger.log(`Client disconnected: ${client.id}`);
-    }
-
-    // Method to emit events from outside the gateway
-    emitToConversation(conversationId: string, event: string, data: any) {
-        this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
-        console.log('Emitting event:', event, 'to conversation:', conversationId);
-
-        // Broadcast to all clients
-        this.server.emit(conversationId, {
-            ...data
-        });
-    }
-
-    // @SubscribeMessage('message')
-    // handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
-    //     this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
-    //     this.server.to(payload.conversationId).emit('message', payload.message);
-    // }
+    // Broadcast to all clients
+    this.server.emit(conversationId, {
+      ...data,
+    });
+  }
 }
+

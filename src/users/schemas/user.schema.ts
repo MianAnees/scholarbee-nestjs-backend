@@ -4,6 +4,17 @@ import * as bcrypt from 'bcryptjs';
 import { FatherLivingStatusEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 
 
+// typescript namespace with all the user type enums
+export namespace UserNS {
+    export enum UserType {
+      Student = 'Student',
+      Admin = 'Admin',
+      Campus_Admin = 'Campus_Admin',
+    }
+}
+
+
+
 // Add the comparePassword method to the interface
 export interface UserDocument extends User, Document {
     comparePassword(candidatePassword: string): Promise<boolean>;
@@ -98,8 +109,8 @@ export class User {
     @Prop()
     address_id?: string;
 
-    @Prop({ required: true, enum: ['Student', 'Admin', 'Campus_Admin'] })
-    user_type: string;
+    @Prop({ required: true, enum: UserNS.UserType })
+    user_type: UserNS.UserType;
 
     @Prop()
     registration_no?: string;

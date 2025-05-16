@@ -9,13 +9,19 @@ import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { BetterOmit } from 'src/utils/typescript.utils';
 import { UsersService } from '../users/users.service';
 import { sendEmail } from '../utils/mail.config';
-import { AccessTokenPayload } from 'src/auth/types/auth.interface';
+import {
+  AccessTokenPayload,
+  AuthenticatedRequest,
+} from 'src/auth/types/auth.interface';
 import { RefreshTokenPayload } from 'src/auth/types/auth.interface';
 
 type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
-    _id: string;
+  _id: string;
 };
-export type SanitizedUser = BetterOmit<UserWithoutComparePassword, 'hash' | 'salt' | 'password'>;
+export type SanitizedUser = BetterOmit<
+  UserWithoutComparePassword,
+  'hash' | 'salt' | 'password'
+>;
 
 @Injectable()
 export class AuthService {
@@ -34,9 +40,24 @@ export class AuthService {
   }
 
   /**
+   * Verify the auth access token for the logged in user.
+   * Used to authenticate the user in the websocket connections
+   */
+  async verifyAuthToken(token: unknown): Promise<AccessTokenPayload> {
+    if (!token || typeof token !== 'string') {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    const decoded = this.jwtService.verify(token, {
+      secret: this.configService.get('jwt.loginSecret', { infer: true }),
+    });
+    return decoded;
+  }
+
+  /**
    * Validate user and get user data after removing sensitive information
    */
-  async validateAndGetUserData_v1(loginDto: LoginDto): Promise<SanitizedUser> {
+  async validateUser(loginDto: LoginDto): Promise<SanitizedUser> {
     // Check if user exists
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
@@ -104,21 +125,6 @@ export class AuthService {
     return user;
   }
 
-  // V2: Passport Local Strategy validation
-  async validateUser(email: string, password: string): Promise<any> {
-    // You can customize this logic for v2 as needed
-    const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) return null;
-    // Remove sensitive info for v2
-    const userObject = user.toObject();
-    delete userObject.hash;
-    delete userObject.salt;
-    delete userObject.password;
-    return userObject;
-  }
-
   /**
    * Receives the validated user and transforms it into a token
    */
@@ -141,7 +147,7 @@ export class AuthService {
     };
   }
 
-  async logout(user: SanitizedUser) {
+  async logout(user: AuthenticatedRequest['user']) {
     // Revoke the refresh token
     await this.usersService.updateUser(user._id, { refreshTokenHash: null });
     return { message: 'Successfully signed out' };

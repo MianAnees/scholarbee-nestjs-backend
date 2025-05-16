@@ -105,10 +105,7 @@ export class ScholarshipsService {
 
         let query = this.scholarshipModel.find(filter);
 
-        console.log('🍎🍎🍎🍎🍎🍎🍎');
-
         if (populate) {
-          console.log('🍌🍌🍌🍌🍌');
           query = query
             .populate('university_id')
             // .populate('country')

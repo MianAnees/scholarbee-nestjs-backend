@@ -20,6 +20,9 @@ export class ChatAnalyticsService {
         $group: {
           _id: '$campus_id',
           conversation_count: { $sum: 1 },
+          conversation_sessions_count: {
+            $sum: { $ifNull: ['$sessionsCount', 0] },
+          },
         },
       },
       // Joins the campuses collection to get the campus name.
@@ -42,6 +45,7 @@ export class ChatAnalyticsService {
           campus_id: '$_id',
           campus_name: '$campus.name',
           conversation_count: 1,
+          conversation_sessions_count: 1,
         },
       },
     ]);

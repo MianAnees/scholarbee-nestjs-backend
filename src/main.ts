@@ -7,6 +7,7 @@ import { ServerOptions } from 'socket.io';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PopulateInterceptor } from './common/interceptors/populate.interceptor';
+import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
 
 class CustomIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: Partial<ServerOptions>): any {
@@ -66,6 +67,7 @@ async function bootstrap() {
   const populateInterceptor = app.get(PopulateInterceptor);
   app.useGlobalInterceptors(populateInterceptor);
   app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
   // Setup Swagger documentation
   const config = new DocumentBuilder()

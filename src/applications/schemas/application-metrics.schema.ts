@@ -14,69 +14,77 @@ import { BaseEntity } from 'src/common/entities/base.entity';
 // -----------------------------------------------------------------------------
 
 @EsEntity({
-    index: 'application_metrics'
+  index: 'application_metrics',
 })
 export class ApplicationMetricsEntity extends BaseEntity {
-    /**
-     * Unique application identifier.
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    applicationId: string;
+  /**
+   * Step in the application process (enum).
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  step: string;
 
-    /**
-     * Step in the application process (enum).
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    step: string;
+  /**
+   * University identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  universityId: string;
 
-    /**
-     * University identifier.
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    universityId: string;
+  /**
+   * Program identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  programId: string;
 
-    /**
-     * Program identifier.
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    programId: string;
+  /**
+   * Campus identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  campusId: string;
 
-    /**
-     * Timestamp of the event.
-     * - 'date' type for time series analytics.
-     */
-    @EsField({ type: 'date' })
-    timestamp: Date;
+  /**
+   * Admission program identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  admissionProgramId: string;
 
-    /**
-     * Event type (e.g., 'navigate').
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    eventType: string;
+  /**
+   * Timestamp of the event.
+   * - 'date' type for time series analytics.
+   */
+  @EsField({ type: 'date' })
+  timestamp: Date;
 
-    /**
-     * User identifier.
-     * - 'keyword' type for exact match and aggregations.
-     */
-    @EsField({ type: 'keyword' })
-    userId: string;
+  /**
+   * Event type (e.g., 'navigate').
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  eventType: string;
+
+  /**
+   * User identifier.
+   * - 'keyword' type for exact match and aggregations.
+   */
+  @EsField({ type: 'keyword' })
+  userId: string;
 }
 
 export const applicationMetricsMappings = {
-    properties: {
-        applicationId: { type: 'keyword' },
-        step: { type: 'keyword' },
-        universityId: { type: 'keyword' },
-        programId: { type: 'keyword' },
-        timestamp: { type: 'date' },
-        eventType: { type: 'keyword' },
-        userId: { type: 'keyword' }
-    }
+  properties: {
+    universityId: { type: 'keyword' },
+    campusId: { type: 'keyword' },
+    programId: { type: 'keyword' },
+    admissionProgramId: { type: 'keyword' },
+    eventType: { type: 'keyword' },
+    step: { type: 'keyword' },
+    userId: { type: 'keyword' },
+    timestamp: { type: 'date' },
+  },
 }; 
 
 

@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ISearchHistory } from '../schemas/search-history.entity';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
@@ -129,11 +135,51 @@ export class SearchHistoryAnalyticsService {
     queryDto: QueryAnalyticsCommonDto,
   ): Promise<Array<{ university: string; count: number }>> {
     try {
-      // get the most searched universities from the search_history index
-      const aggregationResponse = await this.elasticsearchService
-        .search(this.SEARCH_HISTORY_INDEX, {
+      const must: any[] = [];
+      const must_not: any[] = [
+        { term: { 'data.university_id.keyword': '' } },
+        {
+          bool: {
+            must_not: { exists: { field: 'data.university_id.keyword' } },
+          },
+        },
+      ];
+
+      if (queryDto.time_range === 'weekly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1w/w',
+              lte: 'now/w',
+            },
+          },
+        });
+      } else if (queryDto.time_range === 'monthly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1M/M',
+              lte: 'now/M',
+            },
+          },
+        });
+      }
+
+      const query: any = {
+        bool: {
+          must,
+          must_not,
+        },
+      };
+
+      const response = await this.elasticsearchService.search(
+        this.SEARCH_HISTORY_INDEX,
+        {
+          query:
+            Object.keys(must).length || Object.keys(must_not).length
+              ? query
+              : undefined,
           aggs: {
-            // this `top_universities` will then be returned in the aggregations object of the response
             top_universities: {
               terms: {
                 field: 'data.university_id.keyword',
@@ -142,16 +188,36 @@ export class SearchHistoryAnalyticsService {
             },
           },
           size: 0,
-        })
-        .then((response) => {
-          return response.aggregations.top_universities as {
-            buckets: { key: string; doc_count: number }[];
-          };
+        },
+      );
+
+      if (
+        !response.body ||
+        !response.body.aggregations ||
+        !response.body.aggregations.top_universities ||
+        !response.body.aggregations.top_universities.buckets ||
+        // if bucket is not an array, throw an error
+        !Array.isArray(response.body.aggregations.top_universities.buckets) ||
+        // If the buckets are empty, throw an error
+        response.body.aggregations.top_universities.buckets.length === 0
+      ) {
+        throw new NotFoundException(
+          'No aggregation data (top_universities) found in Elasticsearch response.',
+        );
+      }
+
+      // ? This is to ensure that the university_id is a valid object id since these ids will be used to query the university details in the university collection
+      const aggregationResponseBuckets =
+        response.body.aggregations.top_universities.buckets.filter((bucket) => {
+          // if bucket key is a non valid object id, return false
+          if (!Types.ObjectId.isValid(bucket.key)) {
+            return false;
+          }
+          return true;
         });
 
-
       const universityObjectIds: Types.ObjectId[] = [];
-      for (const bucket of aggregationResponse.buckets) {
+      for (const bucket of aggregationResponseBuckets) {
         try {
           universityObjectIds.push(new Types.ObjectId(bucket.key));
         } catch (error) {
@@ -180,7 +246,7 @@ export class SearchHistoryAnalyticsService {
       let finalResponse = [];
 
       // get a list of aggregation response with the relevant university name and university_id
-      for (const bucket of aggregationResponse.buckets) {
+      for (const bucket of aggregationResponseBuckets) {
         try {
           const matchedUniversity = universityDetailList.find(
             (university) => university._id.toString() === bucket.key,

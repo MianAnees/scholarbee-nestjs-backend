@@ -14,26 +14,53 @@ import { SocketStoreService } from 'src/common/services/socket-store.service';
 import { IConfiguration } from 'src/config/configuration';
 import { NotificationEvent } from './notification.types';
 import { AuthService } from 'src/auth/auth.service';
+import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
+import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
   namespace: 'notifications',
   transports: ['websocket', 'polling'],
 })
-export class NotificationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
-{
-  @WebSocketServer()
-  server: Server;
-
-  private readonly logger = new Logger(NotificationGateway.name);
+export class NotificationGateway extends AuthenticatedGateway {
   private socketStoreService: SocketStoreService;
 
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService<IConfiguration>,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(protected readonly authService: AuthService) {
+    super(authService);
+  }
+
+  // ***********************
+  // Lifecycle methods
+  // ***********************
+
+  protected onAuthenticatedInit(server: Server): void {
+    this.logger.log('NotificationGateway initialized');
+  }
+
+  // Custom logic for authenticated connections
+  protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
+    this.logger.log(
+      `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
+    );
+
+    // TODO: Make this reusable as well (by optionally adding a decorator or extending another class)
+    this.socketStoreService.addConnection({
+      userId: authSocket.data.user._id,
+      socketId: authSocket.id,
+    });
+  }
+
+  // Custom logic for disconnects
+  protected onAuthenticatedDisconnect(authSocket: AuthenticatedSocket) {
+    this.logger.log(`Notification socket disconnected: ${authSocket.id}`);
+    this.socketStoreService.removeAssociatedConnection({
+      socketId: authSocket.id,
+    });
+  }
+
+  // ***********************
+  // Subscription methods
+  // ***********************
 
   // subscribe to join
   @SubscribeMessage('join')
@@ -42,48 +69,9 @@ export class NotificationGateway
     client.join(payload.userId); // TODO: REVIEW: Might not be needed for now. But can be used later if we want to send notifications to specific users i.e. admins, campus-admins, students, etc
   }
 
-  afterInit(server: Server) {
-    this.logger.log('Notification WebSocket Gateway initialized');
-
-    // initialize the socket store service
-    this.socketStoreService = new SocketStoreService();
-  }
-
-  async handleConnection(client: Socket) {
-    this.logger.log(`Notification client connected: ${client.id}`);
-    const token = client.handshake.query.token;
-
-    // check if token is provided
-    if (!token || typeof token !== 'string') {
-      this.logger.warn('No token provided, disconnecting client');
-      client.disconnect();
-      return;
-    }
-
-    // verify the token
-    try {
-      // TODO: Type the payload of the access token as the same type as the AccessTokenPayload
-      const payload = await this.authService.verifyAuthToken(token);
-
-      client.data.user = payload;
-
-      this.socketStoreService.addConnection({
-        userId: payload._id,
-        socketId: client.id,
-      });
-    } catch (err) {
-      console.log('🚀 ~ handleConnection ~ err:', err);
-      this.logger.warn('Invalid token, disconnecting client');
-      client.disconnect();
-    }
-  }
-
-  handleDisconnect(client: Socket) {
-    this.logger.log(`Notification client disconnected: ${client.id}`);
-    this.socketStoreService.removeAssociatedConnection({
-      socketId: client.id,
-    });
-  }
+  // ***********************
+  // Event methods
+  // ***********************
 
   emitNotificationToUser(userId: string, notification: any) {
     this.logger.log(`Emitting notification to user: ${userId}`);

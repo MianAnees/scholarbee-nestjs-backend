@@ -11,8 +11,8 @@ import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtGuard } from 'src/auth/guards/ws-jwt.guard';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
-import { AuthGateway } from 'src/common/services/auth-gateway.service';
 import { ChatService } from './chat.service';
+import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 
 @WebSocketGateway({
   cors: {
@@ -24,25 +24,20 @@ import { ChatService } from './chat.service';
   transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
 @UseGuards(WsJwtGuard)
-export class ChatGateway
-  extends AuthGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
-{
-  @WebSocketServer()
-  server: Server;
+export class ChatGateway extends AuthenticatedGateway {
+  // @WebSocketServer()
+  // server: Server;
 
   // Only inject the services needed for this gateway
   constructor(
     private readonly chatService: ChatService,
-    private readonly jwtService: JwtService,
-    authService: AuthService, // Do not redeclare as private/protected, just pass to super
+    protected readonly authService: AuthService, // Do not redeclare as private/protected, just pass to super
   ) {
     super(authService);
-    this.logger.log('ChatGateway created');
   }
 
-  afterInit(server: Server) {
-    this.logger.log('WebSocket Gateway initialized');
+  protected onAuthenticatedInit(server: Server): void {
+    this.logger.log('ChatGateway initialized');
   }
 
   // Custom logic for authenticated connections
@@ -77,12 +72,5 @@ export class ChatGateway
       ...data,
     });
   }
-
-  // @SubscribeMessage('message')
-  // handleMessage(client: Socket, payload: { conversationId: string, message: string }) {
-  //     this.logger.log(`Received message for conversation ${payload.conversationId}: ${payload.message}`);
-  //     this.server.to(payload.conversationId).emit('message', payload.message);
-  // }
 }
 
-// Note: In the base AuthGateway, authService and logger are marked as protected so that child classes can access them if needed (e.g., for logging or advanced authentication logic). If you want to restrict access to only the base class, use private. However, protected is more flexible for extensible base classes.

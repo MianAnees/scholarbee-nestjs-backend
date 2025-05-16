@@ -56,9 +56,50 @@ export class SearchHistoryAnalyticsService {
     queryDto: QueryAnalyticsCommonDto,
   ): Promise<Array<{ major: string; count: number }>> {
     try {
+      const must: any[] = [];
+      const must_not: any[] = [
+        { term: { 'data.major.keyword': '' } },
+        {
+          bool: {
+            must_not: { exists: { field: 'data.major.keyword' } },
+          },
+        },
+      ];
+
+      if (queryDto.time_range === 'weekly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1w/w',
+              lte: 'now/w',
+            },
+          },
+        });
+      } else if (queryDto.time_range === 'monthly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1M/M',
+              lte: 'now/M',
+            },
+          },
+        });
+      }
+
+      const query: any = {
+        bool: {
+          must,
+          must_not,
+        },
+      };
+
       const response = await this.elasticsearchService.search(
         this.SEARCH_HISTORY_INDEX,
         {
+          query:
+            Object.keys(must).length || Object.keys(must_not).length
+              ? query
+              : undefined,
           aggs: {
             top_majors: {
               terms: {
@@ -71,11 +112,24 @@ export class SearchHistoryAnalyticsService {
         },
       );
 
-      const aggregationResponse = response.aggregations.top_majors as {
-        buckets: { key: string; doc_count: number }[];
-      };
+      if (
+        !response.body ||
+        !response.body.aggregations ||
+        !response.body.aggregations.top_majors ||
+        !response.body.aggregations.top_majors.buckets ||
+        !Array.isArray(response.body.aggregations.top_majors.buckets) ||
+        response.body.aggregations.top_majors.buckets.length === 0
+      ) {
+        throw new NotFoundException(
+          'No aggregation data (top_majors) found in Elasticsearch response.',
+        );
+      }
 
-      return aggregationResponse.buckets.map((bucket) => ({
+      const aggregationResponseBuckets = response.body.aggregations.top_majors.buckets.filter(
+        (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
+      );
+
+      return aggregationResponseBuckets.map((bucket) => ({
         major: bucket.key,
         count: bucket.doc_count,
       }));
@@ -96,9 +150,50 @@ export class SearchHistoryAnalyticsService {
     queryDto: QueryAnalyticsCommonDto,
   ): Promise<Array<{ program: string; count: number }>> {
     try {
+      const must: any[] = [];
+      const must_not: any[] = [
+        { term: { 'data.program_name.keyword': '' } },
+        {
+          bool: {
+            must_not: { exists: { field: 'data.program_name.keyword' } },
+          },
+        },
+      ];
+
+      if (queryDto.time_range === 'weekly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1w/w',
+              lte: 'now/w',
+            },
+          },
+        });
+      } else if (queryDto.time_range === 'monthly') {
+        must.push({
+          range: {
+            timestamp: {
+              gte: 'now-1M/M',
+              lte: 'now/M',
+            },
+          },
+        });
+      }
+
+      const query: any = {
+        bool: {
+          must,
+          must_not,
+        },
+      };
+
       const response = await this.elasticsearchService.search(
         this.SEARCH_HISTORY_INDEX,
         {
+          query:
+            Object.keys(must).length || Object.keys(must_not).length
+              ? query
+              : undefined,
           aggs: {
             top_programs: {
               terms: {
@@ -111,11 +206,24 @@ export class SearchHistoryAnalyticsService {
         },
       );
 
-      const aggregationResponse = response.aggregations.top_programs as {
-        buckets: { key: string; doc_count: number }[];
-      };
+      if (
+        !response.body ||
+        !response.body.aggregations ||
+        !response.body.aggregations.top_programs ||
+        !response.body.aggregations.top_programs.buckets ||
+        !Array.isArray(response.body.aggregations.top_programs.buckets) ||
+        response.body.aggregations.top_programs.buckets.length === 0
+      ) {
+        throw new NotFoundException(
+          'No aggregation data (top_programs) found in Elasticsearch response.',
+        );
+      }
 
-      return aggregationResponse.buckets.map((bucket) => ({
+      const aggregationResponseBuckets = response.body.aggregations.top_programs.buckets.filter(
+        (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
+      );
+
+      return aggregationResponseBuckets.map((bucket) => ({
         program: bucket.key,
         count: bucket.doc_count,
       }));

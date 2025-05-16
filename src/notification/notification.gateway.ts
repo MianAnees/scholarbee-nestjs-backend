@@ -1,4 +1,9 @@
-import { HttpException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -16,6 +21,21 @@ import { NotificationEvent } from './notification.types';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
+
+/**
+ * Server should be listening to these events from the client
+ */
+enum ServerEventListeners {
+  JOIN = 'join',
+  NOTIFICATION = 'notification',
+}
+
+/**
+ * Client should be listening to these events from the server
+ */
+enum ClientEventListeners {
+  NOTIFICATION = 'notification',
+}
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -35,19 +55,29 @@ export class NotificationGateway extends AuthenticatedGateway {
 
   protected onAuthenticatedInit(server: Server): void {
     this.logger.log('NotificationGateway initialized');
+
+    // initialize the socket store service
+    this.socketStoreService = new SocketStoreService();
   }
 
   // Custom logic for authenticated connections
   protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
-    this.logger.log(
-      `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
-    );
+    try {
+      this.logger.log(
+        `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
+      );
 
-    // TODO: Make this reusable as well (by optionally adding a decorator or extending another class)
-    this.socketStoreService.addConnection({
-      userId: authSocket.data.user._id,
-      socketId: authSocket.id,
-    });
+      // TODO: Make this reusable as well (by optionally adding a decorator or extending another class)
+      this.socketStoreService.addConnection({
+        userId: authSocket.data.user._id,
+        socketId: authSocket.id,
+      });
+    } catch (error) {
+      if (this.socketStoreService === undefined) {
+        this.logger.error('Socket store service not initialized');
+      }
+      throw error;
+    }
   }
 
   // Custom logic for disconnects
@@ -62,12 +92,12 @@ export class NotificationGateway extends AuthenticatedGateway {
   // Subscription methods
   // ***********************
 
-  // subscribe to join
-  @SubscribeMessage('join')
-  handleJoin(client: Socket, payload: any) {
-    this.logger.log(`Notification client joined: ${client.id}`);
-    client.join(payload.userId); // TODO: REVIEW: Might not be needed for now. But can be used later if we want to send notifications to specific users i.e. admins, campus-admins, students, etc
-  }
+  // // Server-side event handler
+  // @SubscribeMessage(ServerEventListeners.JOIN)
+  // handleJoin(client: Socket, payload: any) {
+  //   this.logger.log(`Notification client joined: ${client.id}`);
+  //   client.join(payload.userId); // TODO: REVIEW: Might not be needed for now. But can be used later if we want to send notifications to specific users i.e. admins, campus-admins, students, etc
+  // }
 
   // ***********************
   // Event methods

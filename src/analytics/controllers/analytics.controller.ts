@@ -103,4 +103,20 @@ export class AnalyticsController {
       universityId,
     );
   }
+
+  @Get('chat/response/universities')
+  async getResponseAnalyticsForAllUniversities(@Query('limit') limit?: string) {
+    const parsedLimit = Number(limit);
+    return this.chatAnalyticsService.getResponseAnalyticsForAllUniversities(
+      !isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10,
+    );
+  }
+
+  @Get('chat/response/campuses')
+  async getResponseAnalyticsForAllCampuses(@Query('limit') limit?: string) {
+    const parsedLimit = Number(limit);
+    return this.chatAnalyticsService.getResponseAnalyticsForAllCampuses(
+      !isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10,
+    );
+  }
 }

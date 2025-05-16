@@ -210,4 +210,116 @@ export class ChatAnalyticsService {
       campuses,
     };
   }
+
+  /**
+   * Returns response analytics for all universities, sorted by averageResponseTime ascending, with a limit (default 10)
+   */
+  async getResponseAnalyticsForAllUniversities(limit: number = 10) {
+    const results = await this.conversationModel.aggregate([
+      { $match: { is_active: true } },
+      {
+        $lookup: {
+          from: 'campuses',
+          localField: 'campus_id',
+          foreignField: '_id',
+          as: 'campus',
+        },
+      },
+      { $unwind: '$campus' },
+      {
+        $group: {
+          _id: { $toObjectId: { $toString: '$campus.university_id' } },
+          totalChatSessionsCount: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+          totalWeightedResponseTime: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$avgResponseTime', 0] },
+                { $ifNull: ['$sessionsCount', 0] },
+              ],
+            },
+          },
+          totalSessions: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+        },
+      },
+      {
+        $lookup: {
+          from: 'universities',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'university',
+        },
+      },
+      { $unwind: '$university' },
+      {
+        $project: {
+          _id: 0,
+          university_id: '$_id',
+          university_name: '$university.name',
+          totalChatSessionsCount: 1,
+          averageResponseTime: {
+            $cond: [
+              { $gt: ['$totalSessions', 0] },
+              { $divide: ['$totalWeightedResponseTime', '$totalSessions'] },
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { averageResponseTime: 1 } },
+      { $limit: limit },
+    ]);
+    return results;
+  }
+
+  /**
+   * Returns response analytics for all campuses, sorted by averageResponseTime ascending, with a limit (default 10)
+   */
+  async getResponseAnalyticsForAllCampuses(limit: number = 10) {
+    // Aggregate per campus
+    const results = await this.conversationModel.aggregate([
+      { $match: { is_active: true } },
+      {
+        $group: {
+          _id: '$campus_id',
+          totalChatSessionsCount: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+          totalWeightedResponseTime: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$avgResponseTime', 0] },
+                { $ifNull: ['$sessionsCount', 0] },
+              ],
+            },
+          },
+          totalSessions: { $sum: { $ifNull: ['$sessionsCount', 0] } },
+        },
+      },
+      {
+        $lookup: {
+          from: 'campuses',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'campus',
+        },
+      },
+      { $unwind: '$campus' },
+      {
+        $project: {
+          _id: 0,
+          campus_id: '$_id',
+          campus_name: '$campus.name',
+          totalChatSessionsCount: 1,
+          averageResponseTime: {
+            $cond: [
+              { $gt: ['$totalSessions', 0] },
+              { $divide: ['$totalWeightedResponseTime', '$totalSessions'] },
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { averageResponseTime: 1 } },
+      { $limit: limit },
+    ]);
+    return results;
+  }
 }

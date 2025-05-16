@@ -18,10 +18,7 @@ export class ElasticsearchService {
   async indexExists(index: string): Promise<boolean> {
     try {
       const response = await this.elasticsearchService.indices.exists({ index });
-      if (typeof response === 'object' && 'body' in response) {
-        return !!response.body;
-      }
-      return response as unknown as boolean;
+      return response.body
     } catch (error) {
       this.logger.error(`Error checking if index ${index} exists: ${error.message}`);
       return false;

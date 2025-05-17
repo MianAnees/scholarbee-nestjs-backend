@@ -131,7 +131,7 @@ export class SearchHistoryAnalyticsService {
    */
   async getMostSearchedPrograms(
     queryDto: QueryAnalyticsCommonDto,
-  ): Promise<Array<{ program: string; count: number }>> {
+  ) {
     try {
       const must: any[] = [];
       const must_not: any[] = [
@@ -154,6 +154,18 @@ export class SearchHistoryAnalyticsService {
           must_not,
         },
       };
+
+      // 1. Get the total count of docs with non-empty program_name
+      const countResponse = await this.elasticsearchService.search(
+        this.SEARCH_HISTORY_INDEX,
+        {
+          query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
+          size: 0,
+          track_total_hits: true,
+        }
+      );
+
+      const total_searches_with_program_name = Number(countResponse.hits?.total?.value) ?? 0;
 
       const aggKey = 'top_programs';
       const response = await this.elasticsearchService.search(
@@ -194,16 +206,21 @@ export class SearchHistoryAnalyticsService {
         (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
       );
 
-      return aggregationResponseBuckets.map((bucket) => ({
+      const programs = aggregationResponseBuckets.map((bucket) => ({
         program: bucket.key,
         count: bucket.doc_count,
       }));
+
+      return {
+        total_searches_with_program_name,
+        programs,
+      };
     } catch (error) {
       this.logger.error(
         `Error getting most searched programs: ${error.message}`,
         error.stack,
       );
-      return [];
+      return { total_searches_with_program_name: 0, programs: [] };
     }
   }
 
@@ -212,11 +229,11 @@ export class SearchHistoryAnalyticsService {
    */
   async getMostSearchedUniversities(
     queryDto: QueryAnalyticsCommonDto,
-  ): Promise<Array<{ university: string; count: number }>> {
+  ) {
     try {
       const must: any[] = [];
       const must_not: any[] = [
-        { term: { 'data.university_id': '' } },
+        { term: { 'data.university_id': '' } }, // exclude docs with empty university_id
         {
           bool: {
             must_not: { exists: { field: 'data.university_id' } },
@@ -235,6 +252,18 @@ export class SearchHistoryAnalyticsService {
           must_not,
         },
       };
+
+      // 1. Get the total count of docs with non-empty university_id
+      const countResponse = await this.elasticsearchService.search(
+        this.SEARCH_HISTORY_INDEX,
+        {
+          query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
+          size: 0,
+          track_total_hits: true,
+        }
+      );
+
+      const total_searches_with_uni_id = Number(countResponse.hits?.total?.value) ?? 0;
 
       const aggKey = 'top_universities';
       const response = await this.elasticsearchService.search(
@@ -310,7 +339,7 @@ export class SearchHistoryAnalyticsService {
         );
       }
 
-      let finalResponse = [];
+      let finalResponse: Array<{ university_id: string; university: string; count: number }> = [];
 
       // get a list of aggregation response with the relevant university name and university_id
       for (const bucket of aggregationResponseBuckets) {
@@ -341,13 +370,16 @@ export class SearchHistoryAnalyticsService {
         }
       }
 
-      return finalResponse;
+      return {
+        total_searches_with_uni_id,
+        universities: finalResponse,
+      };
     } catch (error) {
       this.logger.error(
         `Error getting most searched universities: ${error.message}`,
         error.stack,
       );
-      return [];
+      return null
     }
   }
 }

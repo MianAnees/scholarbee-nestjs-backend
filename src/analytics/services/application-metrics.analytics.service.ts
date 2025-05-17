@@ -8,11 +8,23 @@ import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service'
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
 import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { Search } from '@elastic/elasticsearch/api/requestParams';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
   private readonly logger = new Logger(ApplicationMetricsAnalyticsService.name);
   private readonly APPLICATION_METRICS_INDEX = ES_INDICES.APPLICATION_METRICS;
+
+  private readonly applicationProgressStepAggNames = {
+    [ApplicationProgressStep.APPLICATION_START]: 'application_started',
+    [ApplicationProgressStep.APPLICATION_COMPLETE]: 'application_completed',
+    [ApplicationProgressStep.PROFILE_SELF]: 'profile_self',
+    [ApplicationProgressStep.PROFILE_CONTACT]: 'profile_contact',
+    [ApplicationProgressStep.PROFILE_EDUCATION]: 'profile_education',
+    [ApplicationProgressStep.PROFILE_DOCS]: 'profile_docs',
+    [ApplicationProgressStep.APPLICATION_PROGRAM_SELECTION]:
+      'application_program_selection',
+  };
 
   constructor(
     private readonly elasticsearchService: ElasticsearchService,
@@ -62,16 +74,14 @@ export class ApplicationMetricsAnalyticsService {
           must_not,
         },
       };
-
-      const response = await this.elasticsearchService.search(
-        this.APPLICATION_METRICS_INDEX,
-        {
+      const aggKey = 'top_universities';
+      const esQuery: Search<Record<string, any>>['body'] = {
           query:
             Object.keys(must).length || Object.keys(must_not).length
               ? query
               : undefined,
           aggs: {
-            top_universities: {
+            [aggKey]: {
               terms: {
                 field: 'universityId',
                 size: queryDto.limit,
@@ -79,16 +89,22 @@ export class ApplicationMetricsAnalyticsService {
             },
           },
           size: 0,
-        },
-      );
+      }
+
+      const response = await this.elasticsearchService.search(
+        this.APPLICATION_METRICS_INDEX,
+        esQuery,
+      ) as {
+        aggregations: {
+          [aggKey]: {
+            buckets: { key: string; doc_count: number }[];
+          };
+        };
+      };
 
       if (
-        !response.body ||
-        !response.body.aggregations ||
-        !response.body.aggregations.top_universities ||
-        !response.body.aggregations.top_universities.buckets ||
-        !Array.isArray(response.body.aggregations.top_universities.buckets) ||
-        response.body.aggregations.top_universities.buckets.length === 0
+        !Array.isArray(response?.aggregations?.[aggKey]?.buckets) ||
+        response?.aggregations?.[aggKey]?.buckets?.length === 0
       ) {
         throw new HttpException(
           'No aggregation data (top_universities) found in Elasticsearch response.',
@@ -97,7 +113,7 @@ export class ApplicationMetricsAnalyticsService {
       }
 
       const aggregationResponseBuckets =
-        response.body.aggregations.top_universities.buckets.filter(
+        response.aggregations.top_universities.buckets.filter(
           (bucket) =>
             typeof bucket.key === 'string' &&
             Types.ObjectId.isValid(bucket.key),
@@ -143,19 +159,9 @@ export class ApplicationMetricsAnalyticsService {
    */
   async getOverallMetrics() {
     // Map enum values to aggregation names
-    const stepAggNames = {
-      [ApplicationProgressStep.APPLICATION_START]: 'application_started',
-      [ApplicationProgressStep.APPLICATION_COMPLETE]: 'application_completed',
-      [ApplicationProgressStep.PROFILE_SELF]: 'profile_self',
-      [ApplicationProgressStep.PROFILE_CONTACT]: 'profile_contact',
-      [ApplicationProgressStep.PROFILE_EDUCATION]: 'profile_education',
-      [ApplicationProgressStep.PROFILE_DOCS]: 'profile_docs',
-      [ApplicationProgressStep.APPLICATION_PROGRAM_SELECTION]:
-        'application_program_selection',
-    };
+    const stepAggNames = this.applicationProgressStepAggNames;
 
-    const esQuery = {
-      size: 0,
+    const esQuery: Search<Record<string, any>>['body'] = {
       aggs: Object.entries(stepAggNames).reduce(
         (acc, [step, aggName]) => {
           acc[aggName] = { filter: { term: { step } } };
@@ -163,13 +169,18 @@ export class ApplicationMetricsAnalyticsService {
         },
         {} as Record<string, any>,
       ),
+      size: 0,
     };
 
     try {
       const response = await this.elasticsearchService.search(
         this.APPLICATION_METRICS_INDEX,
         esQuery,
-      );
+      ) as {
+        aggregations: {
+          [key: string]: { doc_count: number };
+        };
+      };
 
       // Map the response to the aggregation names
       const result: {
@@ -181,7 +192,7 @@ export class ApplicationMetricsAnalyticsService {
       };
       Object.values(stepAggNames).forEach((aggName) => {
         result.progress_events_count[aggName] = Number(
-          response.body.aggregations[aggName]?.doc_count || 0,
+          response.aggregations[aggName]?.doc_count || 0,
         );
       });
 
@@ -210,39 +221,54 @@ export class ApplicationMetricsAnalyticsService {
   ) {
     this.logger.log(`📊 Indexing application metric`, applicationMetric);
     try {
-      // Check for duplicate by userId, programId, and step
-      const searchResult = await this.elasticsearchService.search(
-        this.APPLICATION_METRICS_INDEX,
-        {
-          size: 1,
-          query: {
-            bool: {
-              must: [
-                { term: { userId: userId } },
-                { term: { programId: applicationMetric.programId } },
-                { term: { step: applicationMetric.step } },
-              ],
-            },
-          },
-        },
-      );
 
-      if (searchResult.body.hits?.hits?.length > 0) {
-        this.logger.warn(
-          `Duplicate event detected for userId: ${userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`,
-        );
-        return null;
-        // throw new ConflictException(
-        //   `Duplicate event detected for userId: ${userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`,
-        // );
+      // // Check for duplicate by userId, programId, and step
+      // const searchResult = await this.elasticsearchService.search(
+      //   this.APPLICATION_METRICS_INDEX,
+      //   {
+      //     size: 1,
+      //     query: {
+      //       bool: {
+      //         must: [
+      //           { term: { userId: userId } },
+      //           { term: { admissionProgramId: applicationMetric.admissionProgramId } },
+      //           { term: { step: applicationMetric.step } },
+      //         ],
+      //       },
+      //     },
+      //   },
+      // ) as {
+      //   hits: {
+      //     hits: {
+      //       _source: any;
+      //     }[];
+      //   };
+      // };
+
+      // if (
+      //   Array.isArray(searchResult?.hits?.hits) &&
+      //   searchResult.hits?.hits?.length > 0
+      // ) {
+      //   this.logger.warn(
+      //     `Duplicate event detected for userId: ${userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`,
+      //   );
+      //   return null; // ? Not throwing exceptions as this should not interrupt the application flow
+      //   // throw new ConflictException(
+      //   //   `Duplicate event detected for userId: ${userId}, programId: ${applicationMetric.programId}, step: ${applicationMetric.step}. Skipping indexing.`,
+      //   // );
+      // }
+
+      const applicationMetricDocument = {
+        userId,
+        ...applicationMetric,
       }
-
 
       return await this.elasticsearchService.indexDocument(
         this.APPLICATION_METRICS_INDEX,
         undefined, // Let Elasticsearch generate the ID
-        applicationMetric,
+        applicationMetricDocument,
       );
+
     } catch (error) {
       if (error instanceof HttpException) {
         this.logger.error(error.message);

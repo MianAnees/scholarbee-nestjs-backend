@@ -89,6 +89,7 @@ export class SearchHistoryAnalyticsService {
         },
       };
 
+      const aggKey = 'top_majors';
       const response = await this.elasticsearchService.search(
         this.SEARCH_HISTORY_INDEX,
         {
@@ -97,7 +98,7 @@ export class SearchHistoryAnalyticsService {
               ? query
               : undefined,
           aggs: {
-            top_majors: {
+            [aggKey]: {
               terms: {
                 field: 'data.major.keyword',
                 size: queryDto.limit,
@@ -106,22 +107,24 @@ export class SearchHistoryAnalyticsService {
           },
           size: 0,
         },
-      );
+      ) as {
+        aggregations: {
+          [aggKey]: {
+            buckets: { key: string; doc_count: number }[];
+          };
+        };
+      };
 
       if (
-        !response.body ||
-        !response.body.aggregations ||
-        !response.body.aggregations.top_majors ||
-        !response.body.aggregations.top_majors.buckets ||
-        !Array.isArray(response.body.aggregations.top_majors.buckets) ||
-        response.body.aggregations.top_majors.buckets.length === 0
+        !Array.isArray(response?.aggregations?.[aggKey]?.buckets) ||
+        response?.aggregations?.[aggKey]?.buckets?.length === 0
       ) {
         throw new NotFoundException(
-          'No aggregation data (top_majors) found in Elasticsearch response.',
+          `No aggregation data (${aggKey}) found in Elasticsearch response.`,
         );
       }
 
-      const aggregationResponseBuckets = response.body.aggregations.top_majors.buckets.filter(
+      const aggregationResponseBuckets = response.aggregations[aggKey].buckets.filter(
         (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
       );
 
@@ -183,6 +186,7 @@ export class SearchHistoryAnalyticsService {
         },
       };
 
+      const aggKey = 'top_programs';
       const response = await this.elasticsearchService.search(
         this.SEARCH_HISTORY_INDEX,
         {
@@ -191,7 +195,7 @@ export class SearchHistoryAnalyticsService {
               ? query
               : undefined,
           aggs: {
-            top_programs: {
+            [aggKey]: {
               terms: {
                 field: 'data.program_name.keyword',
                 size: queryDto.limit,
@@ -200,22 +204,24 @@ export class SearchHistoryAnalyticsService {
           },
           size: 0,
         },
-      );
+      ) as {
+        aggregations: {
+          [aggKey]: {
+            buckets: { key: string; doc_count: number }[];
+          };
+        };
+      };
 
       if (
-        !response.body ||
-        !response.body.aggregations ||
-        !response.body.aggregations.top_programs ||
-        !response.body.aggregations.top_programs.buckets ||
-        !Array.isArray(response.body.aggregations.top_programs.buckets) ||
-        response.body.aggregations.top_programs.buckets.length === 0
+        !Array.isArray(response?.aggregations?.[aggKey]?.buckets) ||
+        response?.aggregations?.[aggKey]?.buckets?.length === 0
       ) {
         throw new NotFoundException(
-          'No aggregation data (top_programs) found in Elasticsearch response.',
+          `No aggregation data (${aggKey}) found in Elasticsearch response.`,
         );
       }
 
-      const aggregationResponseBuckets = response.body.aggregations.top_programs.buckets.filter(
+      const aggregationResponseBuckets = response.aggregations[aggKey].buckets.filter(
         (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
       );
 
@@ -276,6 +282,7 @@ export class SearchHistoryAnalyticsService {
         },
       };
 
+      const aggKey = 'top_universities';
       const response = await this.elasticsearchService.search(
         this.SEARCH_HISTORY_INDEX,
         {
@@ -284,7 +291,7 @@ export class SearchHistoryAnalyticsService {
               ? query
               : undefined,
           aggs: {
-            top_universities: {
+            [aggKey]: {
               terms: {
                 field: 'data.university_id.keyword',
                 size: queryDto.limit,
@@ -293,26 +300,28 @@ export class SearchHistoryAnalyticsService {
           },
           size: 0,
         },
-      );
+      ) as {
+        aggregations: {
+          [aggKey]: {
+            buckets: { key: string; doc_count: number }[];
+          };
+        };
+      };
 
       if (
-        !response.body ||
-        !response.body.aggregations ||
-        !response.body.aggregations.top_universities ||
-        !response.body.aggregations.top_universities.buckets ||
         // if bucket is not an array, throw an error
-        !Array.isArray(response.body.aggregations.top_universities.buckets) ||
+        !Array.isArray(response?.aggregations?.[aggKey]?.buckets) ||
         // If the buckets are empty, throw an error
-        response.body.aggregations.top_universities.buckets.length === 0
+        response?.aggregations?.[aggKey]?.buckets?.length === 0
       ) {
         throw new NotFoundException(
-          'No aggregation data (top_universities) found in Elasticsearch response.',
+          `No aggregation data (${aggKey}) found in Elasticsearch response.`,
         );
       }
 
       // ? This is to ensure that the university_id is a valid object id since these ids will be used to query the university details in the university collection
       const aggregationResponseBuckets =
-        response.body.aggregations.top_universities.buckets.filter((bucket) => {
+        response?.aggregations?.[aggKey]?.buckets?.filter((bucket) => {
           // if bucket key is a non valid object id, return false
           if (!Types.ObjectId.isValid(bucket.key)) {
             return false;

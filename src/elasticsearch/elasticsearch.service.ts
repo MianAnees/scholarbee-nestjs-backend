@@ -122,8 +122,7 @@ export class ElasticsearchService {
         index,
         body: query,
       });
-      // return result.body
-      return result;
+      return result.body
     } catch (error) {
       this.logger.error(`Error searching index: ${error.message}`, {
         index,

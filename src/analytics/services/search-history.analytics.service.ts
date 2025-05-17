@@ -1,19 +1,16 @@
 import {
-  HttpException,
-  HttpStatus,
   Injectable,
   Logger,
-  NotFoundException,
+  NotFoundException
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { getTimeRangeFilter } from 'src/elasticsearch/utils/time-range-filter.util';
+import { University, UniversityDocument } from 'src/universities/schemas/university.schema';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ISearchHistoryIndexDoc } from '../../elasticsearch/mappings/search-history.mapping';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
-import { Model, Types } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { University } from 'src/universities/schemas/university.schema';
-import { UniversityDocument } from 'src/universities/schemas/university.schema';
-import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
-import { getTimeRangeFilter } from 'src/elasticsearch/utils/time-range-filter.util';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {
@@ -56,10 +53,10 @@ export class SearchHistoryAnalyticsService {
     try {
       const must: any[] = [];
       const must_not: any[] = [
-        { term: { 'data.major.keyword': '' } },
+        { term: { 'data.major': '' } },
         {
           bool: {
-            must_not: { exists: { field: 'data.major.keyword' } },
+            must_not: { exists: { field: 'data.major' } },
           },
         },
       ];
@@ -87,7 +84,7 @@ export class SearchHistoryAnalyticsService {
           aggs: {
             [aggKey]: {
               terms: {
-                field: 'data.major.keyword',
+                field: 'data.major',
                 size: queryDto.limit,
               },
             },
@@ -219,10 +216,10 @@ export class SearchHistoryAnalyticsService {
     try {
       const must: any[] = [];
       const must_not: any[] = [
-        { term: { 'data.university_id.keyword': '' } },
+        { term: { 'data.university_id': '' } },
         {
           bool: {
-            must_not: { exists: { field: 'data.university_id.keyword' } },
+            must_not: { exists: { field: 'data.university_id' } },
           },
         },
       ];
@@ -250,7 +247,7 @@ export class SearchHistoryAnalyticsService {
           aggs: {
             [aggKey]: {
               terms: {
-                field: 'data.university_id.keyword',
+                field: 'data.university_id',
                 size: queryDto.limit,
               },
             },

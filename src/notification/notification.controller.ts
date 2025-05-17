@@ -18,6 +18,7 @@ import { CreateCampusGlobalNotificationDto, CreateGlobalNotificationDto, CreateS
 import { QueryCampusNotificationDto, QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
+import { AudienceType } from 'src/notification/schemas/notification.schema';
 
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(ResourceProtectionGuard)
@@ -104,7 +105,7 @@ export class NotificationController {
   ) {
     const userId = authReq.user._id;
     const { notificationIds } = markNotificationsReadDto;
-    const updatedCount = await this.notificationService.markNotificationsAsRead(userId, notificationIds);
+    const updatedCount = await this.notificationService.markNotificationsAsRead(userId, notificationIds, AudienceType.User);
     return { updatedCount };
   }
 
@@ -115,7 +116,7 @@ export class NotificationController {
   ) {
     const userId = authReq.user._id;
     const { notificationId } = params;
-    const updated = await this.notificationService.markSingleNotificationAsRead(userId, notificationId);
+    const updated = await this.notificationService.markSingleNotificationAsRead(userId, notificationId, AudienceType.User);
     return { updated };
   }
 

@@ -155,11 +155,11 @@ export class NotificationService {
    * This method will only update the read status for the recipient entry matching the requesting user (userId),
    * and will NOT affect the read status of other users/recipients in the same notification document.
    *
-   * @param userId - The ID of the user marking notifications as read
+   * @param recipientId - The ID of the user marking notifications as read
    * @param notificationIds - The list of notification document IDs to mark as read
    * @returns The number of notification documents updated (where the user's read status was changed)
    */
-  async markNotificationsAsRead(userId: string, notificationIds: string[]): Promise<number> {
+  async markNotificationsAsRead(recipientId: string, notificationIds: string[], audienceType: AudienceType): Promise<number> {
     // Only update notifications where:
     // - The notification _id is in the provided list
     // - The user is a recipient (audience.recipients contains an entry with id=userId)
@@ -167,16 +167,17 @@ export class NotificationService {
     const result = await this.notificationModel.updateMany(
       {
         _id: { $in: notificationIds }, // Only notifications with these IDs
-        'audience.recipients': { $elemMatch: { id: userId, isRead: false } }, // Only if user is a recipient and not already read
+        'audience.audienceType': audienceType,
+        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } }, // Only if user is a recipient and not already read
       },
       {
-        // Set isRead to true for the recipient entry matching the userId
+        // Set isRead to true for the recipient entry matching the recipientId
         $set: { 'audience.recipients.$[elem].isRead': true },
       },
       {
         // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
-        // where elem.id matches the userId (i.e., only the requesting user's isRead is set to true, not others)
-        arrayFilters: [{ 'elem.id': userId }],
+        // where elem.id matches the recipientId (i.e., only the requesting user's isRead is set to true, not others)
+        arrayFilters: [{ 'elem.id': recipientId }],
       },
     );
     // result.modifiedCount is the number of notification documents where the user's read status was updated
@@ -189,23 +190,24 @@ export class NotificationService {
    * Only updates the recipient entry in the recipients array where elem.id matches the userId.
    * Does not affect other recipients.
    *
-   * @param userId - The ID of the user marking the notification as read
+   * @param recipientId - The ID of the user marking the notification as read
    * @param notificationId - The notification document ID to mark as read
    * @returns True if the notification was updated, false otherwise
    */
-  async markSingleNotificationAsRead(userId: string, notificationId: string): Promise<boolean> {
+  async markSingleNotificationAsRead(recipientId: string, notificationId: string, audienceType: AudienceType): Promise<boolean> {
     const result = await this.notificationModel.updateOne(
       {
         _id: notificationId, // Only the specified notification
-        'audience.recipients': { $elemMatch: { id: userId, isRead: false } }, // Only if user is a recipient and not already read
+        'audience.audienceType': audienceType,
+        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } }, // Only if user is a recipient and not already read
       },
       {
         $set: { 'audience.recipients.$[elem].isRead': true },
       },
       {
         // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
-        // where elem.id matches the userId (i.e., only the requesting user's isRead is set to true, not others)
-        arrayFilters: [{ 'elem.id': userId }],
+        // where elem.id matches the recipientId (i.e., only the requesting user's isRead is set to true, not others)
+        arrayFilters: [{ 'elem.id': recipientId }],
       },
     );
     // result.modifiedCount is 1 if the notification was updated, 0 otherwise

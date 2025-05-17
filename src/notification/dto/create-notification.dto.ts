@@ -1,21 +1,20 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   IsArray,
   IsBoolean,
   IsEnum,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   MaxLength,
-  ValidateNested,
+  ValidateNested
 } from 'class-validator';
 import { Types } from 'mongoose';
 import { IsObjectId, ParseObjectId } from 'nestjs-object-id';
 import { AudienceType } from '../schemas/notification.schema';
 import {
-  IsAudienceMutuallyExclusive,
-  NotificationAudience,
+  NotificationAudience
 } from './notification.validator';
 
 export class RecipientDto {
@@ -61,10 +60,21 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   message: string;
 
-  @IsAudienceMutuallyExclusive()
-  @ValidateNested()
-  @IsObject()
-  @IsNotEmpty()
-  @Type(() => AudienceDto)
-  audience: AudienceDto;
+  // @IsAudienceMutuallyExclusive()
+  // @ValidateNested()
+  // @IsObject()
+  // @IsNotEmpty()
+  // @Type(() => AudienceDto)
+  // audience: AudienceDto;
+}
+
+// DTO for global notification creation
+export class CreateGlobalNotificationDto extends CreateNotificationDto { }
+
+// DTO for specific users notification creation
+export class CreateSpecificNotificationDto extends CreateNotificationDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  userIds: string[];
 }

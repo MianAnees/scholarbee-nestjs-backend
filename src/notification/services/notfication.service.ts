@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateNotificationDto } from '../dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateNotificationDto, CreateSpecificNotificationDto } from '../dto/create-notification.dto';
 import {
   NotificationDocument,
   Notification,
@@ -11,21 +11,51 @@ import {
   NotificationQuery,
   QueryNotificationDto,
 } from '../dto/query-notification.dto';
+import { NotificationGateway } from 'src/notification/notification.gateway';
 
 @Injectable()
 export class NotificationService {
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
-  // Creates a new notification for a user
-  async createNotification(
-    user: AuthenticatedRequest['user'],
-    createNotificationDto: CreateNotificationDto,
+
+  // Creates a global notification for all users
+  async createNotificationForAllUsers(
+    createNotificationDto: CreateGlobalNotificationDto,
   ): Promise<NotificationDocument> {
     try {
-      const notification = new this.notificationModel(createNotificationDto);
+      const notification = new this.notificationModel({
+        ...createNotificationDto,
+        audience: {
+          audienceType: 'User',
+          isGlobal: true,
+          recipients: [],
+        },
+      });
+      return notification.save();
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  // Creates a notification for specific users
+  async createNotificationForSpecificUsers(
+    createNotificationDto: CreateSpecificNotificationDto,
+  ): Promise<NotificationDocument> {
+    try {
+      const { userIds, ...notificationPayload } = createNotificationDto;
+
+      const notification = new this.notificationModel({
+        ...notificationPayload,
+        audience: {
+          audienceType: 'User',
+          isGlobal: false,
+          recipients: userIds.map((id) => ({ id, isRead: false })),
+        },
+      });
       return notification.save();
     } catch (error) {
       throw new BadRequestException(error);

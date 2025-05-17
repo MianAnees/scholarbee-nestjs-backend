@@ -9,7 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { CreateNotificationDto, CreateGlobalNotificationDto, CreateSpecificNotificationDto } from './dto/create-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
@@ -38,19 +38,6 @@ export class NotificationController {
     return { success: true };
   }
 
-
-  @Post('create')
-  async createNotification(
-    @AuthReq() authReq: AuthenticatedRequest,
-    @Body() createNotificationDto: CreateNotificationDto,
-  ) {
-    const notification = await this.notificationService.createNotification(
-      authReq.user,
-      createNotificationDto,
-    );
-    return notification;
-  }
-
   @Get()
   async getUserNotifications(
     @AuthReq() authReq: AuthenticatedRequest,
@@ -58,5 +45,27 @@ export class NotificationController {
   ) {
     const userId = authReq.user._id;
     return this.notificationService.getUserNotifications(userId, queryDto);
+  }
+
+  @Post('user/global')
+  async createGlobalNotification(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createGlobalNotificationDto: CreateGlobalNotificationDto,
+  ) {
+    const notification = await this.notificationService.createNotificationForAllUsers(
+      createGlobalNotificationDto,
+    );
+    return notification;
+  }
+
+  @Post('user/specific')
+  async createSpecificNotification(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createSpecificNotificationDto: CreateSpecificNotificationDto,
+  ) {
+    const notification = await this.notificationService.createNotificationForSpecificUsers(
+      createSpecificNotificationDto,
+    );
+    return notification;
   }
 }

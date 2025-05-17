@@ -1,8 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { Campus } from 'src/campuses/schemas/campus.schema';
-import { University } from 'src/universities/schemas/university.schema';
-import { User } from 'src/users/schemas/user.schema';
+import { Document } from 'mongoose';
 
 
 // export enum NotificationType {
@@ -31,7 +28,7 @@ export enum AudienceType {
 }
 
 @Schema({ _id: false })
-export class Audience {
+class Audience {
   @Prop({
     type: String,
     required: true,
@@ -47,7 +44,7 @@ export class Audience {
   recipients?: Recipient[];
 }
 
-export const AudienceSchema = SchemaFactory.createForClass(Audience);
+const AudienceSchema = SchemaFactory.createForClass(Audience);
 
 @Schema({ timestamps: { createdAt: 'createdAt', updatedAt: false } })
 export class Notification {

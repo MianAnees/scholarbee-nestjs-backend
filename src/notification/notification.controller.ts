@@ -2,25 +2,22 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   Query,
   UseGuards,
   UseInterceptors,
-  Patch,
-  Param,
-  BadRequestException,
   ValidationPipe
 } from '@nestjs/common';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto, CreateCampusGlobalNotificationDto, CreateSpecificCampusesNotificationDto } from './dto/create-notification.dto';
-import { QueryNotificationDto } from './dto/query-notification.dto';
+import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
+import { CreateCampusGlobalNotificationDto, CreateGlobalNotificationDto, CreateSpecificCampusesNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto } from './dto/create-notification.dto';
+import { QueryCampusNotificationDto, QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
-import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
-import { ParseUUIDPipe } from '@nestjs/common';
-import { IsNotEmpty, IsString } from 'class-validator';
 
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(ResourceProtectionGuard)
@@ -45,7 +42,7 @@ export class NotificationController {
     return { success: true };
   }
 
-  @Get()
+  @Get('user')
   async getUserNotifications(
     @AuthReq() authReq: AuthenticatedRequest,
     @Query() queryDto: QueryNotificationDto,
@@ -120,5 +117,13 @@ export class NotificationController {
     const { notificationId } = params;
     const updated = await this.notificationService.markSingleNotificationAsRead(userId, notificationId);
     return { updated };
+  }
+
+  @Get('campus')
+  async getCampusNotifications(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Query() queryDto: QueryCampusNotificationDto,
+  ) {
+    return this.notificationService.getCampusNotifications(authReq.user, queryDto);
   }
 }

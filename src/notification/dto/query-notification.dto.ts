@@ -26,3 +26,6 @@ export class QueryNotificationDto extends PaginationDto {
   read_status?: NotificationQuery.ReadStatus =
     NotificationQuery.ReadStatus.UNREAD;
 }
+
+// DTO for querying campus notifications (for campus admins)
+export class QueryCampusNotificationDto extends QueryNotificationDto { }

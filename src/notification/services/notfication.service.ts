@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { NotificationGateway } from 'src/notification/notification.gateway';
@@ -6,12 +6,15 @@ import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, CreateCampu
 import {
   NotificationQuery,
   QueryNotificationDto,
+  QueryCampusNotificationDto,
 } from '../dto/query-notification.dto';
 import {
   AudienceType,
   Notification,
   NotificationDocument,
 } from '../schemas/notification.schema';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { UserNS } from 'src/users/schemas/user.schema';
 
 @Injectable()
 export class NotificationService {
@@ -294,5 +297,71 @@ export class NotificationService {
     );
     // result.modifiedCount is 1 if the notification was updated, 0 otherwise
     return !!result.modifiedCount;
+  }
+
+  /**
+   * Build the MongoDB query for campus notifications for a campus admin.
+   * @param campusId - The campus ID
+   * @param queryDto - QueryCampusNotificationDto
+   */
+  private getCampusNotificationsQuery(
+    campusId: string,
+    queryDto: QueryCampusNotificationDto,
+  ) {
+    const { read_status, scope } = queryDto;
+    let match: RootFilterQuery<NotificationDocument> = {
+      'audience.audienceType': AudienceType.Campus,
+    };
+
+    // Handle scope
+    if (scope === NotificationQuery.Scope.ALL) {
+      match.$or = [
+        { 'audience.isGlobal': true },
+        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
+      ];
+    } else if (scope === NotificationQuery.Scope.GLOBAL) {
+      match['audience.isGlobal'] = true;
+    } else if (scope === NotificationQuery.Scope.SPECIFIC) {
+      match['audience.isGlobal'] = false;
+      match['audience.recipients'] = { $elemMatch: { id: campusId } };
+    }
+
+    // Handle read_status
+    if (read_status === NotificationQuery.ReadStatus.UNREAD) {
+      if (scope === NotificationQuery.Scope.ALL || !scope) {
+        match.$or = [
+          { 'audience.isGlobal': true },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId, isRead: false } } },
+        ];
+      } else if (scope === NotificationQuery.Scope.SPECIFIC) {
+        match['audience.recipients'] = { $elemMatch: { id: campusId, isRead: false } };
+      }
+      // For global, no read tracking, so just return all global
+    }
+
+    return match;
+  }
+
+  /**
+   * Get notifications for a campus admin (all notifications for their campus, including global campus notifications)
+   * @param user - The authenticated user object
+   * @param queryDto - QueryCampusNotificationDto (pagination, scope, read_status)
+   */
+  async getCampusNotifications(user: AuthenticatedRequest['user'], queryDto: QueryCampusNotificationDto) {
+    // Check if user is a campus admin
+    if (!user || user.user_type !== UserNS.UserType.Campus_Admin || !user.campus_id) {
+      throw new ForbiddenException('Only campus admins can access campus notifications');
+    }
+    const campusId = user.campus_id;
+    const { limit, sortBy, sortOrder, skip } = queryDto;
+    const match = this.getCampusNotificationsQuery(campusId, queryDto);
+    // Add pagination and sorting
+    const notifications = await this.notificationModel
+      .find(match)
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+    return notifications;
   }
 }

@@ -52,13 +52,13 @@ class SearchHistoryData {
   @EsField({ type: 'keyword' })
   university_id?: string;
 
-  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  @EsField({ type: 'keyword' })
   university_name?: string;
 
   @EsField({ type: 'keyword' })
   campus_id?: string;
 
-  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  @EsField({ type: 'keyword' })
   campus_name?: string;
 
   @EsField({ type: 'keyword' })
@@ -70,7 +70,7 @@ class SearchHistoryData {
   @EsField({ type: 'keyword' })
   degree_level?: string;
 
-  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  @EsField({ type: 'keyword' })
   major?: string;
 
   @EsField({ type: 'keyword' })
@@ -97,13 +97,13 @@ export class SearchHistoryMappingEntity extends BaseMappingEntity {
     type: 'object',
     properties: {
       university_id: { type: 'keyword' },
-      university_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      university_name: { type: 'keyword' },
       campus_id: { type: 'keyword' },
-      campus_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      campus_name: { type: 'keyword' },
       program_id: { type: 'keyword' },
       program_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
       degree_level: { type: 'keyword' },
-      major: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      major: { type: 'keyword' },
       mode_of_study: { type: 'keyword' },
     },
   })
@@ -118,14 +118,17 @@ export const searchHistoryRawMappings = {
     timestamp: { type: 'date' },
     data: {
       properties: {
+        // ? Query: Find all docs for "stanford-123".
         university_id: { type: 'keyword' },
-        university_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        university_name: { type: 'keyword' },
         campus_id: { type: 'keyword' },
-        campus_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        campus_name: { type: 'keyword' },
         program_id: { type: 'keyword' },
+        // ? Query: Search for "engineering" (matches "Mechanical Engineering").
+        // ? Query: Get the most common program names (use "program_name.keyword" in aggregation).
         program_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
         degree_level: { type: 'keyword' },
-        major: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        major: { type: 'keyword' },
         mode_of_study: { type: 'keyword' },
       },
     },

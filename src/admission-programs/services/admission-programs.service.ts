@@ -6,7 +6,7 @@ import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
-import { SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { ISearchHistory, SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { UserTypeEnum } from 'src/elasticsearch/mappings/search-history.mapping';
@@ -23,29 +23,39 @@ export class AdmissionProgramsService {
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
   async indexAdmissionProgramSearchHistory(
     user_id: string,
-    fitlerDto: FilterAdmissionProgramDto,
+    filterDto: FilterAdmissionProgramDto,
   ) {
     const {
       // degree_level, major, mode_of_study, name: program_name, university_id
       major,
       university,
       programName,
-    } = fitlerDto;
+      campusId,
+      studyLevel,
+      // courseForm,
+      // fee,
+      // year,
+      // intake,
+    } = filterDto;
 
-    // Track search event
-    await this.searchHistoryAnalyticsService.indexSearchHistory({
-      timestamp: new Date(),
+    const admissionProgramSearchHistory: ISearchHistory = {
       user_id,
       user_type: UserTypeEnum.STUDENT,
-      resource_type: SearchResourceEnum.UNIVERSITY,
+      resource_type: SearchResourceEnum.ADMISSION_PROGRAM,
       data: {
         major,
-        // degree_level: degree_level as LastDegreeLevelEnum.,
-        // mode_of_study,
         program_name: programName,
         university_id: university,
+        campus_id: campusId,
+        degree_level: studyLevel,
+        // mode_of_study: modeOfStudy,
+        // program_id: programId,
+        // university_name: universityName,
       },
-    });
+    }
+
+    // Track search event
+    await this.searchHistoryAnalyticsService.indexSearchHistory(admissionProgramSearchHistory);
   }
 
   async create(

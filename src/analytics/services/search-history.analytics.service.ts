@@ -43,7 +43,7 @@ export class SearchHistoryAnalyticsService {
         `Error logging user event: ${error.message}`,
         error.stack,
       );
-      return false;
+      return null;
     }
   }
 

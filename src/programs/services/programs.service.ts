@@ -8,6 +8,7 @@ import { QueryProgramDto } from '../dto/query-program.dto';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import {
+  ISearchHistory,
   SearchResourceEnum,
   UserTypeEnum,
 } from 'src/elasticsearch/mappings/search-history.mapping';
@@ -22,22 +23,26 @@ export class ProgramsService {
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
   async indexProgramSearchHistory(user_id: string, queryDto: QueryProgramDto) {
-    const { degree_level, major, mode_of_study, name: program_name } = queryDto;
+    const { degree_level, major, mode_of_study, name: program_name, campus_id, university_id } = queryDto;
 
-    // Track search event
-    await this.searchHistoryAnalyticsService.indexSearchHistory({
-      timestamp: new Date(),
+
+
+    const programSearchHistory: ISearchHistory = {
       user_id,
       user_type: UserTypeEnum.STUDENT,
       resource_type: SearchResourceEnum.PROGRAM,
       data: {
         major,
+        program_name,
+        university_id,
+        campus_id,
         degree_level: degree_level as LastDegreeLevelEnum,
         mode_of_study,
-        program_name,
-        university_id: queryDto.university_id,
       },
-    });
+    }
+
+    return await this.searchHistoryAnalyticsService.indexSearchHistory(programSearchHistory);
+
   }
 
   // method to translate the university_id filter to campus_id filter

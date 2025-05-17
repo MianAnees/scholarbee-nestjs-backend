@@ -78,13 +78,13 @@ export class ElasticsearchService {
   /**
    * Indexes a document and automatically adds a timestamp to the document
    */
-  async indexDocument(
+  async indexDocument<T extends Record<string, any>>(
     index: string,
     id: string,
-    document: Record<string, any>,
+    document: T,
   ) {
     try {
-      const documentWithTimestamp: Index<{
+      const documentWithTimestamp: Index<T & {
         timestamp: Date;
       }>['body'] = {
         ...document,

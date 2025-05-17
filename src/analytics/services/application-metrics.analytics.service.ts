@@ -44,10 +44,10 @@ export class ApplicationMetricsAnalyticsService {
     try {
       const must: any[] = [];
       const must_not: any[] = [
-        { term: { universityId: '' } },
+        { term: { 'data.universityId': '' } },
         {
           bool: {
-            must_not: { exists: { field: 'universityId' } },
+            must_not: { exists: { field: 'data.universityId' } },
           },
         },
       ];
@@ -72,7 +72,7 @@ export class ApplicationMetricsAnalyticsService {
           aggs: {
             [aggKey]: {
               terms: {
-                field: 'universityId',
+                field: 'data.universityId',
                 size: queryDto.limit,
               },
             },
@@ -170,7 +170,7 @@ export class ApplicationMetricsAnalyticsService {
       query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
       aggs: Object.entries(stepAggNames).reduce(
         (acc, [step, aggName]) => {
-          acc[aggName] = { filter: { term: { step } } };
+          acc[aggName] = { filter: { term: { 'data.step': step } } };
           return acc;
         },
         {} as Record<string, any>,
@@ -236,9 +236,9 @@ export class ApplicationMetricsAnalyticsService {
       //     query: {
       //       bool: {
       //         must: [
-      //           { term: { userId: userId } },
-      //           { term: { admissionProgramId: applicationMetric.admissionProgramId } },
-      //           { term: { step: applicationMetric.step } },
+      //           { term: { 'data.userId': userId } },
+      //           { term: { 'data.admissionProgramId': applicationMetric.admissionProgramId } },
+      //           { term: { 'data.step': applicationMetric.step } },
       //         ],
       //       },
       //     },
@@ -249,7 +249,7 @@ export class ApplicationMetricsAnalyticsService {
       //       _source: any;
       //     }[];
       //   };
-      // };
+      // }
 
       // if (
       //   Array.isArray(searchResult?.hits?.hits) &&

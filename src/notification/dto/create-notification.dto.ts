@@ -11,7 +11,8 @@ import {
   ValidateNested
 } from 'class-validator';
 import { Types } from 'mongoose';
-import { IsObjectId, ParseObjectId } from 'nestjs-object-id';
+import { ToObjectId } from 'src/common/transformers/object-id.transformer';
+import { IsObjectId } from 'src/common/validators/object-id.validator';
 import { AudienceType } from '../schemas/notification.schema';
 import {
   NotificationAudience
@@ -19,7 +20,7 @@ import {
 
 export class RecipientDto {
   @IsObjectId()
-  @ParseObjectId()
+  @ToObjectId()
   @IsNotEmpty()
   id: Types.ObjectId;
 
@@ -85,4 +86,12 @@ export class MarkNotificationsReadDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   notificationIds: string[];
+}
+
+// DTO for validating notificationId as a param
+export class MarkSingleNotificationReadDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsObjectId({ message: 'Notification ID must be a valid MongoDB ObjectId' })
+  notificationId: string;
 }

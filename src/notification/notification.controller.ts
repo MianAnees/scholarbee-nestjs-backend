@@ -6,16 +6,21 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
-  Patch
+  Patch,
+  Param,
+  BadRequestException,
+  ValidationPipe
 } from '@nestjs/common';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto } from './dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto } from './dto/create-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
 import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
+import { ParseUUIDPipe } from '@nestjs/common';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(ResourceProtectionGuard)
@@ -80,5 +85,16 @@ export class NotificationController {
     const { notificationIds } = markNotificationsReadDto;
     const updatedCount = await this.notificationService.markNotificationsAsRead(userId, notificationIds);
     return { updatedCount };
+  }
+
+  @Patch('mark-read/single/:notificationId')
+  async markSingleNotificationAsRead(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Param(new ValidationPipe({ transform: true })) params: MarkSingleNotificationReadDto,
+  ) {
+    const userId = authReq.user._id;
+    const { notificationId } = params;
+    const updated = await this.notificationService.markSingleNotificationAsRead(userId, notificationId);
+    return { updated };
   }
 }

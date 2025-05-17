@@ -207,4 +207,33 @@ export class NotificationService {
     // result.modifiedCount is the number of notification documents where the user's read status was updated
     return result.modifiedCount || 0;
   }
+
+  /**
+   * Marks a single notification as read for a specific user.
+   *
+   * Only updates the recipient entry in the recipients array where elem.id matches the userId.
+   * Does not affect other recipients.
+   *
+   * @param userId - The ID of the user marking the notification as read
+   * @param notificationId - The notification document ID to mark as read
+   * @returns True if the notification was updated, false otherwise
+   */
+  async markSingleNotificationAsRead(userId: string, notificationId: string): Promise<boolean> {
+    const result = await this.notificationModel.updateOne(
+      {
+        _id: notificationId, // Only the specified notification
+        'audience.recipients': { $elemMatch: { id: userId, isRead: false } }, // Only if user is a recipient and not already read
+      },
+      {
+        $set: { 'audience.recipients.$[elem].isRead': true },
+      },
+      {
+        // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
+        // where elem.id matches the userId (i.e., only the requesting user's isRead is set to true, not others)
+        arrayFilters: [{ 'elem.id': userId }],
+      },
+    );
+    // result.modifiedCount is 1 if the notification was updated, 0 otherwise
+    return !!result.modifiedCount;
+  }
 }

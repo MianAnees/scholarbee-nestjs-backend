@@ -102,3 +102,11 @@ export class CreateCampusGlobalNotificationDto extends CreateNotificationDto {
   // @IsNotEmpty()
   // campusId: string;
 }
+
+// DTO for creating a notification for specific campuses
+export class CreateSpecificCampusesNotificationDto extends CreateNotificationDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsObjectId({ each: true, message: 'Each campus ID must be a valid MongoDB ObjectId' })
+  campusIds: string[];
+}

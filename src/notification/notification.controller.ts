@@ -14,7 +14,7 @@ import {
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto, CreateCampusGlobalNotificationDto } from './dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto, CreateCampusGlobalNotificationDto, CreateSpecificCampusesNotificationDto } from './dto/create-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
@@ -76,15 +76,27 @@ export class NotificationController {
     return notification;
   }
 
-  @Post('user/campus-global')
-  async createCampusGlobalNotification(
+  @Post('campus/global')
+  async createGlobalCampusNotification(
     @AuthReq() authReq: AuthenticatedRequest,
     @Body() createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
   ) {
-    const notification = await this.notificationService.createCampusGlobalNotification(
+    const notification = await this.notificationService.createGlobalCampusNotification(
       createCampusGlobalNotificationDto,
     );
     this.notificationGateway.emitCampusGlobalNotification(notification.toObject());
+    return notification;
+  }
+
+  @Post('campus/specific')
+  async createSpecificCampusesNotification(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
+  ) {
+    const notification = await this.notificationService.createSpecificCampusesNotification(
+      createSpecificCampusesNotificationDto,
+    );
+    this.notificationGateway.emitSpecificCampusesNotification(createSpecificCampusesNotificationDto.campusIds, notification.toObject());
     return notification;
   }
 

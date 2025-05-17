@@ -176,4 +176,14 @@ export class NotificationGateway extends AuthenticatedGateway {
     this.server.emit(NotificationNamespace.Event.CAMPUS_GLOBAL, notification);
   }
 
+  /**
+   * Emit a notification to all users for specific campuses
+   * @param campusIds - The campus IDs
+   * @param notification - The notification payload
+   */
+  emitSpecificCampusesNotification(campusIds: string[], notification: Record<string, any>) {
+    this.logger.log(`Emitting specific campuses notification to campuses: ${campusIds.join(',')}`);
+    this.server.emit('campus/specific', { campusIds, notification });
+  }
+
 }

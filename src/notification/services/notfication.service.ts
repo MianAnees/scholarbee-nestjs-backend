@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { NotificationGateway } from 'src/notification/notification.gateway';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, CreateCampusGlobalNotificationDto } from '../dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, CreateCampusGlobalNotificationDto, CreateSpecificCampusesNotificationDto } from '../dto/create-notification.dto';
 import {
   NotificationQuery,
   QueryNotificationDto,
@@ -79,7 +79,7 @@ export class NotificationService {
    * @param createCampusGlobalNotificationDto - DTO containing title, message, and campusId
    * @returns The created notification document
    */
-  async createCampusGlobalNotification(
+  async createGlobalCampusNotification(
     createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
   ): Promise<NotificationDocument> {
     try {
@@ -96,6 +96,33 @@ export class NotificationService {
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
       // (WS emit will be handled in controller or a separate method)
+      return savedNotification;
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  /**
+   * Creates a notification for specific campuses.
+   *
+   * @param createSpecificCampusesNotificationDto - DTO containing title, message, and campusIds
+   * @returns The created notification document
+   */
+  async createSpecificCampusesNotification(
+    createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
+  ): Promise<NotificationDocument> {
+    try {
+      const { campusIds, ...notificationPayload } = createSpecificCampusesNotificationDto;
+      const notificationDoc: Notification = {
+        ...notificationPayload,
+        audience: {
+          audienceType: AudienceType.Campus,
+          isGlobal: false,
+          recipients: campusIds.map((id) => ({ id, isRead: false })),
+        },
+      };
+      const notification = new this.notificationModel(notificationDoc);
+      const savedNotification = await notification.save();
       return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);

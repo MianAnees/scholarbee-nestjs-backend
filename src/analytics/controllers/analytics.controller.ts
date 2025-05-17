@@ -68,6 +68,11 @@ export class AnalyticsController {
     return this.applicationMetricsAnalyticsService.getOverallMetrics(query);
   }
 
+  @Get('application-metrics/daily-breakdown')
+  async getDailyApplicationMetrics(@Query() query: QueryAnalyticsCommonDto) {
+    return this.applicationMetricsAnalyticsService.getDailyApplicationMetrics(query);
+  }
+
   @Post('application-metrics/register-event')
   async registerApplicationMetricEvent(
     @Body() applicationMetric: ApplicationMetricRegisterEventDto,

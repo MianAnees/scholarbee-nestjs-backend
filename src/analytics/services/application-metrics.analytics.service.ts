@@ -215,14 +215,14 @@ export class ApplicationMetricsAnalyticsService {
 
       // Map the response to the aggregation names
       const result: {
-        progress_events_count: {
+        progress_events_counts: {
           [key: string]: number;
         };
       } = {
-        progress_events_count: {},
+        progress_events_counts: {},
       };
       Object.values(stepAggNames).forEach((aggName) => {
-        result.progress_events_count[aggName] = Number(
+        result.progress_events_counts[aggName] = Number(
           response.aggregations[aggName]?.doc_count || 0,
         );
       });
@@ -311,6 +311,85 @@ export class ApplicationMetricsAnalyticsService {
         `Error indexing application metric: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  /**
+   * Get per-day breakdown of application metrics
+   */
+  async getDailyApplicationMetrics(queryDto: QueryAnalyticsCommonDto) {
+    try {
+      const must: any[] = [];
+      const must_not: any[] = [];
+      const timeRangeFilter = getTimeRangeFilter(queryDto?.time_range);
+      if (timeRangeFilter) {
+        must.push(timeRangeFilter);
+      }
+      const query: any = {
+        bool: {
+          must,
+          must_not,
+        },
+      };
+      const aggKey = 'per_day';
+      // Build sub-aggregations for each step
+      const stepAggNames = this.applicationProgressStepAggNames;
+      const stepAggs = Object.entries(stepAggNames).reduce((acc, [step, aggName]) => {
+        acc[aggName] = { filter: { term: { 'data.step': step } } };
+        return acc;
+      }, {} as Record<string, any>);
+      const esQuery: Search<Record<string, any>>['body'] = {
+        query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
+        aggs: {
+          [aggKey]: {
+            date_histogram: {
+              field: 'timestamp',
+              calendar_interval: 'day',
+              order: { _key: 'desc' },
+              format: 'yyyy-MM-dd',
+              min_doc_count: 0,
+            },
+            aggs: stepAggs,
+          },
+        },
+        size: 0,
+      };
+      const response = await this.elasticsearchService.search(
+        this.APPLICATION_METRICS_INDEX,
+        esQuery,
+      ) as {
+        aggregations: {
+          [aggKey]: {
+            buckets: Array<{
+              key_as_string: string;
+              doc_count: number;
+              // Only stepAggs as dynamic keys
+              [stepAgg: string]: any;
+            }>;
+          };
+        };
+      };
+      let buckets = response?.aggregations?.[aggKey]?.buckets || [];
+      // Apply limit (default 10)
+      const limit = queryDto?.limit ?? 10;
+      buckets = buckets.slice(0, limit);
+      return buckets.map((bucket) => {
+        const progress_events_counts: Record<string, number> = {};
+        Object.values(stepAggNames).forEach((aggName) => {
+          progress_events_counts[aggName] = bucket[aggName]?.doc_count || 0;
+        });
+        return {
+          date: bucket.key_as_string,
+          count: bucket.doc_count,
+          progress_events_counts,
+        };
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error getting daily application metrics: ${error.message}`,
+        error.stack,
+      );
+      return [];
     }
   }
 } 

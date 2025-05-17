@@ -172,4 +172,39 @@ export class NotificationService {
 
     return notifications;
   }
+
+  /**
+   * Marks multiple notifications as read for a specific user.
+   *
+   * Each notification document contains an array of recipients, where each recipient has their own read status (isRead).
+   * This method will only update the read status for the recipient entry matching the requesting user (userId),
+   * and will NOT affect the read status of other users/recipients in the same notification document.
+   *
+   * @param userId - The ID of the user marking notifications as read
+   * @param notificationIds - The list of notification document IDs to mark as read
+   * @returns The number of notification documents updated (where the user's read status was changed)
+   */
+  async markNotificationsAsRead(userId: string, notificationIds: string[]): Promise<number> {
+    // Only update notifications where:
+    // - The notification _id is in the provided list
+    // - The user is a recipient (audience.recipients contains an entry with id=userId)
+    // - The user's isRead status is currently false
+    const result = await this.notificationModel.updateMany(
+      {
+        _id: { $in: notificationIds }, // Only notifications with these IDs
+        'audience.recipients': { $elemMatch: { id: userId, isRead: false } }, // Only if user is a recipient and not already read
+      },
+      {
+        // Set isRead to true for the recipient entry matching the userId
+        $set: { 'audience.recipients.$[elem].isRead': true },
+      },
+      {
+        // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
+        // where elem.id matches the userId (i.e., only the requesting user's isRead is set to true, not others)
+        arrayFilters: [{ 'elem.id': userId }],
+      },
+    );
+    // result.modifiedCount is the number of notification documents where the user's read status was updated
+    return result.modifiedCount || 0;
+  }
 }

@@ -78,3 +78,11 @@ export class CreateSpecificNotificationDto extends CreateNotificationDto {
   @IsString({ each: true })
   userIds: string[];
 }
+
+// DTO for marking notifications as read
+export class MarkNotificationsReadDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  notificationIds: string[];
+}

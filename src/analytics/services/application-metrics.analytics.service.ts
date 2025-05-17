@@ -261,7 +261,7 @@ export class ApplicationMetricsAnalyticsService {
       //     query: {
       //       bool: {
       //         must: [
-      //           { term: { 'data.userId': userId } },
+      //           { term: { 'user_id': userId } },
       //           { term: { 'data.admissionProgramId': applicationMetric.admissionProgramId } },
       //           { term: { 'data.step': applicationMetric.step } },
       //         ],
@@ -293,7 +293,6 @@ export class ApplicationMetricsAnalyticsService {
         user_id: userId,
         user_type: UserNS.UserType.Student,
         data: applicationMetric,
-        // ...applicationMetric,
       }
 
       return await this.indexApplicationMetricEvent(applicationMetricDocument);

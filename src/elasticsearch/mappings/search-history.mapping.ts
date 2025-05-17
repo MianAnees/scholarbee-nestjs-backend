@@ -20,7 +20,6 @@ interface ISearchHistoryData {
   campus_id?: string;
   campus_name?: string;
 
-
   program_id?: string;
   program_name?: string;
 
@@ -33,6 +32,7 @@ export interface ISearchHistoryIndexDoc {
   user_type: UserNS.UserType;
   user_id: string;
   data: Partial<ISearchHistoryData>;
+  timestamp?: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -48,142 +48,86 @@ export interface ISearchHistoryIndexDoc {
 // This structure enables insights such as most searched programs, majors, or universities, and supports flexible querying.
 // -----------------------------------------------------------------------------
 
+class SearchHistoryData {
+  @EsField({ type: 'keyword' })
+  university_id?: string;
+
+  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  university_name?: string;
+
+  @EsField({ type: 'keyword' })
+  campus_id?: string;
+
+  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  campus_name?: string;
+
+  @EsField({ type: 'keyword' })
+  program_id?: string;
+
+  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  program_name?: string;
+
+  @EsField({ type: 'keyword' })
+  degree_level?: string;
+
+  @EsField({ type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' })
+  major?: string;
+
+  @EsField({ type: 'keyword' })
+  mode_of_study?: string;
+}
+
 @EsEntity({
   index: ES_INDICES.SEARCH_HISTORY,
 })
 export class SearchHistoryMappingEntity extends BaseMappingEntity {
-  /**
-   * The name of the program or university searched for.
-   * - 'text' type allows full-text search (e.g., partial matches, relevance ranking).
-   * - 'keyword' subfield enables exact match and aggregations (e.g., most searched names).
-   */
-  @EsField({
-    type: 'text',
-    analyzer: 'english',
-    fields: {
-      keyword: {
-        type: 'keyword',
-        ignore_above: 256
-      }
-    }
-  })
-  name: string;
+  @EsField({ type: 'keyword' })
+  resource_type: string;
 
-  /**
-   * The major (field of study) associated with the search.
-   * - 'text' type for flexible search.
-   * - 'keyword' subfield for aggregations (e.g., most popular majors).
-   */
-  @EsField({
-    type: 'text',
-    analyzer: 'english',
-    fields: {
-      keyword: {
-        type: 'keyword',
-        ignore_above: 256
-      }
-    }
-  })
-  major: string;
+  @EsField({ type: 'keyword' })
+  user_type: string;
 
-  /**
-   * The degree level (e.g., Bachelor, Master, PhD).
-   * - 'keyword' type for exact match and aggregations (e.g., most searched degree levels).
-   */
-  @EsField({
-    type: 'keyword'
-  })
-  degree_level: string;
+  @EsField({ type: 'keyword' })
+  user_id: string;
 
-  /**
-   * The mode of study (e.g., full-time, part-time).
-   * - 'keyword' type for filtering and aggregations.
-   */
-  @EsField({
-    type: 'keyword'
-  })
-  mode_of_study: string;
+  @EsField({ type: 'date' })
+  timestamp: Date;
 
-  /**
-   * The campus identifier related to the search.
-   * - 'keyword' type for exact match and aggregations.
-   */
   @EsField({
-    type: 'keyword'
+    type: 'object',
+    properties: {
+      university_id: { type: 'keyword' },
+      university_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      campus_id: { type: 'keyword' },
+      campus_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      program_id: { type: 'keyword' },
+      program_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      degree_level: { type: 'keyword' },
+      major: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+      mode_of_study: { type: 'keyword' },
+    },
   })
-  campus_id: string;
-
-  /**
-   * The university identifier related to the search.
-   * - 'keyword' type for exact match and aggregations.
-   */
-  @EsField({
-    type: 'keyword'
-  })
-  university_id: string;
-
-  /**
-   * List of academic departments associated with the search.
-   * - 'keyword' type for each department, enabling filtering and aggregations.
-   */
-  @EsField({
-    type: 'keyword'
-  })
-  academic_departments: string[];
-
-  /**
-   * Free-text description or additional context for the search.
-   * - 'text' type for full-text search and flexible querying.
-   */
-  @EsField({
-    type: 'text',
-    analyzer: 'english'
-  })
-  description: string;
+  data: SearchHistoryData;
 }
-
-
 
 export const searchHistoryRawMappings = {
   properties: {
-    academic_departments: {
-      type: 'keyword'
-    },
-    campus_id: {
-      type: 'keyword'
-    },
-    degree_level: {
-      type: 'keyword'
-    },
-    description: {
-      type: 'text',
-      analyzer: 'english'
-    },
-    major: {
-      type: 'text',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        }
+    resource_type: { type: 'keyword' },
+    user_type: { type: 'keyword' },
+    user_id: { type: 'keyword' },
+    timestamp: { type: 'date' },
+    data: {
+      properties: {
+        university_id: { type: 'keyword' },
+        university_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        campus_id: { type: 'keyword' },
+        campus_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        program_id: { type: 'keyword' },
+        program_name: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        degree_level: { type: 'keyword' },
+        major: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } }, analyzer: 'english' },
+        mode_of_study: { type: 'keyword' },
       },
-      analyzer: 'english'
     },
-    mode_of_study: {
-      type: 'keyword'
-    },
-    name: {
-      type: 'text',
-      fields: {
-        keyword: {
-          type: 'keyword',
-          ignore_above: 256
-        }
-      },
-      analyzer: 'english'
-    },
-    university_id: {
-      type: 'keyword'
-    }
-  }
+  },
 };

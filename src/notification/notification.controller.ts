@@ -120,6 +120,7 @@ export class NotificationController {
     return { updated };
   }
 
+
   @Get('campus')
   async getCampusNotifications(
     @AuthReq() authReq: AuthenticatedRequest,

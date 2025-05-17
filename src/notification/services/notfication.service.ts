@@ -160,6 +160,15 @@ export class NotificationService {
    * @returns The number of notification documents updated (where the user's read status was changed)
    */
   async markNotificationsAsRead(recipientId: string, notificationIds: string[], audienceType: AudienceType): Promise<number> {
+    // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
+    // if (audienceType === AudienceType.Campus) {
+    //   const campus = await this.campusModel.findById(recipientId);
+    //   if (!campus) {
+    //     throw new BadRequestException('Campus not found');
+    //   }
+    // }
+
+
     // Only update notifications where:
     // - The notification _id is in the provided list
     // - The user is a recipient (audience.recipients contains an entry with id=userId)
@@ -195,6 +204,16 @@ export class NotificationService {
    * @returns True if the notification was updated, false otherwise
    */
   async markSingleNotificationAsRead(recipientId: string, notificationId: string, audienceType: AudienceType): Promise<boolean> {
+
+    // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
+    // if (audienceType === AudienceType.Campus) {
+    //   const campus = await this.campusModel.findById(recipientId);
+    //   if (!campus) {
+    //     throw new BadRequestException('Campus not found');
+    //   }
+    // }
+
+
     const result = await this.notificationModel.updateOne(
       {
         _id: notificationId, // Only the specified notification

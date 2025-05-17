@@ -24,6 +24,17 @@ export class NotificationController {
     private readonly notificationService: NotificationService,
   ) {}
 
+  @Post('test/user/global')
+  sendGlobalTestNotificationToUser(@Body() payload: Record<string, any>) {
+    this.notificationGateway.emitUserGlobalNotification(payload);
+    return { success: true };
+  }
+
+
+
+
+
+
   @Post('test/global')
   sendGlobalTestNotification() {
     const notification = {

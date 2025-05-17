@@ -17,7 +17,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { SocketStoreService } from 'src/common/services/socket-store.service';
 import { IConfiguration } from 'src/config/configuration';
-import { NotificationEvent } from './notification.types';
+import { NotificationNamespace } from './notification.types';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
@@ -62,6 +62,7 @@ export class NotificationGateway extends AuthenticatedGateway {
 
   // Custom logic for authenticated connections
   protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
+    console.log(` authSocket:`, authSocket)
     try {
       this.logger.log(
         `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
@@ -103,9 +104,16 @@ export class NotificationGateway extends AuthenticatedGateway {
   // Event methods
   // ***********************
 
+  emitUserGlobalNotification(notification: Record<string, any>) {
+    // emit notification to `user/global` event on all sockets
+    this.logger.log(`Emitting notification to all users`);
+    this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+  }
+
+
   emitNotificationToUser(userId: string, notification: any) {
     this.logger.log(`Emitting notification to user: ${userId}`);
-    this.server.to(`user_${userId}`).emit(NotificationEvent.USER, notification);
+    this.server.to(`user_${userId}`).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
   }
 
   emitNotificationToAll(notification: any) {
@@ -118,8 +126,8 @@ export class NotificationGateway extends AuthenticatedGateway {
         throw new NotFoundException('No users connected');
       }
 
-      this.server.emit(NotificationEvent.GLOBAL, notification);
-      this.server.serverSideEmit(NotificationEvent.GLOBAL, notification);
+      this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+      this.server.serverSideEmit(NotificationNamespace.Event.USER_GLOBAL, notification);
       return {
         success: true,
         message: 'Notification sent to all users',

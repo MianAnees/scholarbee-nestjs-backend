@@ -9,7 +9,7 @@ import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/applicat
 import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 import { Search } from '@elastic/elasticsearch/api/requestParams';
-import { getTimeRangeFilter } from 'src/analytics/utils/time-range-filter.util';
+import { getTimeRangeFilter } from 'src/elasticsearch/utils/time-range-filter.util';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {

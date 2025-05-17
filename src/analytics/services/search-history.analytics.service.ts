@@ -13,7 +13,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
-import { getTimeRangeFilter } from 'src/analytics/utils/time-range-filter.util';
+import { getTimeRangeFilter } from 'src/elasticsearch/utils/time-range-filter.util';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {

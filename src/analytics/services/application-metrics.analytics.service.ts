@@ -37,6 +37,7 @@ export class ApplicationMetricsAnalyticsService {
 
   /**
    * Get most popular universities receiving applications
+   * This gets total events (regardless of what step) for each university
    * TODO: Could be expanded to include 'unique users', etc
    */
   async getMostPopularUniversities(queryDto: QueryAnalyticsCommonDto) {
@@ -81,7 +82,7 @@ export class ApplicationMetricsAnalyticsService {
 
       const response = await this.elasticsearchService.search(
         this.APPLICATION_METRICS_INDEX,
-        esQuery,
+        esQuery, // the default sort is by doc_count, descending
       ) as {
         aggregations: {
           [aggKey]: {
@@ -267,7 +268,7 @@ export class ApplicationMetricsAnalyticsService {
         user_id: userId,
         user_type: UserNS.UserType.Student,
         data: applicationMetric,
-        ...applicationMetric,
+        // ...applicationMetric,
       }
 
       return await this.elasticsearchService.indexDocument(

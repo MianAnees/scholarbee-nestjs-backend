@@ -62,7 +62,6 @@ export class NotificationGateway extends AuthenticatedGateway {
 
   // Custom logic for authenticated connections
   protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
-    console.log(` authSocket:`, authSocket)
     try {
       this.logger.log(
         `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
@@ -105,9 +104,17 @@ export class NotificationGateway extends AuthenticatedGateway {
   // ***********************
 
   emitUserGlobalNotification(notification: Record<string, any>) {
-    // emit notification to `user/global` event on all sockets
     this.logger.log(`Emitting notification to all users`);
+    // emit notification to `user/global` event on all sockets
     this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+  }
+
+  emitUserSpecificNotification(userId: string, notification: Record<string, any>) {
+    this.logger.log(`Emitting notification to user: ${userId}`);
+    // retrieve the socket id of the user from the socket store service
+    const { socketId } = this.socketStoreService.getConnection({ userId });
+    // emit notification to the user's socket
+    this.server.to(socketId).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
   }
 
 

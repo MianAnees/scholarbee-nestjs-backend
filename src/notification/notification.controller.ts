@@ -26,37 +26,18 @@ export class NotificationController {
 
   @Post('test/user/global')
   sendGlobalTestNotificationToUser(@Body() payload: Record<string, any>) {
+    // TODO: Call the service to create a notification which should handle the WS and DB operations
     this.notificationGateway.emitUserGlobalNotification(payload);
     return { success: true };
   }
 
-
-
-
-
-
-  @Post('test/global')
-  sendGlobalTestNotification() {
-    const notification = {
-      title: 'Test Notification',
-      message: 'This is a test notification!',
-      timestamp: new Date(),
-    };
-    const response =
-      this.notificationGateway.emitNotificationToAll(notification);
-    return response;
-  }
-
-  @Post('test/:userId')
-  sendTestNotification(@Param('userId') userId: string) {
-    const notification = {
-      title: 'Test Notification',
-      message: 'This is a test notification!',
-      timestamp: new Date(),
-    };
-    this.notificationGateway.emitNotificationToUser(userId, notification);
+  @Post('test/user/specific')
+  sendSpecificTestNotificationToUser(@Body() payload: Record<string, any>) {
+    // TODO: Call the service to create a notification which should handle the WS and DB operations
+    this.notificationGateway.emitUserSpecificNotification(payload.userId, payload);
     return { success: true };
   }
+
 
   @Post('create')
   async createNotification(

@@ -1,4 +1,4 @@
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { HttpException, Logger, UnauthorizedException } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -8,6 +8,14 @@ import {
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
+
+/**
+ * Client should be listening to these events from the server
+ */
+enum ClientEventListener {
+  ERROR = 'error',
+}
+
 
 export abstract class AuthenticatedGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
@@ -29,14 +37,21 @@ export abstract class AuthenticatedGateway
 
       if (!token) throw new UnauthorizedException('No token provided');
 
-      const user = await this.authService.verifyAuthToken(token);
+      const user = await this.authService.verifyAuthToken(token).catch((err) => {
+        throw new UnauthorizedException(err.message);
+      });
       client.data.user = user;
 
       await this.onAuthenticatedConnection(client, ...args);
     } catch (err) {
-      // this.logger.warn(
-      //   `Disconnecting client: ${client.id} due to auth failure`,
-      // );
+      this.logger.warn(
+        `Disconnecting client: ${client.id} due to auth failure`,
+      );
+      if (err instanceof UnauthorizedException) {
+        client.emit(ClientEventListener.ERROR, err.getResponse());
+      } else {
+        client.emit(ClientEventListener.ERROR, err);
+      }
       client.disconnect();
     }
   }

@@ -75,7 +75,7 @@ export class CreateAdmissionProgramDto {
     available_seats: number;
 
     @IsMongoId()
-    program: string;
+    program: string; // TODO: This must be parsed to a valid program object id
 
     @IsOptional()
     @IsString()

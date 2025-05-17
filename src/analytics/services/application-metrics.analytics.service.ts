@@ -218,15 +218,17 @@ export class ApplicationMetricsAnalyticsService {
         progress_events_counts: {
           [key: string]: number;
         };
+        overall_progress_events_count: number;
       } = {
         progress_events_counts: {},
+        overall_progress_events_count: 0,
       };
       Object.values(stepAggNames).forEach((aggName) => {
         result.progress_events_counts[aggName] = Number(
           response.aggregations[aggName]?.doc_count || 0,
         );
       });
-
+      result.overall_progress_events_count = Object.values(result.progress_events_counts).reduce((sum, v) => sum + v, 0);
       return result;
     } catch (error) {
       this.logger.error(

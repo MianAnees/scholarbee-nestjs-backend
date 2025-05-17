@@ -132,98 +132,10 @@ export class NotificationService {
     }
   }
 
-  private getUserNotificationsQuery(
-    userId: string,
-    queryDto: Pick<QueryNotificationDto, 'read_status' | 'scope'>,
-  ): RootFilterQuery<NotificationDocument> {
-    const { read_status, scope } = queryDto;
-
-    let match: RootFilterQuery<NotificationDocument> = {};
-
-    // COMBINATION: ALL + ANY
-    if (
-      read_status === NotificationQuery.ReadStatus.ANY &&
-      scope === NotificationQuery.Scope.ALL
-    ) {
-      // No filters: return all notifications for user (global and specific)
-      match = {
-        'audience.audienceType': AudienceType.User,
-        $or: [
-          { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: userId } } },
-        ],
-      };
-    }
-
-    // COMBINATION: ALL + UNREAD
-    if (
-      read_status === NotificationQuery.ReadStatus.UNREAD &&
-      scope === NotificationQuery.Scope.ALL
-    ) {
-      // Only unread notifications for user (global and specific)
-      match = {
-        'audience.audienceType': AudienceType.User,
-        $or: [
-          { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: userId, isRead: false } } },
-        ],
-      };
-    }
-
-    // COMBINATION: GLOBAL + ANY
-    if (read_status === NotificationQuery.ReadStatus.ANY && scope === NotificationQuery.Scope.GLOBAL) {
-      // Only global notifications irrespective of read status
-      match = {
-        'audience.audienceType': AudienceType.User,
-        'audience.isGlobal': true,
-      };
-    }
-
-    // COMBINATION: GLOBAL + UNREAD
-    if (read_status === NotificationQuery.ReadStatus.UNREAD && scope === NotificationQuery.Scope.GLOBAL) {
-      // Only global notifications
-      match = {
-        'audience.audienceType': AudienceType.User,
-        'audience.isGlobal': true,
-        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
-      };
-    }
-
-    // COMBINATION: SPECIFIC + ANY
-    if (
-      read_status === NotificationQuery.ReadStatus.ANY &&
-      scope === NotificationQuery.Scope.SPECIFIC
-    ) {
-      // Only specific notifications irrespective of read status
-      match = {
-        'audience.audienceType': AudienceType.User,
-        'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: userId } },
-      };
-    }
-
-    // COMBINATION: SPECIFIC + UNREAD
-    if (
-      read_status === NotificationQuery.ReadStatus.UNREAD &&
-      scope === NotificationQuery.Scope.SPECIFIC
-    ) {
-      match = {
-        'audience.audienceType': AudienceType.User,
-        'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: userId, isRead: false } },
-      };
-    }
-
-    return match;
-  }
-
   async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
     const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
 
-    const match = this.getUserNotificationsQuery(userId, {
-      read_status,
-      scope,
-    });
+    const match = this.getSharedNotificationsQuery(userId, { read_status, scope }, AudienceType.User);
 
     // Run aggregation or find
     const notifications = await this.notificationModel
@@ -302,22 +214,23 @@ export class NotificationService {
 
   /**
    * Build the MongoDB query for campus notifications for a campus admin.
-   * @param campusId - The campus ID
+   * @param recipientId - The campus ID
    * @param queryDto - QueryCampusNotificationDto
    */
-  private getCampusNotificationsQuery(
-    campusId: string,
-    queryDto: QueryCampusNotificationDto,
+  private getSharedNotificationsQuery(
+    recipientId: string,
+    queryDto: Pick<QueryNotificationDto, 'read_status' | 'scope'>,
+    audienceType: AudienceType,
   ): RootFilterQuery<NotificationDocument> {
     const { read_status, scope } = queryDto;
 
     // Combination: ALL + ANY
     if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.ANY) {
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         $or: [
           { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId } } },
         ],
       };
     }
@@ -325,10 +238,10 @@ export class NotificationService {
     // Combination: ALL + UNREAD
     if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.UNREAD) {
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         $or: [
           { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId, isRead: false } } },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } } },
         ],
       };
     }
@@ -336,7 +249,7 @@ export class NotificationService {
     // Combination: GLOBAL + ANY
     if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.ANY) {
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         'audience.isGlobal': true,
       };
     }
@@ -345,7 +258,7 @@ export class NotificationService {
     if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.UNREAD) {
       // No read tracking for global, so just return all global
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         'audience.isGlobal': true,
         // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
       };
@@ -354,27 +267,27 @@ export class NotificationService {
     // Combination: SPECIFIC + ANY
     if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.ANY) {
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: campusId } },
+        'audience.recipients': { $elemMatch: { id: recipientId } },
       };
     }
 
     // Combination: SPECIFIC + UNREAD
     if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.UNREAD) {
       return {
-        'audience.audienceType': AudienceType.Campus,
+        'audience.audienceType': audienceType,
         'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: campusId, isRead: false } },
+        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } },
       };
     }
 
     // Fallback (should not be reached)
     return {
-      'audience.audienceType': AudienceType.Campus,
+      'audience.audienceType': audienceType,
       $or: [
         { 'audience.isGlobal': true },
-        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
+        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId } } },
       ],
     };
   }
@@ -385,13 +298,15 @@ export class NotificationService {
    * @param queryDto - QueryCampusNotificationDto (pagination, scope, read_status)
    */
   async getCampusNotifications(user: AuthenticatedRequest['user'], queryDto: QueryCampusNotificationDto) {
+
     // Check if user is a campus admin
     if (!user || user.user_type !== UserNS.UserType.Campus_Admin || !user.campus_id) {
       throw new ForbiddenException('Only campus admins can access campus notifications');
     }
+    const { limit, sortBy, sortOrder, skip, read_status, scope } = queryDto;
+
     const campusId = user.campus_id;
-    const { limit, sortBy, sortOrder, skip } = queryDto;
-    const match = this.getCampusNotificationsQuery(campusId, queryDto);
+    const match = this.getSharedNotificationsQuery(campusId, { read_status, scope }, AudienceType.Campus);
     // Add pagination and sorting
     const notifications = await this.notificationModel
       .find(match)

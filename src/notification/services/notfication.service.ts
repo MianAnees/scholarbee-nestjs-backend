@@ -1,17 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
-import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateGlobalNotificationDto, CreateNotificationDto, CreateSpecificNotificationDto } from '../dto/create-notification.dto';
-import {
-  NotificationDocument,
-  Notification,
-} from '../schemas/notification.schema';
+import { NotificationGateway } from 'src/notification/notification.gateway';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto } from '../dto/create-notification.dto';
 import {
   NotificationQuery,
   QueryNotificationDto,
 } from '../dto/query-notification.dto';
-import { NotificationGateway } from 'src/notification/notification.gateway';
+import {
+  Notification,
+  NotificationDocument,
+} from '../schemas/notification.schema';
 
 @Injectable()
 export class NotificationService {
@@ -21,14 +20,15 @@ export class NotificationService {
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
-
   // Creates a global notification for all users
-  async createNotificationForAllUsers(
-    createNotificationDto: CreateGlobalNotificationDto,
+  async createGlobalUserNotification(
+    createGlobalNotificationDto: CreateGlobalNotificationDto,
   ): Promise<NotificationDocument> {
+    // TODO: Send the global notification to all users active on the platform (through the gateway)
+
     try {
       const notification = new this.notificationModel({
-        ...createNotificationDto,
+        ...createGlobalNotificationDto,
         audience: {
           audienceType: 'User',
           isGlobal: true,
@@ -42,11 +42,11 @@ export class NotificationService {
   }
 
   // Creates a notification for specific users
-  async createNotificationForSpecificUsers(
-    createNotificationDto: CreateSpecificNotificationDto,
+  async createSpecificUsersNotification(
+    createSpecificNotificationDto: CreateSpecificNotificationDto,
   ): Promise<NotificationDocument> {
     try {
-      const { userIds, ...notificationPayload } = createNotificationDto;
+      const { userIds, ...notificationPayload } = createSpecificNotificationDto;
 
       const notification = new this.notificationModel({
         ...notificationPayload,

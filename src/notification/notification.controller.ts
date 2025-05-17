@@ -48,22 +48,22 @@ export class NotificationController {
   }
 
   @Post('user/global')
-  async createGlobalNotification(
+  async createGlobalUserNotification(
     @AuthReq() authReq: AuthenticatedRequest,
     @Body() createGlobalNotificationDto: CreateGlobalNotificationDto,
   ) {
-    const notification = await this.notificationService.createNotificationForAllUsers(
+    const notification = await this.notificationService.createGlobalUserNotification(
       createGlobalNotificationDto,
     );
     return notification;
   }
 
   @Post('user/specific')
-  async createSpecificNotification(
+  async createSpecificUsersNotification(
     @AuthReq() authReq: AuthenticatedRequest,
     @Body() createSpecificNotificationDto: CreateSpecificNotificationDto,
   ) {
-    const notification = await this.notificationService.createNotificationForSpecificUsers(
+    const notification = await this.notificationService.createSpecificUsersNotification(
       createSpecificNotificationDto,
     );
     return notification;

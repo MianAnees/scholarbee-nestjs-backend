@@ -140,74 +140,75 @@ export class NotificationService {
 
     let match: RootFilterQuery<NotificationDocument> = {};
 
-    // 1. read_status: NotificationReadStatus.ANY, scope: NotificationScope.ALL
+    // COMBINATION: ALL + ANY
     if (
       read_status === NotificationQuery.ReadStatus.ANY &&
       scope === NotificationQuery.Scope.ALL
     ) {
       // No filters: return all notifications for user (global and specific)
       match = {
+        'audience.audienceType': AudienceType.User,
         $or: [
-          // Global notifications
-          {
-            'audience.audienceType': 'User',
-            'audience.isGlobal': true,
-          },
-          // Specific notifications (irrespective of read status)
-          {
-            'audience.audienceType': 'User',
-            'audience.isGlobal': false,
-            'audience.recipients': { $elemMatch: { id: userId } },
-          },
+          { 'audience.isGlobal': true },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: userId } } },
         ],
       };
     }
 
-    // 2. read_status: NotificationReadStatus.ANY, scope: NotificationScope.GLOBAL
+    // COMBINATION: ALL + UNREAD
     if (
-      read_status === NotificationQuery.ReadStatus.ANY &&
-      scope === NotificationQuery.Scope.GLOBAL
+      read_status === NotificationQuery.ReadStatus.UNREAD &&
+      scope === NotificationQuery.Scope.ALL
     ) {
+      // Only unread notifications for user (global and specific)
+      match = {
+        'audience.audienceType': AudienceType.User,
+        $or: [
+          { 'audience.isGlobal': true },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: userId, isRead: false } } },
+        ],
+      };
+    }
+
+    // COMBINATION: GLOBAL + ANY
+    if (read_status === NotificationQuery.ReadStatus.ANY && scope === NotificationQuery.Scope.GLOBAL) {
       // Only global notifications irrespective of read status
       match = {
-        'audience.audienceType': 'User',
+        'audience.audienceType': AudienceType.User,
         'audience.isGlobal': true,
       };
     }
 
-    // 3. read_status: NotificationReadStatus.ANY, scope: NotificationScope.SPECIFIC
+    // COMBINATION: GLOBAL + UNREAD
+    if (read_status === NotificationQuery.ReadStatus.UNREAD && scope === NotificationQuery.Scope.GLOBAL) {
+      // Only global notifications
+      match = {
+        'audience.audienceType': AudienceType.User,
+        'audience.isGlobal': true,
+        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
+      };
+    }
+
+    // COMBINATION: SPECIFIC + ANY
     if (
       read_status === NotificationQuery.ReadStatus.ANY &&
       scope === NotificationQuery.Scope.SPECIFIC
     ) {
       // Only specific notifications irrespective of read status
       match = {
-        'audience.audienceType': 'User',
+        'audience.audienceType': AudienceType.User,
         'audience.isGlobal': false,
         'audience.recipients': { $elemMatch: { id: userId } },
       };
     }
 
-    // 4. read_status: NotificationReadStatus.UNREAD, scope: NotificationScope.GLOBAL
-    if (
-      read_status === NotificationQuery.ReadStatus.UNREAD &&
-      scope === NotificationQuery.Scope.GLOBAL
-    ) {
-      // Only global notifications
-      match = {
-        'audience.audienceType': 'User',
-        'audience.isGlobal': true,
-        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
-      };
-    }
-
-    // 5. read_status: NotificationReadStatus.UNREAD, scope: NotificationScope.SPECIFIC
+    // COMBINATION: SPECIFIC + UNREAD
     if (
       read_status === NotificationQuery.ReadStatus.UNREAD &&
       scope === NotificationQuery.Scope.SPECIFIC
     ) {
       match = {
-        'audience.audienceType': 'User',
+        'audience.audienceType': AudienceType.User,
         'audience.isGlobal': false,
         'audience.recipients': { $elemMatch: { id: userId, isRead: false } },
       };
@@ -307,39 +308,75 @@ export class NotificationService {
   private getCampusNotificationsQuery(
     campusId: string,
     queryDto: QueryCampusNotificationDto,
-  ) {
+  ): RootFilterQuery<NotificationDocument> {
     const { read_status, scope } = queryDto;
-    let match: RootFilterQuery<NotificationDocument> = {
-      'audience.audienceType': AudienceType.Campus,
-    };
 
-    // Handle scope
-    if (scope === NotificationQuery.Scope.ALL) {
-      match.$or = [
-        { 'audience.isGlobal': true },
-        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
-      ];
-    } else if (scope === NotificationQuery.Scope.GLOBAL) {
-      match['audience.isGlobal'] = true;
-    } else if (scope === NotificationQuery.Scope.SPECIFIC) {
-      match['audience.isGlobal'] = false;
-      match['audience.recipients'] = { $elemMatch: { id: campusId } };
+    // Combination: ALL + ANY
+    if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.ANY) {
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        $or: [
+          { 'audience.isGlobal': true },
+          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
+        ],
+      };
     }
 
-    // Handle read_status
-    if (read_status === NotificationQuery.ReadStatus.UNREAD) {
-      if (scope === NotificationQuery.Scope.ALL || !scope) {
-        match.$or = [
+    // Combination: ALL + UNREAD
+    if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.UNREAD) {
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        $or: [
           { 'audience.isGlobal': true },
           { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId, isRead: false } } },
-        ];
-      } else if (scope === NotificationQuery.Scope.SPECIFIC) {
-        match['audience.recipients'] = { $elemMatch: { id: campusId, isRead: false } };
-      }
-      // For global, no read tracking, so just return all global
+        ],
+      };
     }
 
-    return match;
+    // Combination: GLOBAL + ANY
+    if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.ANY) {
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        'audience.isGlobal': true,
+      };
+    }
+
+    // Combination: GLOBAL + UNREAD
+    if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.UNREAD) {
+      // No read tracking for global, so just return all global
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        'audience.isGlobal': true,
+        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
+      };
+    }
+
+    // Combination: SPECIFIC + ANY
+    if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.ANY) {
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        'audience.isGlobal': false,
+        'audience.recipients': { $elemMatch: { id: campusId } },
+      };
+    }
+
+    // Combination: SPECIFIC + UNREAD
+    if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.UNREAD) {
+      return {
+        'audience.audienceType': AudienceType.Campus,
+        'audience.isGlobal': false,
+        'audience.recipients': { $elemMatch: { id: campusId, isRead: false } },
+      };
+    }
+
+    // Fallback (should not be reached)
+    return {
+      'audience.audienceType': AudienceType.Campus,
+      $or: [
+        { 'audience.isGlobal': true },
+        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: campusId } } },
+      ],
+    };
   }
 
   /**

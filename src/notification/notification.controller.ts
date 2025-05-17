@@ -2,19 +2,17 @@ import {
   Body,
   Controller,
   Get,
-  Param,
   Post,
-  UseGuards,
   Query,
-  Req,
+  UseGuards
 } from '@nestjs/common';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
-import { CreateNotificationDto, CreateGlobalNotificationDto, CreateSpecificNotificationDto } from './dto/create-notification.dto';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto } from './dto/create-notification.dto';
+import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
-import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
-import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { QueryNotificationDto } from './dto/query-notification.dto';
 
 @UseGuards(ResourceProtectionGuard)
 @Controller('notifications')

@@ -35,7 +35,10 @@ export class NotificationService {
           recipients: [],
         },
       });
-      return notification.save();
+      const savedNotification = await notification.save();
+      // Emit to all active users via gateway
+      this.notificationGateway.emitUserGlobalNotification(savedNotification.toObject());
+      return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);
     }

@@ -157,11 +157,43 @@ export class ApplicationMetricsAnalyticsService {
    * Get number of applications started vs completed
    * TODO: Could be expanded to include 'unique users', 'unique programs', 'overall completion rate over time' etc.
    */
-  async getOverallMetrics() {
+  async getOverallMetrics(queryDto: QueryAnalyticsCommonDto) {
     // Map enum values to aggregation names
     const stepAggNames = this.applicationProgressStepAggNames;
 
+    const must: any[] = [];
+    const must_not: any[] = [];
+
+    // Add time range filter if provided
+    if (queryDto?.time_range === 'weekly') {
+      must.push({
+        range: {
+          timestamp: {
+            gte: 'now-1w/w',
+            lte: 'now/w',
+          },
+        },
+      });
+    } else if (queryDto?.time_range === 'monthly') {
+      must.push({
+        range: {
+          timestamp: {
+            gte: 'now-1M/M',
+            lte: 'now/M',
+          },
+        },
+      });
+    }
+
+    const query: any = {
+      bool: {
+        must,
+        must_not,
+      },
+    };
+
     const esQuery: Search<Record<string, any>>['body'] = {
+      query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
       aggs: Object.entries(stepAggNames).reduce(
         (acc, [step, aggName]) => {
           acc[aggName] = { filter: { term: { step } } };

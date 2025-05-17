@@ -4,7 +4,8 @@ import {
   Get,
   Post,
   Query,
-  UseGuards
+  UseGuards,
+  UseInterceptors
 } from '@nestjs/common';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
@@ -13,7 +14,9 @@ import { CreateGlobalNotificationDto, CreateSpecificNotificationDto } from './dt
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
+import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
 
+@UseInterceptors(ResponseInterceptor)
 @UseGuards(ResourceProtectionGuard)
 @Controller('notifications')
 export class NotificationController {

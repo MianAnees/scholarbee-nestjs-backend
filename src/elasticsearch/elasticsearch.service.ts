@@ -4,8 +4,9 @@ import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasti
 import { IConfiguration } from 'src/config/configuration';
 import { DEFAULT_INDEX_SETTINGS } from 'src/elasticsearch/config/es-indexing-settings.config';
 import { applicationMetricsRawMappings } from 'src/elasticsearch/mappings/application-metrics.mapping';
-import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 import { searchHistoryRawMappings } from 'src/elasticsearch/mappings/search-history.mapping';
+import { Bulk, Index, Search } from '@elastic/elasticsearch/api/requestParams';
 
 @Injectable()
 export class ElasticsearchService {
@@ -83,7 +84,9 @@ export class ElasticsearchService {
     document: Record<string, any>,
   ) {
     try {
-      const documentWithTimestamp = {
+      const documentWithTimestamp: Index<{
+        timestamp: Date;
+      }>['body'] = {
         ...document,
         timestamp: new Date(),
       };
@@ -95,13 +98,9 @@ export class ElasticsearchService {
       });
 
       return {
-        success: true,
-        message: 'Document indexed successfully',
-        data: {
-          index: index,
-          id: id,
-          document: documentWithTimestamp,
-        }
+        index: index,
+        id: id,
+        document: documentWithTimestamp,
       };
     } catch (error) {
       this.logger.error(`Error indexing document: ${error.message}`, {
@@ -117,12 +116,13 @@ export class ElasticsearchService {
   /**
    * Search an index
    */
-  async search(index: string, query: Record<string, any>) {
+  async search(index: string, query: Search<Record<string, any>>['body']) {
     try {
       const result = await this.elasticsearchService.search({
         index,
         body: query,
       });
+      // return result.body
       return result;
     } catch (error) {
       this.logger.error(`Error searching index: ${error.message}`, {
@@ -204,7 +204,7 @@ export class ElasticsearchService {
   /**
    * Bulk index documents
    */
-  async bulk(operations: any[]): Promise<boolean> {
+  async bulk(operations: Bulk<Record<string, any>[]>['body']): Promise<boolean> {
     try {
       if (operations.length === 0) {
         return true;

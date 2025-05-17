@@ -7,7 +7,7 @@ import { University, UniversityDocument } from 'src/universities/schemas/univers
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
 import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
-import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {

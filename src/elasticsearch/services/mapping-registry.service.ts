@@ -3,7 +3,7 @@ import { EsMappingService } from 'es-mapping-ts';
 import { ElasticsearchService } from '../elasticsearch.service';
 import { DEFAULT_INDEX_SETTINGS } from 'src/elasticsearch/config/es-indexing-settings.config';
 import { searchHistoryRawMappings } from 'src/elasticsearch/mappings/search-history.mapping';
-import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 import { applicationMetricsRawMappings } from 'src/elasticsearch/mappings/application-metrics.mapping';
 
 

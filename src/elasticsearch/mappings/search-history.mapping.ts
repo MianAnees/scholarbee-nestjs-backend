@@ -1,6 +1,6 @@
 import { EsEntity, EsField } from "es-mapping-ts";
 import { BaseMappingEntity } from "src/elasticsearch/mappings/base.mapping";
-import { ES_INDICES } from "src/elasticsearch/mappings/es-indices.enum";
+import { ES_INDICES } from "src/elasticsearch/types/es-indices.enum";
 import { LastDegreeLevelEnum } from "src/student-scholarships/schemas/student-scholarship.schema";
 
 export enum UserTypeEnum {

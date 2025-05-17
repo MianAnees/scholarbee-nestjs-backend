@@ -12,7 +12,7 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
-import { ES_INDICES } from 'src/elasticsearch/mappings/es-indices.enum';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {

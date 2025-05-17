@@ -13,6 +13,7 @@ export class ElasticsearchController {
     @Param('id') id: string,
     @Body() document: Record<string, any>,
   ) {
+    console.log(` document:`, document)
     return {
       success: await this.elasticsearchService.indexDocument(index, id, document),
     };

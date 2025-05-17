@@ -338,6 +338,7 @@ export class ApplicationMetricsAnalyticsService {
         acc[aggName] = { filter: { term: { 'data.step': step } } };
         return acc;
       }, {} as Record<string, any>);
+
       const esQuery: Search<Record<string, any>>['body'] = {
         query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
         aggs: {
@@ -380,7 +381,7 @@ export class ApplicationMetricsAnalyticsService {
         });
         return {
           date: bucket.key_as_string,
-          count: bucket.doc_count,
+          overall_progress_events_count: bucket.doc_count,
           progress_events_counts,
         };
       });

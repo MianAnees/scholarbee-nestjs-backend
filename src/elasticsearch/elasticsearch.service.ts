@@ -19,7 +19,7 @@ export class ElasticsearchService {
   /**
    * Check if an index exists
    */
-  async indexExists(index: string): Promise<boolean> {
+  private async indexExists(index: string): Promise<boolean> {
     try {
       const response = await this.elasticsearchService.indices.exists({ index });
       return response.body
@@ -32,7 +32,7 @@ export class ElasticsearchService {
   /**
    * Create an index with the given settings and mappings
    */
-  async createIndex(
+  private async createIndex(
     index: string,
     settings?: Record<string, any>,
     mappings?: Record<string, any>,
@@ -50,6 +50,27 @@ export class ElasticsearchService {
       this.logger.error(`Error creating index: ${error.message}`, error.stack);
       return false;
     }
+  }
+
+
+  /**
+   * Create an index if it doesn't exist
+   */
+  async createIndexIfRequired({
+    name,
+    mapping,
+  }: {
+    name: string;
+    mapping: Record<string, any>;
+  }) {
+    const exists = await this.indexExists(name);
+    if (!exists) {
+      await this.createIndex(name, DEFAULT_INDEX_SETTINGS, mapping);
+      this.logger.log(`"${name}" index created`);
+      return true;
+    }
+    this.logger.log(`"${name}" index already exists`);
+    return false;
   }
 
 

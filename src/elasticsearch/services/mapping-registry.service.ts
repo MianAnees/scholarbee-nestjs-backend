@@ -46,24 +46,6 @@ export class MappingRegistryService implements OnModuleInit {
     return indicesToInitialize;
   }
 
-  private async initializeIfRequired({
-    name,
-    mapping,
-  }: {
-    name: string;
-    mapping: Record<string, any>;
-  }) {
-    const exists = await this.elasticsearchService.indexExists(name);
-    if (!exists) {
-      await this.elasticsearchService.createIndex(name, DEFAULT_INDEX_SETTINGS, mapping);
-      this.logger.log(`"${name}" index created`);
-      return true;
-    }
-    this.logger.log(`"${name}" index already exists`);
-    return false;
-  }
-
-
   /**
    * Initialize analytics-related indices (i.e. search logs and user events)
    */
@@ -73,7 +55,7 @@ export class MappingRegistryService implements OnModuleInit {
       const indicesToInitialize = this.loadAllRawMappings();
       for (const index of indicesToInitialize) {
         // console.log(`Raw Mapping for ${index.name}:`, index.mapping);
-        await this.initializeIfRequired(index);
+        await this.elasticsearchService.createIndexIfRequired(index);
       }
 
     } catch (error) {
@@ -90,7 +72,7 @@ export class MappingRegistryService implements OnModuleInit {
       const indicesToInitialize = this.loadAllDecoratedMappings();
       for (const index of indicesToInitialize) {
         // console.log(`Decorated Mapping for ${index.esmapping.index}:`, index.esmapping.body);
-        await this.initializeIfRequired({
+        await this.elasticsearchService.createIndexIfRequired({
           name: index.esmapping.index,
           mapping: index.esmapping.body,
         });

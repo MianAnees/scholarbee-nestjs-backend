@@ -1,28 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ElasticsearchService } from './elasticsearch.service';
 
+// TODO: Remove this controller after testing
 @Controller('elasticsearch')
 export class ElasticsearchController {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
-  @Get('index/:index')
-  async indexExists(@Param('index') index: string) {
-    return { exists: await this.elasticsearchService.indexExists(index) };
-  }
-
-  @Post('index/:index')
-  async createIndex(
-    @Param('index') index: string,
-    @Body() body: { settings?: Record<string, any>; mappings?: Record<string, any> },
-  ) {
-    return {
-      success: await this.elasticsearchService.createIndex(
-        index,
-        body.settings,
-        body.mappings,
-      ),
-    };
-  }
 
   @Put('index/:index/document/:id')
   async indexDocument(

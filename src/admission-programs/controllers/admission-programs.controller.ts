@@ -91,7 +91,7 @@ export class AdmissionProgramsController {
     @Query() filterDto: FilterAdmissionProgramDto,
     @Req() req: Request,
   ) {
-    await this.admissionProgramsService.indexSearchHistory(
+    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
       req.user?.['sub'],
       filterDto,
     );

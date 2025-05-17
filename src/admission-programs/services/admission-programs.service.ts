@@ -21,7 +21,7 @@ export class AdmissionProgramsService {
   ) {}
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
-  async indexSearchHistory(
+  async indexAdmissionProgramSearchHistory(
     user_id: string,
     fitlerDto: FilterAdmissionProgramDto,
   ) {
@@ -33,7 +33,7 @@ export class AdmissionProgramsService {
     } = fitlerDto;
 
     // Track search event
-    await this.searchHistoryAnalyticsService.indexDocument({
+    await this.searchHistoryAnalyticsService.indexSearchHistory({
       timestamp: new Date(),
       user_id,
       user_type: UserTypeEnum.STUDENT,

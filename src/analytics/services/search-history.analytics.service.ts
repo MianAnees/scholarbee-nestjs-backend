@@ -29,9 +29,10 @@ export class SearchHistoryAnalyticsService {
   /**
    * Log a user event to Elasticsearch
    */
-  async indexDocument(searchHistory: ISearchHistory) {
+  async indexSearchHistory(searchHistory: ISearchHistory) {
     this.logger.log(`🔍 Indexing document`, searchHistory);
     try {
+
       return await this.elasticsearchService.indexDocument(
         this.SEARCH_HISTORY_INDEX,
         undefined, // Let Elasticsearch generate the ID

@@ -28,7 +28,6 @@ import { ProgramsService } from '../services/programs.service';
 export class ProgramsController {
   constructor(
     private readonly programsService: ProgramsService,
-    private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
 
   @UseGuards(ResourceProtectionGuard, RolesGuard)
@@ -40,7 +39,7 @@ export class ProgramsController {
 
   @Get()
   async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findAll(queryDto);
     return result;
   }
@@ -56,7 +55,7 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findByCampus(campusId, queryDto);
     return result;
   }
@@ -67,7 +66,7 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findAllByUniversity(
       universityId,
       queryDto,

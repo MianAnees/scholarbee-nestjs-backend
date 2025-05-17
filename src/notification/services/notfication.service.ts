@@ -2,12 +2,13 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { NotificationGateway } from 'src/notification/notification.gateway';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto } from '../dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, CreateCampusGlobalNotificationDto } from '../dto/create-notification.dto';
 import {
   NotificationQuery,
   QueryNotificationDto,
 } from '../dto/query-notification.dto';
 import {
+  AudienceType,
   Notification,
   NotificationDocument,
 } from '../schemas/notification.schema';
@@ -27,14 +28,15 @@ export class NotificationService {
     // TODO: Send the global notification to all users active on the platform (through the gateway)
 
     try {
-      const notification = new this.notificationModel({
+      const notificationDoc: Notification = {
         ...createGlobalNotificationDto,
         audience: {
-          audienceType: 'User',
+          audienceType: AudienceType.User,
           isGlobal: true,
           recipients: [],
         },
-      });
+      }
+      const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
       // Emit to all active users via gateway
       this.notificationGateway.emitUserGlobalNotification(savedNotification.toObject());
@@ -51,19 +53,49 @@ export class NotificationService {
     try {
       const { userIds, ...notificationPayload } = createSpecificNotificationDto;
 
-      const notification = new this.notificationModel({
+      const notificationDoc: Notification = {
         ...notificationPayload,
         audience: {
-          audienceType: 'User',
+          audienceType: AudienceType.User,
           isGlobal: false,
           recipients: userIds.map((id) => ({ id, isRead: false })),
         },
-      });
+      }
+      const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
 
       // Emit to each active user via gateway
       this.notificationGateway.emitMultipleUserSpecificNotifications(userIds, savedNotification.toObject());
 
+      return savedNotification;
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
+
+  /**
+   * Creates a global notification for all users in a campus.
+   *
+   * @param createCampusGlobalNotificationDto - DTO containing title, message, and campusId
+   * @returns The created notification document
+   */
+  async createCampusGlobalNotification(
+    createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
+  ): Promise<NotificationDocument> {
+    try {
+
+
+      const notificationDoc: Notification = {
+        ...createCampusGlobalNotificationDto,
+        audience: {
+          audienceType: AudienceType.Campus,
+          isGlobal: true,
+          recipients: [],
+        },
+      }
+      const notification = new this.notificationModel(notificationDoc);
+      const savedNotification = await notification.save();
+      // (WS emit will be handled in controller or a separate method)
       return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);

@@ -95,3 +95,10 @@ export class MarkSingleNotificationReadDto {
   @IsObjectId({ message: 'Notification ID must be a valid MongoDB ObjectId' })
   notificationId: string;
 }
+
+// DTO for creating a campus global notification
+export class CreateCampusGlobalNotificationDto extends CreateNotificationDto {
+  // @IsObjectId({ message: 'Campus ID must be a valid MongoDB ObjectId' })
+  // @IsNotEmpty()
+  // campusId: string;
+}

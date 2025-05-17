@@ -14,7 +14,7 @@ import {
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto } from './dto/create-notification.dto';
+import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto, CreateCampusGlobalNotificationDto } from './dto/create-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
@@ -73,6 +73,18 @@ export class NotificationController {
     const notification = await this.notificationService.createSpecificUsersNotification(
       createSpecificNotificationDto,
     );
+    return notification;
+  }
+
+  @Post('user/campus-global')
+  async createCampusGlobalNotification(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
+  ) {
+    const notification = await this.notificationService.createCampusGlobalNotification(
+      createCampusGlobalNotificationDto,
+    );
+    this.notificationGateway.emitCampusGlobalNotification(notification.toObject());
     return notification;
   }
 

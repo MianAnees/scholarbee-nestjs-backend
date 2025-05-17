@@ -1,26 +1,16 @@
 import {
   HttpException,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
+  NotFoundException
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
+  WebSocketGateway
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { SocketStoreService } from 'src/common/services/socket-store.service';
-import { IConfiguration } from 'src/config/configuration';
-import { NotificationNamespace } from './notification.types';
+import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
-import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
+import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
+import { SocketStoreService } from 'src/common/services/socket-store.service';
+import { NotificationNamespace } from './notification.types';
 
 /**
  * Server should be listening to these events from the client
@@ -174,4 +164,16 @@ export class NotificationGateway extends AuthenticatedGateway {
       };
     }
   }
+
+  /**
+   * Emit a global notification to all users in a campus
+   * @param campusId - The campus ID
+   * @param notification - The notification payload
+   */
+  emitCampusGlobalNotification(notification: Record<string, any>) {
+    this.logger.log(`Emitting campus global notification to all users`);
+    // For now, emit to all sockets; clients should filter by campusId
+    this.server.emit(NotificationNamespace.Event.CAMPUS_GLOBAL, notification);
+  }
+
 }

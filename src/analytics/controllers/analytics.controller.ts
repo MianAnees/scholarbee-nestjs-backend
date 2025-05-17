@@ -61,8 +61,8 @@ export class AnalyticsController {
   }
 
   @Get('application-metrics')
-  async getApplicationProgress() {
-    return this.applicationMetricsAnalyticsService.getOverallMetrics();
+  async getApplicationProgress(@Query() query: QueryAnalyticsCommonDto) {
+    return this.applicationMetricsAnalyticsService.getOverallMetrics(query);
   }
 
   @Post('application-metrics/register-event')

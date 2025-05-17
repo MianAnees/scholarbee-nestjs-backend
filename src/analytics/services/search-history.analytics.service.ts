@@ -49,7 +49,7 @@ export class SearchHistoryAnalyticsService {
    */
   async getMostSearchedMajors(
     queryDto: QueryAnalyticsCommonDto,
-  ): Promise<Array<{ major: string; count: number }>> {
+  ) {
     try {
       const must: any[] = [];
       const must_not: any[] = [
@@ -72,6 +72,18 @@ export class SearchHistoryAnalyticsService {
           must_not,
         },
       };
+
+      // 1. Get the total count of docs with non-empty major
+      const countResponse = await this.elasticsearchService.search(
+        this.SEARCH_HISTORY_INDEX,
+        {
+          query: Object.keys(must).length || Object.keys(must_not).length ? query : undefined,
+          size: 0,
+          track_total_hits: true,
+        }
+      );
+
+      const total_searches_with_major = Number(countResponse.hits?.total?.value) ?? 0;
 
       const aggKey = 'top_majors';
       const response = await this.elasticsearchService.search(
@@ -112,16 +124,21 @@ export class SearchHistoryAnalyticsService {
         (bucket) => typeof bucket.key === 'string' && bucket.key.trim() !== ''
       );
 
-      return aggregationResponseBuckets.map((bucket) => ({
+      const majors = aggregationResponseBuckets.map((bucket) => ({
         major: bucket.key,
         count: bucket.doc_count,
       }));
+
+      return {
+        total_searches_with_major,
+        majors,
+      };
     } catch (error) {
       this.logger.error(
         `Error getting most searched majors: ${error.message}`,
         error.stack,
       );
-      return [];
+      return { total_searches_with_major: 0, majors: [] };
     }
   }
 

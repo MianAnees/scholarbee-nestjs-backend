@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { EsEntity, EsField } from 'es-mapping-ts';
-import { BaseEntity } from 'src/common/entities/base.entity';
+import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
 
 export type ApplicationDocument = Application & Document;
 

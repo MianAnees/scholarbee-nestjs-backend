@@ -1,28 +1,11 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ElasticsearchService } from './elasticsearch.service';
 
+// TODO: Remove this controller after testing
 @Controller('elasticsearch')
 export class ElasticsearchController {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
-  @Get('index/:index')
-  async indexExists(@Param('index') index: string) {
-    return { exists: await this.elasticsearchService.indexExists(index) };
-  }
-
-  @Post('index/:index')
-  async createIndex(
-    @Param('index') index: string,
-    @Body() body: { settings?: Record<string, any>; mappings?: Record<string, any> },
-  ) {
-    return {
-      success: await this.elasticsearchService.createIndex(
-        index,
-        body.settings,
-        body.mappings,
-      ),
-    };
-  }
 
   @Put('index/:index/document/:id')
   async indexDocument(
@@ -30,6 +13,7 @@ export class ElasticsearchController {
     @Param('id') id: string,
     @Body() document: Record<string, any>,
   ) {
+    console.log(` document:`, document)
     return {
       success: await this.elasticsearchService.indexDocument(index, id, document),
     };
@@ -43,9 +27,9 @@ export class ElasticsearchController {
   @Post('search/:index')
   async search(
     @Param('index') index: string,
-    @Body() query: any,
+    @Body() query: Record<string, unknown>,
   ) {
-    return await this.elasticsearchService.search(index, query);
+    return await this.elasticsearchService.search(index, query)
   }
 
   @Delete('index/:index/document/:id')

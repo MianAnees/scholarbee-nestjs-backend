@@ -1,19 +1,16 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    Req,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { SearchResourceEnum, UserTypeEnum } from 'src/analytics/schemas/search-history.entity';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
-import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';
@@ -28,7 +25,6 @@ import { ProgramsService } from '../services/programs.service';
 export class ProgramsController {
   constructor(
     private readonly programsService: ProgramsService,
-    private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
 
   @UseGuards(ResourceProtectionGuard, RolesGuard)
@@ -40,7 +36,7 @@ export class ProgramsController {
 
   @Get()
   async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findAll(queryDto);
     return result;
   }
@@ -56,7 +52,7 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findByCampus(campusId, queryDto);
     return result;
   }
@@ -67,7 +63,7 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
     const result = await this.programsService.findAllByUniversity(
       universityId,
       queryDto,

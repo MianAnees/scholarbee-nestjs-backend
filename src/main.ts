@@ -66,6 +66,7 @@ async function bootstrap() {
   const populateInterceptor = app.get(PopulateInterceptor);
   app.useGlobalInterceptors(populateInterceptor);
   app.useGlobalInterceptors(new LoggingInterceptor());
+  // app.useGlobalInterceptors(new ResponseInterceptor());
 
   // Setup Swagger documentation
   const config = new DocumentBuilder()

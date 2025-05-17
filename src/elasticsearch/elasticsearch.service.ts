@@ -1,7 +1,12 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
+import { HttpException, HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { IConfiguration } from 'src/config/configuration';
+import { DEFAULT_INDEX_SETTINGS } from 'src/elasticsearch/config/es-indexing-settings.config';
+import { applicationMetricsRawMappings } from 'src/elasticsearch/mappings/application-metrics.mapping';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { searchHistoryRawMappings } from 'src/elasticsearch/mappings/search-history.mapping';
+import { Bulk, Index, Search } from '@elastic/elasticsearch/api/requestParams';
 
 @Injectable()
 export class ElasticsearchService {
@@ -15,13 +20,10 @@ export class ElasticsearchService {
   /**
    * Check if an index exists
    */
-  async indexExists(index: string): Promise<boolean> {
+  private async indexExists(index: string): Promise<boolean> {
     try {
       const response = await this.elasticsearchService.indices.exists({ index });
-      if (typeof response === 'object' && 'body' in response) {
-        return !!response.body;
-      }
-      return response as unknown as boolean;
+      return response.body
     } catch (error) {
       this.logger.error(`Error checking if index ${index} exists: ${error.message}`);
       return false;
@@ -31,7 +33,7 @@ export class ElasticsearchService {
   /**
    * Create an index with the given settings and mappings
    */
-  async createIndex(
+  private async createIndex(
     index: string,
     settings?: Record<string, any>,
     mappings?: Record<string, any>,
@@ -51,29 +53,54 @@ export class ElasticsearchService {
     }
   }
 
+
   /**
-   * Index a document
+   * Create an index if it doesn't exist
    */
-  async indexDocument(
+  async createIndexIfRequired({
+    name,
+    mapping,
+  }: {
+    name: string;
+    mapping: Record<string, any>;
+  }) {
+    const exists = await this.indexExists(name);
+    if (!exists) {
+      await this.createIndex(name, DEFAULT_INDEX_SETTINGS, mapping);
+      this.logger.log(`"${name}" index created`);
+      return true;
+    }
+    this.logger.log(`"${name}" index already exists`);
+    return false;
+  }
+
+
+  /**
+   * Indexes a document and automatically adds a timestamp to the document
+   */
+  async indexDocument<T extends Record<string, any>>(
     index: string,
     id: string,
-    document: Record<string, any>,
+    document: T,
   ) {
     try {
+      const documentWithTimestamp: Index<T & {
+        timestamp: Date;
+      }>['body'] = {
+        ...document,
+        timestamp: new Date(),
+      };
+
       await this.elasticsearchService.index({
         index,
         id,
-        body: document,
+        body: documentWithTimestamp,
       });
 
       return {
-        success: true,
-        message: 'Document indexed successfully',
-        data: {
-          index: index,
-          id: id,
-          document: document,
-        }
+        index: index,
+        id: id,
+        document: documentWithTimestamp,
       };
     } catch (error) {
       this.logger.error(`Error indexing document: ${error.message}`, {
@@ -89,13 +116,13 @@ export class ElasticsearchService {
   /**
    * Search an index
    */
-  async search(index: string, query: any): Promise<any> {
+  async search(index: string, query: Search<Record<string, any>>['body']) {
     try {
       const result = await this.elasticsearchService.search({
         index,
         body: query,
       });
-      return result;
+      return result.body
     } catch (error) {
       this.logger.error(`Error searching index: ${error.message}`, {
         index,
@@ -176,7 +203,7 @@ export class ElasticsearchService {
   /**
    * Bulk index documents
    */
-  async bulk(operations: any[]): Promise<boolean> {
+  async bulk(operations: Bulk<Record<string, any>[]>['body']): Promise<boolean> {
     try {
       if (operations.length === 0) {
         return true;

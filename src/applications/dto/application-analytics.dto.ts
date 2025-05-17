@@ -1,30 +1,33 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { ApplicationProgressStep } from 'src/applications/schemas/application-metrics.schema';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 
-export class ApplicationMetricDto {
-    @IsString()
-    @IsNotEmpty()
-    applicationId: string;
+export class ApplicationMetricRegisterEventDto {
+  @IsEnum(ApplicationProgressStep)
+  step: ApplicationProgressStep;
 
-    @IsEnum(ApplicationProgressStep)
-    step: ApplicationProgressStep;
+  @IsString()
+  @IsNotEmpty()
+  campusId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    universityId: string;
+  @IsString()
+  @IsNotEmpty()
+  universityId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    programId: string;
+  @IsString()
+  @IsNotEmpty()
+  programId: string;
 
-    @IsDateString()
-    timestamp: string;
+  @IsString()
+  @IsNotEmpty()
+  admissionProgramId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    eventType: string;
-
-    @IsString()
-    @IsNotEmpty()
-    userId: string;
+  @IsOptional()
+  @IsString()
+  eventType: string = 'navigate';
 }

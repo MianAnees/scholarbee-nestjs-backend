@@ -10,17 +10,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';
 import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsService } from '../services/admission-programs.service';
-import {
-  SearchResourceEnum,
-  UserTypeEnum,
-} from 'src/analytics/schemas/search-history.entity';
-import { Request } from 'express';
 
 @Controller('admission-programs')
 export class AdmissionProgramsController {
@@ -91,7 +87,7 @@ export class AdmissionProgramsController {
     @Query() filterDto: FilterAdmissionProgramDto,
     @Req() req: Request,
   ) {
-    await this.admissionProgramsService.indexSearchHistory(
+    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
       req.user?.['sub'],
       filterDto,
     );

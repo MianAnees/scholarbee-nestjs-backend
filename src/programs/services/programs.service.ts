@@ -1,17 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder, RootFilterQuery } from 'mongoose';
-import { Program, ProgramDocument } from '../schemas/program.schema';
-import { CreateProgramDto } from '../dto/create-program.dto';
-import { UpdateProgramDto } from '../dto/update-program.dto';
-import { QueryProgramDto } from '../dto/query-program.dto';
-import { CompareProgramsDto } from '../dto/compare-programs.dto';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history-analytics.service';
+import { Model, RootFilterQuery, SortOrder, Types } from 'mongoose';
+import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import {
-  SearchResourceEnum,
-  UserTypeEnum,
-} from 'src/analytics/schemas/search-history.entity';
+  ISearchHistoryIndexDoc,
+  SearchResourceEnum
+} from 'src/elasticsearch/mappings/search-history.mapping';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
+import { UserNS } from 'src/users/schemas/user.schema';
+import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { CreateProgramDto } from '../dto/create-program.dto';
+import { QueryProgramDto } from '../dto/query-program.dto';
+import { UpdateProgramDto } from '../dto/update-program.dto';
+import { Program, ProgramDocument } from '../schemas/program.schema';
 
 @Injectable()
 export class ProgramsService {
@@ -21,23 +22,27 @@ export class ProgramsService {
   ) {}
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
-  async indexSearchHistory(user_id: string, queryDto: QueryProgramDto) {
-    const { degree_level, major, mode_of_study, name: program_name } = queryDto;
+  async indexProgramSearchHistory(user_id: string, queryDto: QueryProgramDto) {
+    const { degree_level, major, mode_of_study, name: program_name, campus_id, university_id } = queryDto;
 
-    // Track search event
-    await this.searchHistoryAnalyticsService.indexDocument({
-      timestamp: new Date(),
+
+
+    const programSearchHistory: ISearchHistoryIndexDoc = {
       user_id,
-      user_type: UserTypeEnum.STUDENT,
+      user_type: UserNS.UserType.Student,
       resource_type: SearchResourceEnum.PROGRAM,
       data: {
         major,
+        program_name,
+        university_id,
+        campus_id,
         degree_level: degree_level as LastDegreeLevelEnum,
         mode_of_study,
-        program_name,
-        university_id: queryDto.university_id,
       },
-    });
+    }
+
+    return await this.searchHistoryAnalyticsService.indexSearchHistory(programSearchHistory);
+
   }
 
   // method to translate the university_id filter to campus_id filter

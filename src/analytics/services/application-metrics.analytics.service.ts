@@ -9,6 +9,7 @@ import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/applicat
 import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 import { Search } from '@elastic/elasticsearch/api/requestParams';
+import { getTimeRangeFilter } from 'src/analytics/utils/time-range-filter.util';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -48,24 +49,9 @@ export class ApplicationMetricsAnalyticsService {
         },
       ];
 
-      if (queryDto.time_range === 'weekly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1w/w',
-              lte: 'now/w',
-            },
-          },
-        });
-      } else if (queryDto.time_range === 'monthly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1M/M',
-              lte: 'now/M',
-            },
-          },
-        });
+      const timeRangeFilter = getTimeRangeFilter(queryDto.time_range);
+      if (timeRangeFilter) {
+        must.push(timeRangeFilter);
       }
 
       const query: any = {
@@ -165,24 +151,9 @@ export class ApplicationMetricsAnalyticsService {
     const must_not: any[] = [];
 
     // Add time range filter if provided
-    if (queryDto?.time_range === 'weekly') {
-      must.push({
-        range: {
-          timestamp: {
-            gte: 'now-1w/w',
-            lte: 'now/w',
-          },
-        },
-      });
-    } else if (queryDto?.time_range === 'monthly') {
-      must.push({
-        range: {
-          timestamp: {
-            gte: 'now-1M/M',
-            lte: 'now/M',
-          },
-        },
-      });
+    const timeRangeFilter = getTimeRangeFilter(queryDto?.time_range);
+    if (timeRangeFilter) {
+      must.push(timeRangeFilter);
     }
 
     const query: any = {

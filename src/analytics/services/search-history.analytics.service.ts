@@ -13,6 +13,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { University } from 'src/universities/schemas/university.schema';
 import { UniversityDocument } from 'src/universities/schemas/university.schema';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { getTimeRangeFilter } from 'src/analytics/utils/time-range-filter.util';
 
 @Injectable()
 export class SearchHistoryAnalyticsService {
@@ -62,24 +63,9 @@ export class SearchHistoryAnalyticsService {
         },
       ];
 
-      if (queryDto.time_range === 'weekly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1w/w',
-              lte: 'now/w',
-            },
-          },
-        });
-      } else if (queryDto.time_range === 'monthly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1M/M',
-              lte: 'now/M',
-            },
-          },
-        });
+      const timeRangeFilter = getTimeRangeFilter(queryDto.time_range);
+      if (timeRangeFilter) {
+        must.push(timeRangeFilter);
       }
 
       const query: any = {
@@ -159,24 +145,9 @@ export class SearchHistoryAnalyticsService {
         },
       ];
 
-      if (queryDto.time_range === 'weekly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1w/w',
-              lte: 'now/w',
-            },
-          },
-        });
-      } else if (queryDto.time_range === 'monthly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1M/M',
-              lte: 'now/M',
-            },
-          },
-        });
+      const timeRangeFilter = getTimeRangeFilter(queryDto.time_range);
+      if (timeRangeFilter) {
+        must.push(timeRangeFilter);
       }
 
       const query: any = {
@@ -255,24 +226,9 @@ export class SearchHistoryAnalyticsService {
         },
       ];
 
-      if (queryDto.time_range === 'weekly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1w/w',
-              lte: 'now/w',
-            },
-          },
-        });
-      } else if (queryDto.time_range === 'monthly') {
-        must.push({
-          range: {
-            timestamp: {
-              gte: 'now-1M/M',
-              lte: 'now/M',
-            },
-          },
-        });
+      const timeRangeFilter = getTimeRangeFilter(queryDto.time_range);
+      if (timeRangeFilter) {
+        must.push(timeRangeFilter);
       }
 
       const query: any = {

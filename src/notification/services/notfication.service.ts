@@ -59,7 +59,12 @@ export class NotificationService {
           recipients: userIds.map((id) => ({ id, isRead: false })),
         },
       });
-      return notification.save();
+      const savedNotification = await notification.save();
+
+      // Emit to each active user via gateway
+      this.notificationGateway.emitMultipleUserSpecificNotifications(userIds, savedNotification.toObject());
+
+      return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);
     }

@@ -110,13 +110,31 @@ export class NotificationGateway extends AuthenticatedGateway {
   }
 
   emitUserSpecificNotification(userId: string, notification: Record<string, any>) {
-    this.logger.log(`Emitting notification to user: ${userId}`);
-    // retrieve the socket id of the user from the socket store service
-    const { socketId } = this.socketStoreService.getConnection({ userId });
-    // emit notification to the user's socket
-    this.server.to(socketId).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    try {
+      this.logger.log(`Emitting notification to user: ${userId}`);
+      // retrieve the socket id of the user from the socket store service
+      const { socketId } = this.socketStoreService.getConnection({ userId });
+      // emit notification to the user's socket
+      this.server.to(socketId).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    } catch (error) {
+      this.logger.error(`Error emitting notification to user: ${userId}`, error);
+    }
   }
 
+  /**
+   * Emit a notification to multiple users
+   * Checks
+   * @param userIds - The list of user ids to emit the notification to
+   * @param notification - The notification to emit
+   */
+  emitMultipleUserSpecificNotifications(userIds: string[], notification: Record<string, any>) {
+    // Finds the active connections for the target users (filter out the inactive ones)
+    const activeConnections = this.socketStoreService.getAllConnections(userIds);
+    // Retrieve the socket ids of the active connections
+    const activeSockets = activeConnections.map(({ socketId }) => socketId);
+    // Emit the notification to the active sockets
+    this.server.to(activeSockets).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+  }
 
   emitNotificationToUser(userId: string, notification: any) {
     this.logger.log(`Emitting notification to user: ${userId}`);

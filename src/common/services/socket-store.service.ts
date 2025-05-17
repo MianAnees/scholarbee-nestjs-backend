@@ -63,13 +63,22 @@ export class SocketStoreService {
   }
 
   /**
-   * Returns all connections
+   * Returns connections filtered by userIds
+   * If no userIds are provided, returns all active connections
+   * @param filterUserIds - The list of userIds to filter the connections by
    * @returns Map<string, string>
    */
-  getAllConnections() {
+  getAllConnections(filterUserIds?: string[]) {
     // return connections as an array of objects
     const connections: Connection[] = [];
-    for (const [userId, socketId] of this.connectionsUserToSocket.entries()) {
+
+    const connectionEntries = filterUserIds
+      // if filterUserIds are provided, only return the active connections for the provided userIds
+      ? Array.from(this.connectionsUserToSocket.entries())
+        .filter(([connUserId]) => filterUserIds.includes(connUserId))
+      : this.connectionsUserToSocket.entries();
+
+    for (const [userId, socketId] of connectionEntries) {
       connections.push({ userId, socketId });
     }
 

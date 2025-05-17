@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   Param,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApplicationMetricRegisterEventDto } from 'src/applications/dto/application-analytics.dto';
 import { ApplicationMetricsAnalyticsService } from 'src/analytics/services/application-metrics.analytics.service';
@@ -16,9 +17,11 @@ import { SearchHistoryAnalyticsService } from '../services/search-history.analyt
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { ResponseInterceptor } from '../../common/interceptors/response.interceptor';
 
 // Authenticated with Guard
 @UseGuards(ResourceProtectionGuard)
+@UseInterceptors(ResponseInterceptor)
 @Controller('analytics')
 export class AnalyticsController {
   constructor(

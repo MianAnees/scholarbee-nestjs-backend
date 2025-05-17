@@ -89,16 +89,23 @@ export class ApplicationMetricsMappingEntity extends BaseMappingEntity {
 
 }
 
+
+
 export const applicationMetricsRawMappings = {
   properties: {
-    universityId: { type: 'keyword' },
-    campusId: { type: 'keyword' },
-    programId: { type: 'keyword' },
-    admissionProgramId: { type: 'keyword' },
-    eventType: { type: 'keyword' },
-    step: { type: 'keyword' },
-    userId: { type: 'keyword' },
+    data: {
+      properties: {
+        universityId: { type: 'keyword' },
+        campusId: { type: 'keyword' },
+        programId: { type: 'keyword' },
+        admissionProgramId: { type: 'keyword' },
+        eventType: { type: 'keyword' },
+        step: { type: 'keyword' },
+        userId: { type: 'keyword' },
+      },
+    },
+    user_id: { type: 'keyword' },
+    user_type: { type: 'keyword' },
     timestamp: { type: 'date' },
   },
-};
-
+}; 

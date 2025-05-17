@@ -186,4 +186,4 @@ export const searchHistoryRawMappings = {
       type: 'keyword'
     }
   }
-}; 
+};

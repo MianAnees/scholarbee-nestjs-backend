@@ -35,6 +35,31 @@ export class ApplicationMetricsAnalyticsService {
     private universityModel: Model<UniversityDocument>,
   ) { }
 
+
+  /**
+   * Index an application metric event to Elasticsearch
+   */
+  async indexApplicationMetricEvent(applicationMetric: IApplicationMetricRegisterEventIndexDoc) {
+    this.logger.log(`🔍 Indexing document`, applicationMetric);
+    try {
+
+      return await this.elasticsearchService.indexDocument(
+        this.APPLICATION_METRICS_INDEX,
+        undefined, // Let Elasticsearch generate the ID
+        applicationMetric,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error logging application metric event: ${error.message}`,
+        error.stack,
+      );
+      return null;
+    }
+  }
+
+
+
+
   /**
    * Get most popular universities receiving applications
    * This gets total events (regardless of what step) for each university
@@ -271,11 +296,7 @@ export class ApplicationMetricsAnalyticsService {
         // ...applicationMetric,
       }
 
-      return await this.elasticsearchService.indexDocument(
-        this.APPLICATION_METRICS_INDEX,
-        undefined, // Let Elasticsearch generate the ID
-        applicationMetricDocument,
-      );
+      return await this.indexApplicationMetricEvent(applicationMetricDocument);
 
     } catch (error) {
       if (error instanceof HttpException) {

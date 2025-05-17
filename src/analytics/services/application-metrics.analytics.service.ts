@@ -10,6 +10,8 @@ import { ApplicationProgressStep } from 'src/analytics/schema/application-metric
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
 import { Search } from '@elastic/elasticsearch/api/requestParams';
 import { getTimeRangeFilter } from 'src/elasticsearch/utils/time-range-filter.util';
+import { IApplicationMetricRegisterEventIndexDoc } from 'src/elasticsearch/mappings/application-metrics.mapping';
+import { UserNS } from 'src/users/schemas/user.schema';
 
 @Injectable()
 export class ApplicationMetricsAnalyticsService {
@@ -261,8 +263,10 @@ export class ApplicationMetricsAnalyticsService {
       //   // );
       // }
 
-      const applicationMetricDocument = {
-        userId,
+      const applicationMetricDocument: IApplicationMetricRegisterEventIndexDoc = {
+        user_id: userId,
+        user_type: UserNS.UserType.Student,
+        data: applicationMetric,
         ...applicationMetric,
       }
 

@@ -2,12 +2,8 @@ import { EsEntity, EsField } from "es-mapping-ts";
 import { BaseMappingEntity } from "src/elasticsearch/mappings/base.mapping";
 import { ES_INDICES } from "src/elasticsearch/types/es-indices.enum";
 import { LastDegreeLevelEnum } from "src/student-scholarships/schemas/student-scholarship.schema";
+import { UserNS } from "src/users/schemas/user.schema";
 
-export enum UserTypeEnum {
-  STUDENT = 'student',
-  ADMIN = 'admin',
-  CAMPUS_ADMIN = 'campus_admin',
-}
 
 // TODO: Should be mapped to the schema model names
 export enum SearchResourceEnum {
@@ -32,9 +28,9 @@ interface ISearchHistoryData {
   major?: string; // TODO: Create a main "major" enum, restrict the data entry to only the values in the enum and then use it here
   mode_of_study?: string;
 }
-export interface ISearchHistory {
+export interface ISearchHistoryIndexDoc {
   resource_type: SearchResourceEnum;
-  user_type: UserTypeEnum;
+  user_type: UserNS.UserType;
   user_id: string;
   data: Partial<ISearchHistoryData>;
 }

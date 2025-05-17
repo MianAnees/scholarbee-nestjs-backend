@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ElasticsearchService } from '../../elasticsearch/elasticsearch.service';
-import { ISearchHistory } from '../../elasticsearch/mappings/search-history.mapping';
+import { ISearchHistoryIndexDoc } from '../../elasticsearch/mappings/search-history.mapping';
 import { QueryAnalyticsCommonDto } from '../dto/query-analytics.dto';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -29,7 +29,7 @@ export class SearchHistoryAnalyticsService {
   /**
    * Log a user event to Elasticsearch
    */
-  async indexSearchHistory(searchHistory: ISearchHistory) {
+  async indexSearchHistory(searchHistory: ISearchHistoryIndexDoc) {
     this.logger.log(`🔍 Indexing document`, searchHistory);
     try {
 

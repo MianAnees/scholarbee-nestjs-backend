@@ -1,18 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder, RootFilterQuery } from 'mongoose';
-import { Program, ProgramDocument } from '../schemas/program.schema';
-import { CreateProgramDto } from '../dto/create-program.dto';
-import { UpdateProgramDto } from '../dto/update-program.dto';
-import { QueryProgramDto } from '../dto/query-program.dto';
-import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { Model, RootFilterQuery, SortOrder, Types } from 'mongoose';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import {
-  ISearchHistory,
-  SearchResourceEnum,
-  UserTypeEnum,
+  ISearchHistoryIndexDoc,
+  SearchResourceEnum
 } from 'src/elasticsearch/mappings/search-history.mapping';
 import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
+import { UserNS } from 'src/users/schemas/user.schema';
+import { CompareProgramsDto } from '../dto/compare-programs.dto';
+import { CreateProgramDto } from '../dto/create-program.dto';
+import { QueryProgramDto } from '../dto/query-program.dto';
+import { UpdateProgramDto } from '../dto/update-program.dto';
+import { Program, ProgramDocument } from '../schemas/program.schema';
 
 @Injectable()
 export class ProgramsService {
@@ -27,9 +27,9 @@ export class ProgramsService {
 
 
 
-    const programSearchHistory: ISearchHistory = {
+    const programSearchHistory: ISearchHistoryIndexDoc = {
       user_id,
-      user_type: UserTypeEnum.STUDENT,
+      user_type: UserNS.UserType.Student,
       resource_type: SearchResourceEnum.PROGRAM,
       data: {
         major,

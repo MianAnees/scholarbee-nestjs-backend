@@ -1,6 +1,25 @@
 import { EsEntity, EsField } from 'es-mapping-ts';
+import { ApplicationProgressStep } from 'src/analytics/schema/application-metrics.schema';
 import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
 import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { UserNS } from 'src/users/schemas/user.schema';
+
+
+interface IApplicationMetricRegisterEventData {
+  step: ApplicationProgressStep;
+  universityId: string;
+  campusId: string;
+  programId: string;
+  admissionProgramId: string;
+  eventType: string;
+}
+
+export interface IApplicationMetricRegisterEventIndexDoc {
+  user_type: UserNS.UserType;
+  user_id: string;
+  data: IApplicationMetricRegisterEventData;
+}
+
 
 
 // -----------------------------------------------------------------------------

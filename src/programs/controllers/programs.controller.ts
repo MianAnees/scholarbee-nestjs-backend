@@ -1,19 +1,16 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    Req,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { SearchResourceEnum, UserTypeEnum } from 'src/elasticsearch/mappings/search-history.mapping';
-import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
-import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';

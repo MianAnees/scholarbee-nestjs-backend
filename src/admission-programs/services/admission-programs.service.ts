@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder } from 'mongoose';
-import { AdmissionProgram, AdmissionProgramDocument } from '../schemas/admission-program.schema';
-import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
-import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
-import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
-import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
-import { ISearchHistory, SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { Model, SortOrder, Types } from 'mongoose';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
+import { ISearchHistoryIndexDoc, SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { UserNS } from 'src/users/schemas/user.schema';
+import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
-import { UserTypeEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
+import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
+import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
+import { AdmissionProgram, AdmissionProgramDocument } from '../schemas/admission-program.schema';
 
 @Injectable()
 export class AdmissionProgramsService {
@@ -38,9 +38,9 @@ export class AdmissionProgramsService {
       // intake,
     } = filterDto;
 
-    const admissionProgramSearchHistory: ISearchHistory = {
+    const admissionProgramSearchHistory: ISearchHistoryIndexDoc = {
       user_id,
-      user_type: UserTypeEnum.STUDENT,
+      user_type: UserNS.UserType.Student,
       resource_type: SearchResourceEnum.ADMISSION_PROGRAM,
       data: {
         major,

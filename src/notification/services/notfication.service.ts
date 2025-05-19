@@ -1,31 +1,39 @@
-import { BadRequestException, Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery, Types } from 'mongoose';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { NotificationGateway } from 'src/notification/notification.gateway';
+import { UserNS } from 'src/users/schemas/user.schema';
 import {
-  CreateGlobalNotificationDto,
-  CreateSpecificNotificationDto,
   CreateCampusGlobalNotificationDto,
+  CreateGlobalNotificationDto,
   CreateSpecificCampusesNotificationDto,
+  CreateSpecificNotificationDto,
 } from '../dto/create-notification.dto';
 import {
   NotificationQuery,
-  QueryNotificationDto,
   QueryCampusNotificationDto,
+  QueryNotificationDto,
 } from '../dto/query-notification.dto';
 import {
   AudienceType,
   Notification,
   NotificationDocument,
 } from '../schemas/notification.schema';
-import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { UserNS } from 'src/users/schemas/user.schema';
+import { NotificationReadReceiptDocument } from '../schemas/notification-read-receipt.schema';
+import { NotificationReadReceipt } from '../schemas/notification-read-receipt.schema';
 
 @Injectable()
 export class NotificationService {
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    @InjectModel(NotificationReadReceipt.name)
+    private notificationReadReceiptModel: Model<NotificationReadReceiptDocument>,
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
@@ -63,14 +71,20 @@ export class NotificationService {
     try {
       const { userIds, ...notificationPayload } = createSpecificNotificationDto;
 
+      const userObjectIds = userIds.map((id) => new Types.ObjectId(id));
+
       const notificationDoc: Notification = {
         ...notificationPayload,
         audience: {
           audienceType: AudienceType.User,
           isGlobal: false,
-          recipients: userIds.map((id) => new Types.ObjectId(id)),
+          recipients: userObjectIds,
         },
       };
+      console.log(
+        '🚀 ~ NotificationService ~ notificationDoc:',
+        notificationDoc,
+      );
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
 
@@ -141,229 +155,179 @@ export class NotificationService {
     }
   }
 
-  async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
-    const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
-
-    const match = this.getSharedNotificationsQuery(
-      userId,
-      { read_status, scope },
-      AudienceType.User,
-    );
-
-    // Run aggregation or find
-    const notifications = await this.notificationModel
-      .find(match)
-      .sort({ [sortBy]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-
-    return notifications;
-  }
-
   /**
    * Marks multiple notifications as read for a specific user.
    *
-   * Each notification document contains an array of recipients, where each recipient has their own read status (isRead).
-   * This method will only update the read status for the recipient entry matching the requesting user (userId),
-   * and will NOT affect the read status of other users/recipients in the same notification document.
+   * This method uses a unique compound index on (notificationId, userId) in the NotificationReadReceipt collection
+   * to ensure that each user can only have one read receipt per notification. This prevents duplicate entries.
    *
-   * @param recipientId - The ID of the user marking notifications as read
+   * The method uses bulkWrite with updateOne and upsert: true for each notificationId. This means:
+   *   - If a read receipt for (notificationId, userId) already exists, MongoDB does nothing (no error, no new document).
+   *   - If it does not exist, MongoDB creates a new read receipt with the current timestamp.
+   *
+   * This is safe for cases where the client may select a mix of read and unread notifications:
+   *   - Already-read notifications are ignored (no error, no duplicate).
+   *   - Unread notifications get a new read receipt.
+   *
+   * @param userId - The ID of the user marking notifications as read
    * @param notificationIds - The list of notification document IDs to mark as read
-   * @returns The number of notification documents updated (where the user's read status was changed)
+   * @returns The number of notifications for which an upsert was attempted (not necessarily the number of new receipts created)
    */
-  async markNotificationsAsRead(
-    recipientId: string,
+  async markBulkNotificationsAsRead(
+    userId: string,
     notificationIds: string[],
-    audienceType: AudienceType,
   ): Promise<number> {
-    // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
-    // if (audienceType === AudienceType.Campus) {
-    //   const campus = await this.campusModel.findById(recipientId);
-    //   if (!campus) {
-    //     throw new BadRequestException('Campus not found');
-    //   }
-    // }
-
-    // Only update notifications where:
-    // - The notification _id is in the provided list
-    // - The user is a recipient (audience.recipients contains an entry with id=userId)
-    // - The user's isRead status is currently false
-    const result = await this.notificationModel.updateMany(
-      {
-        _id: { $in: notificationIds }, // Only notifications with these IDs
-        'audience.audienceType': audienceType,
-        'audience.recipients': {
-          $elemMatch: { id: recipientId, isRead: false },
-        }, // Only if user is a recipient and not already read
-      },
-      {
-        // Set isRead to true for the recipient entry matching the recipientId
-        $set: { 'audience.recipients.$[elem].isRead': true },
-      },
-      {
-        // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
-        // where elem.id matches the recipientId (i.e., only the requesting user's isRead is set to true, not others)
-        arrayFilters: [{ 'elem.id': recipientId }],
-      },
+    // Convert userId and notificationIds to ObjectId for MongoDB
+    const userObjectId = new Types.ObjectId(userId);
+    const notificationObjectIds = notificationIds.map(
+      (id) => new Types.ObjectId(id),
     );
-    // result.modifiedCount is the number of notification documents where the user's read status was updated
-    return result.modifiedCount || 0;
+    const readTime = new Date();
+
+    // Prepare bulkWrite operations: one upsert per notificationId
+    // $setOnInsert ensures readAt is only set if a new document is created
+    // upsert: true means if the document exists, do nothing; if not, insert
+    const operations = notificationObjectIds.map((notificationId) => ({
+      updateOne: {
+        filter: { notificationId, userId: userObjectId },
+        update: { $setOnInsert: { readAt: readTime } },
+        upsert: true,
+      },
+    }));
+
+    // Execute all upserts in a single bulkWrite operation
+    // Thanks to the unique index, no duplicates will be created
+    // No errors will be thrown for already existing read receipts
+    if (operations.length > 0) {
+      await this.notificationReadReceiptModel.bulkWrite(operations);
+    }
+    // Return the number of upsert attempts (not the number of new receipts)
+    return operations.length;
   }
 
   /**
    * Marks a single notification as read for a specific user.
    *
-   * Only updates the recipient entry in the recipients array where elem.id matches the userId.
-   * Does not affect other recipients.
+   * Uses updateOne with upsert: true and $setOnInsert to ensure that:
+   *   - If a read receipt for (notificationId, userId) exists, do nothing (no error, no duplicate).
+   *   - If it does not exist, create a new read receipt with the current timestamp.
    *
-   * @param recipientId - The ID of the user marking the notification as read
+   * This is safe and idempotent, and works seamlessly with the unique index.
+   *
+   * @param userId - The ID of the user marking the notification as read
    * @param notificationId - The notification document ID to mark as read
-   * @returns True if the notification was updated, false otherwise
+   * @returns True (operation always succeeds or is a no-op)
    */
-  async markSingleNotificationAsRead(
-    recipientId: string,
+  async markNotificationAsRead(
+    userId: string,
     notificationId: string,
-    audienceType: AudienceType,
   ): Promise<boolean> {
-    // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
-    // if (audienceType === AudienceType.Campus) {
-    //   const campus = await this.campusModel.findById(recipientId);
-    //   if (!campus) {
-    //     throw new BadRequestException('Campus not found');
-    //   }
-    // }
+    // Convert IDs to ObjectId for MongoDB
+    const userObjectId = new Types.ObjectId(userId);
+    const notificationObjectId = new Types.ObjectId(notificationId);
+    const readTime = new Date();
 
-    const result = await this.notificationModel.updateOne(
-      {
-        _id: notificationId, // Only the specified notification
-        'audience.audienceType': audienceType,
-        'audience.recipients': {
-          $elemMatch: { id: recipientId, isRead: false },
-        }, // Only if user is a recipient and not already read
-      },
-      {
-        $set: { 'audience.recipients.$[elem].isRead': true },
-      },
-      {
-        // arrayFilters ensures that the $set update only applies to the recipient entry in the recipients array
-        // where elem.id matches the recipientId (i.e., only the requesting user's isRead is set to true, not others)
-        arrayFilters: [{ 'elem.id': recipientId }],
-      },
+    // Upsert the read receipt: create if not exists, do nothing if exists
+    await this.notificationReadReceiptModel.updateOne(
+      { notificationId: notificationObjectId, userId: userObjectId },
+      { $setOnInsert: { readAt: readTime } },
+      { upsert: true },
     );
-    // result.modifiedCount is 1 if the notification was updated, 0 otherwise
-    return !!result.modifiedCount;
+    // Always return true (operation is safe and idempotent)
+    return true;
   }
 
   /**
    * Build the MongoDB query for campus notifications for a campus admin.
-   * @param recipientId - The campus ID
-   * @param queryDto - QueryCampusNotificationDto
+   * @param recipientObjectId - The campus ID
+   * @param queryScope - QueryCampusNotificationDto
    */
   private getSharedNotificationsQuery(
-    recipientId: string,
-    queryDto: Pick<QueryNotificationDto, 'read_status' | 'scope'>,
+    recipientObjectId: Types.ObjectId,
+    scope: QueryNotificationDto['scope'],
     audienceType: AudienceType,
   ): RootFilterQuery<NotificationDocument> {
-    const { read_status, scope } = queryDto;
-
-    // Combination: ALL + ANY
-    if (
-      scope === NotificationQuery.Scope.ALL &&
-      read_status === NotificationQuery.ReadStatus.ANY
-    ) {
-      return {
-        'audience.audienceType': audienceType,
-        $or: [
-          { 'audience.isGlobal': true },
-          {
-            'audience.isGlobal': false,
-            'audience.recipients': { $elemMatch: { id: recipientId } },
-          },
-        ],
-      };
-    }
-
-    // Combination: ALL + UNREAD
-    if (
-      scope === NotificationQuery.Scope.ALL &&
-      read_status === NotificationQuery.ReadStatus.UNREAD
-    ) {
-      return {
-        'audience.audienceType': audienceType,
-        $or: [
-          { 'audience.isGlobal': true },
-          {
-            'audience.isGlobal': false,
-            'audience.recipients': {
-              $elemMatch: { id: recipientId, isRead: false },
-            },
-          },
-        ],
-      };
-    }
-
-    // Combination: GLOBAL + ANY
-    if (
-      scope === NotificationQuery.Scope.GLOBAL &&
-      read_status === NotificationQuery.ReadStatus.ANY
-    ) {
+    // Global notifications only
+    if (scope === NotificationQuery.Scope.GLOBAL) {
+      console.log('🚀 ~ GLOBAL:', scope);
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': true,
       };
     }
 
-    // Combination: GLOBAL + UNREAD
-    if (
-      scope === NotificationQuery.Scope.GLOBAL &&
-      read_status === NotificationQuery.ReadStatus.UNREAD
-    ) {
-      // No read tracking for global, so just return all global
-      return {
-        'audience.audienceType': audienceType,
-        'audience.isGlobal': true,
-        // TODO: Right now, there's no way to filter unread global notifications (as read receipts is not tracked for global notifications)
-      };
-    }
-
-    // Combination: SPECIFIC + ANY
-    if (
-      scope === NotificationQuery.Scope.SPECIFIC &&
-      read_status === NotificationQuery.ReadStatus.ANY
-    ) {
+    // Specific notifications only
+    if (scope === NotificationQuery.Scope.SPECIFIC) {
+      console.log('🚀 ~ SPECIFIC:', scope);
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: recipientId } },
+        // recipientId should be checked within the array of recipients in the notification document
+        'audience.recipients': { $in: [recipientObjectId] },
       };
     }
 
-    // Combination: SPECIFIC + UNREAD
-    if (
-      scope === NotificationQuery.Scope.SPECIFIC &&
-      read_status === NotificationQuery.ReadStatus.UNREAD
-    ) {
-      return {
-        'audience.audienceType': audienceType,
-        'audience.isGlobal': false,
-        'audience.recipients': {
-          $elemMatch: { id: recipientId, isRead: false },
-        },
-      };
-    }
-
-    // Fallback (should not be reached)
+    // All notifications (global + specific)
+    console.log('🚀 ~ All notifications:', scope);
     return {
       'audience.audienceType': audienceType,
       $or: [
         { 'audience.isGlobal': true },
         {
           'audience.isGlobal': false,
-          'audience.recipients': { $elemMatch: { id: recipientId } },
+          'audience.recipients': { $in: [recipientObjectId] },
         },
       ],
     };
+  }
+
+  async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
+    const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
+
+    const userObjectId = new Types.ObjectId(userId);
+
+    const match = this.getSharedNotificationsQuery(
+      userObjectId,
+      scope,
+      AudienceType.User,
+    );
+
+    const pipeline = [
+      { $match: match },
+      {
+        $lookup: {
+          from: 'notificationreadreceipts',
+          let: { notificationId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$notificationId', '$$notificationId'] },
+                    { $eq: ['$userId', new Types.ObjectId(userId)] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'readReceipts',
+        },
+      },
+      {
+        $addFields: {
+          isRead: { $gt: [{ $size: '$readReceipts' }, 0] },
+        },
+      },
+      {
+        $project: {
+          readReceipts: 0,
+        },
+      },
+    ];
+    const notificationsWithRead =
+      await this.notificationModel.aggregate(pipeline);
+
+    return notificationsWithRead;
   }
 
   /**
@@ -388,9 +352,10 @@ export class NotificationService {
     const { limit, sortBy, sortOrder, skip, read_status, scope } = queryDto;
 
     const campusId = user.campus_id;
+    const campusObjectId = new Types.ObjectId(campusId);
     const match = this.getSharedNotificationsQuery(
-      campusId,
-      { read_status, scope },
+      campusObjectId,
+      scope,
       AudienceType.Campus,
     );
     // Add pagination and sorting

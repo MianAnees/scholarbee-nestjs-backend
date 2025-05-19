@@ -14,8 +14,18 @@ import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { ResponseInterceptor } from 'src/common/interceptors/response.interceptor';
-import { CreateCampusGlobalNotificationDto, CreateGlobalNotificationDto, CreateSpecificCampusesNotificationDto, CreateSpecificNotificationDto, MarkNotificationsReadDto, MarkSingleNotificationReadDto } from './dto/create-notification.dto';
-import { QueryCampusNotificationDto, QueryNotificationDto } from './dto/query-notification.dto';
+import {
+  CreateCampusGlobalNotificationDto,
+  CreateGlobalNotificationDto,
+  CreateSpecificCampusesNotificationDto,
+  CreateSpecificNotificationDto,
+  MarkBulkNotificationsAsReadDto,
+  MarkNotificationAsReadDto,
+} from './dto/create-notification.dto';
+import {
+  QueryCampusNotificationDto,
+  QueryNotificationDto,
+} from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationService } from './services/notfication.service';
 import { AudienceType } from 'src/notification/schemas/notification.schema';
@@ -43,9 +53,10 @@ export class NotificationController {
     @AuthReq() authReq: AuthenticatedRequest,
     @Body() createGlobalNotificationDto: CreateGlobalNotificationDto,
   ) {
-    const notification = await this.notificationService.createGlobalUserNotification(
-      createGlobalNotificationDto,
-    );
+    const notification =
+      await this.notificationService.createGlobalUserNotification(
+        createGlobalNotificationDto,
+      );
     return notification;
   }
 
@@ -54,64 +65,84 @@ export class NotificationController {
     @AuthReq() authReq: AuthenticatedRequest,
     @Body() createSpecificNotificationDto: CreateSpecificNotificationDto,
   ) {
-    const notification = await this.notificationService.createSpecificUsersNotification(
-      createSpecificNotificationDto,
-    );
+    const notification =
+      await this.notificationService.createSpecificUsersNotification(
+        createSpecificNotificationDto,
+      );
     return notification;
   }
 
   @Post('campus/global')
   async createGlobalCampusNotification(
     @AuthReq() authReq: AuthenticatedRequest,
-    @Body() createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
+    @Body()
+    createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
   ) {
-    const notification = await this.notificationService.createGlobalCampusNotification(
-      createCampusGlobalNotificationDto,
+    const notification =
+      await this.notificationService.createGlobalCampusNotification(
+        createCampusGlobalNotificationDto,
+      );
+    this.notificationGateway.emitCampusGlobalNotification(
+      notification.toObject(),
     );
-    this.notificationGateway.emitCampusGlobalNotification(notification.toObject());
     return notification;
   }
 
   @Post('campus/specific')
   async createSpecificCampusesNotification(
     @AuthReq() authReq: AuthenticatedRequest,
-    @Body() createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
+    @Body()
+    createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
   ) {
-    const notification = await this.notificationService.createSpecificCampusesNotification(
-      createSpecificCampusesNotificationDto,
+    const notification =
+      await this.notificationService.createSpecificCampusesNotification(
+        createSpecificCampusesNotificationDto,
+      );
+    this.notificationGateway.emitSpecificCampusesNotification(
+      createSpecificCampusesNotificationDto.campusIds,
+      notification.toObject(),
     );
-    this.notificationGateway.emitSpecificCampusesNotification(createSpecificCampusesNotificationDto.campusIds, notification.toObject());
     return notification;
   }
 
-  @Patch('mark-read')
-  async markNotificationsAsRead(
+  @Patch('mark-read/bulk')
+  async markBulkNotificationsAsRead(
     @AuthReq() authReq: AuthenticatedRequest,
-    @Body() markNotificationsReadDto: MarkNotificationsReadDto,
+    @Body() markNotificationsReadDto: MarkBulkNotificationsAsReadDto,
   ) {
     const userId = authReq.user._id;
     const { notificationIds } = markNotificationsReadDto;
-    const updatedCount = await this.notificationService.markNotificationsAsRead(userId, notificationIds, AudienceType.User);
+    const updatedCount =
+      await this.notificationService.markBulkNotificationsAsRead(
+        userId,
+        notificationIds,
+      );
     return { updatedCount };
   }
 
-  @Patch('mark-read/single/:notificationId')
-  async markSingleNotificationAsRead(
+  @Patch('mark-read/:notificationId')
+  async markNotificationAsRead(
     @AuthReq() authReq: AuthenticatedRequest,
-    @Param(new ValidationPipe({ transform: true })) params: MarkSingleNotificationReadDto,
+    @Param(new ValidationPipe({ transform: true }))
+    params: MarkNotificationAsReadDto,
   ) {
     const userId = authReq.user._id;
     const { notificationId } = params;
-    const updated = await this.notificationService.markSingleNotificationAsRead(userId, notificationId, AudienceType.User);
+    const updated = await this.notificationService.markNotificationAsRead(
+      userId,
+      notificationId,
+    );
     return { updated };
   }
-
 
   @Get('campus')
   async getCampusNotifications(
     @AuthReq() authReq: AuthenticatedRequest,
     @Query() queryDto: QueryCampusNotificationDto,
   ) {
-    return this.notificationService.getCampusNotifications(authReq.user, queryDto);
+    return this.notificationService.getCampusNotifications(
+      authReq.user,
+      queryDto,
+    );
   }
 }

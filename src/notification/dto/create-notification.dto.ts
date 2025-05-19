@@ -81,7 +81,7 @@ export class CreateSpecificNotificationDto extends CreateNotificationDto {
 }
 
 // DTO for marking notifications as read
-export class MarkNotificationsReadDto {
+export class MarkBulkNotificationsAsReadDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
@@ -89,7 +89,7 @@ export class MarkNotificationsReadDto {
 }
 
 // DTO for validating notificationId as a param
-export class MarkSingleNotificationReadDto {
+export class MarkNotificationAsReadDto {
   @IsString()
   @IsNotEmpty()
   @IsObjectId({ message: 'Notification ID must be a valid MongoDB ObjectId' })

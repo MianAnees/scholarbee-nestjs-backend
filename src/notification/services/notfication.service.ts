@@ -135,7 +135,7 @@ export class NotificationService {
    * @param createCampusSpecificNotificationDto - DTO containing title, message, and campusId
    * @returns The created notification document
    */
-  async createCampusSpecificNotification(
+  async createSpecificCampusesNotification(
     createCampusSpecificNotificationDto: CreateCampusSpecificNotificationsDto,
   ): Promise<NotificationDocument> {
     try {
@@ -305,7 +305,7 @@ export class NotificationService {
    * @param queryDto - Query parameters (scope, read_status, pagination, etc.)
    * @returns Array of notifications with isRead status
    */
-  async getUserNotifications(
+  async getNotifications(
     user: AuthenticatedRequest['user'],
     queryDto: QueryNotificationDto,
   ) {
@@ -415,43 +415,5 @@ export class NotificationService {
       .limit(limit)
       .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
     return notificationsWithRead;
-  }
-
-  /**
-   * Get notifications for a campus admin (all notifications for their campus, including global campus notifications)
-   * @param user - The authenticated user object
-   * @param queryDto - QueryCampusNotificationDto (pagination, scope, read_status)
-   */
-  async getCampusNotifications(
-    user: AuthenticatedRequest['user'],
-    queryDto: QueryCampusNotificationDto,
-  ) {
-    // Check if user is a campus admin
-    if (
-      !user ||
-      user.user_type !== UserNS.UserType.Campus_Admin ||
-      !user.campus_id
-    ) {
-      throw new ForbiddenException(
-        'Only campus admins can access campus notifications',
-      );
-    }
-    const { limit, sortBy, sortOrder, skip, read_status, scope } = queryDto;
-
-    const campusId = user.campus_id;
-    const campusObjectId = new Types.ObjectId(campusId);
-    const match = this.getSharedNotificationsQuery(
-      campusObjectId,
-      scope,
-      AudienceType.Campus,
-    );
-    // Add pagination and sorting
-    const notifications = await this.notificationModel
-      .find(match)
-      .sort({ [sortBy]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-    return notifications;
   }
 }

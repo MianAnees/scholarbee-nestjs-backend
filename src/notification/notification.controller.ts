@@ -39,15 +39,12 @@ export class NotificationController {
     private readonly notificationService: NotificationService,
   ) {}
 
-  @Get('user')
-  async getUserNotifications(
+  @Get()
+  async getNotifications(
     @AuthReq() authReq: AuthenticatedRequest,
     @Query() queryDto: QueryNotificationDto,
   ) {
-    return this.notificationService.getUserNotifications(
-      authReq.user,
-      queryDto,
-    );
+    return this.notificationService.getNotifications(authReq.user, queryDto);
   }
 
   @Post('user/global')
@@ -88,13 +85,13 @@ export class NotificationController {
   }
 
   @Post('campus/specific')
-  async createCampusSpecificNotification(
+  async createSpecificCampusesNotification(
     @AuthReq() authReq: AuthenticatedRequest,
     @Body()
     createCampusSpecificNotificationDto: CreateCampusSpecificNotificationsDto,
   ) {
     const notification =
-      await this.notificationService.createCampusSpecificNotification(
+      await this.notificationService.createSpecificCampusesNotification(
         createCampusSpecificNotificationDto,
       );
     return notification;
@@ -128,16 +125,5 @@ export class NotificationController {
       notificationId,
     );
     return { updated };
-  }
-
-  @Get('campus')
-  async getCampusNotifications(
-    @AuthReq() authReq: AuthenticatedRequest,
-    @Query() queryDto: QueryCampusNotificationDto,
-  ) {
-    return this.notificationService.getCampusNotifications(
-      authReq.user,
-      queryDto,
-    );
   }
 }

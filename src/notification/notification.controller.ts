@@ -29,20 +29,6 @@ export class NotificationController {
     private readonly notificationService: NotificationService,
   ) {}
 
-  @Post('test/user/global')
-  sendGlobalTestNotificationToUser(@Body() payload: Record<string, any>) {
-    // TODO: Call the service to create a notification which should handle the WS and DB operations
-    this.notificationGateway.emitUserGlobalNotification(payload);
-    return { success: true };
-  }
-
-  @Post('test/user/specific')
-  sendSpecificTestNotificationToUser(@Body() payload: Record<string, any>) {
-    // TODO: Call the service to create a notification which should handle the WS and DB operations
-    this.notificationGateway.emitUserSpecificNotification(payload.userId, payload);
-    return { success: true };
-  }
-
   @Get('user')
   async getUserNotifications(
     @AuthReq() authReq: AuthenticatedRequest,

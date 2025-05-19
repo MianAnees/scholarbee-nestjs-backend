@@ -85,6 +85,10 @@ export class MarkBulkNotificationsAsReadDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
+  @IsObjectId({
+    each: true,
+    message: 'Each notification ID must be a valid MongoDB ObjectId',
+  })
   notificationIds: string[];
 }
 

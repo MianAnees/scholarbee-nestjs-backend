@@ -336,7 +336,8 @@ export class NotificationService {
     // - User is a campus admin with a campus_id
     // - AND getCampusNotifications flag is true
     const isCampusAdmin =
-      user.user_type === UserNS.UserType.Campus_Admin && user.campus_id;
+      // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
+      user.user_type === UserNS.UserType.Admin && user.campus_id;
     if (isCampusAdmin && get_campus_notifications) {
       const campusObjectId = new Types.ObjectId(user.campus_id);
       const campusMatch = this.getSharedNotificationsQuery(

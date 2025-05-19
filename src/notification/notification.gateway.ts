@@ -11,6 +11,7 @@ import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 import { SocketStoreService } from 'src/common/services/socket-store.service';
 import { NotificationNamespace } from './notification.types';
+import { UserNS } from 'src/users/schemas/user.schema';
 
 /**
  * Server should be listening to these events from the client
@@ -57,11 +58,20 @@ export class NotificationGateway extends AuthenticatedGateway {
         `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
       );
 
-      // TODO: Make this reusable as well (by optionally adding a decorator or extending another class)
+      // TODO: Make this reusable as well, like auth gateway logic (by optionally adding a decorator or extending another class)
       this.socketStoreService.addConnection({
         userId: authSocket.data.user._id,
         socketId: authSocket.id,
       });
+
+      // Join a room with `campus/{campus_id}` and `campus/global`, if the user is a campus admin
+      if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
+        // Join the `campus/{campus_id}` room
+        authSocket.join(`campus/${authSocket.data.user.campus_id}`);
+
+        // Join the `campus/global` room
+        authSocket.join('campus/global');
+      }
     } catch (error) {
       if (this.socketStoreService === undefined) {
         this.logger.error('Socket store service not initialized');
@@ -99,15 +109,23 @@ export class NotificationGateway extends AuthenticatedGateway {
     this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
   }
 
-  emitUserSpecificNotification(userId: string, notification: Record<string, any>) {
+  emitUserSpecificNotification(
+    userId: string,
+    notification: Record<string, any>,
+  ) {
     try {
       this.logger.log(`Emitting notification to user: ${userId}`);
       // retrieve the socket id of the user from the socket store service
       const { socketId } = this.socketStoreService.getConnection({ userId });
       // emit notification to the user's socket
-      this.server.to(socketId).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+      this.server
+        .to(socketId)
+        .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
     } catch (error) {
-      this.logger.error(`Error emitting notification to user: ${userId}`, error);
+      this.logger.error(
+        `Error emitting notification to user: ${userId}`,
+        error,
+      );
     }
   }
 
@@ -117,18 +135,26 @@ export class NotificationGateway extends AuthenticatedGateway {
    * @param userIds - The list of user ids to emit the notification to
    * @param notification - The notification to emit
    */
-  emitMultipleUserSpecificNotifications(userIds: string[], notification: Record<string, any>) {
+  emitMultipleUserSpecificNotifications(
+    userIds: string[],
+    notification: Record<string, any>,
+  ) {
     // Finds the active connections for the target users (filter out the inactive ones)
-    const activeConnections = this.socketStoreService.getAllConnections(userIds);
+    const activeConnections =
+      this.socketStoreService.getAllConnections(userIds);
     // Retrieve the socket ids of the active connections
     const activeSockets = activeConnections.map(({ socketId }) => socketId);
     // Emit the notification to the active sockets
-    this.server.to(activeSockets).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    this.server
+      .to(activeSockets)
+      .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
   }
 
   emitNotificationToUser(userId: string, notification: any) {
     this.logger.log(`Emitting notification to user: ${userId}`);
-    this.server.to(`user_${userId}`).emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    this.server
+      .to(`user_${userId}`)
+      .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
   }
 
   emitNotificationToAll(notification: any) {
@@ -142,7 +168,10 @@ export class NotificationGateway extends AuthenticatedGateway {
       }
 
       this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
-      this.server.serverSideEmit(NotificationNamespace.Event.USER_GLOBAL, notification);
+      this.server.serverSideEmit(
+        NotificationNamespace.Event.USER_GLOBAL,
+        notification,
+      );
       return {
         success: true,
         message: 'Notification sent to all users',
@@ -181,9 +210,13 @@ export class NotificationGateway extends AuthenticatedGateway {
    * @param campusIds - The campus IDs
    * @param notification - The notification payload
    */
-  emitSpecificCampusesNotification(campusIds: string[], notification: Record<string, any>) {
-    this.logger.log(`Emitting specific campuses notification to campuses: ${campusIds.join(',')}`);
+  emitSpecificCampusesNotification(
+    campusIds: string[],
+    notification: Record<string, any>,
+  ) {
+    this.logger.log(
+      `Emitting specific campuses notification to campuses: ${campusIds.join(',')}`,
+    );
     this.server.emit('campus/specific', { campusIds, notification });
   }
-
 }

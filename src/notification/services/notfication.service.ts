@@ -1,8 +1,13 @@
 import { BadRequestException, Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, RootFilterQuery } from 'mongoose';
+import { Model, RootFilterQuery, Types } from 'mongoose';
 import { NotificationGateway } from 'src/notification/notification.gateway';
-import { CreateGlobalNotificationDto, CreateSpecificNotificationDto, CreateCampusGlobalNotificationDto, CreateSpecificCampusesNotificationDto } from '../dto/create-notification.dto';
+import {
+  CreateGlobalNotificationDto,
+  CreateSpecificNotificationDto,
+  CreateCampusGlobalNotificationDto,
+  CreateSpecificCampusesNotificationDto,
+} from '../dto/create-notification.dto';
 import {
   NotificationQuery,
   QueryNotificationDto,
@@ -38,11 +43,13 @@ export class NotificationService {
           isGlobal: true,
           recipients: [],
         },
-      }
+      };
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
       // Emit to all active users via gateway
-      this.notificationGateway.emitUserGlobalNotification(savedNotification.toObject());
+      this.notificationGateway.emitUserGlobalNotification(
+        savedNotification.toObject(),
+      );
       return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);
@@ -61,14 +68,17 @@ export class NotificationService {
         audience: {
           audienceType: AudienceType.User,
           isGlobal: false,
-          recipients: userIds.map((id) => ({ id, isRead: false })),
+          recipients: userIds.map((id) => new Types.ObjectId(id)),
         },
-      }
+      };
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
 
       // Emit to each active user via gateway
-      this.notificationGateway.emitMultipleUserSpecificNotifications(userIds, savedNotification.toObject());
+      this.notificationGateway.emitMultipleUserSpecificNotifications(
+        userIds,
+        savedNotification.toObject(),
+      );
 
       return savedNotification;
     } catch (error) {
@@ -86,8 +96,6 @@ export class NotificationService {
     createCampusGlobalNotificationDto: CreateCampusGlobalNotificationDto,
   ): Promise<NotificationDocument> {
     try {
-
-
       const notificationDoc: Notification = {
         ...createCampusGlobalNotificationDto,
         audience: {
@@ -95,7 +103,7 @@ export class NotificationService {
           isGlobal: true,
           recipients: [],
         },
-      }
+      };
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
       // (WS emit will be handled in controller or a separate method)
@@ -115,13 +123,14 @@ export class NotificationService {
     createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
   ): Promise<NotificationDocument> {
     try {
-      const { campusIds, ...notificationPayload } = createSpecificCampusesNotificationDto;
+      const { campusIds, ...notificationPayload } =
+        createSpecificCampusesNotificationDto;
       const notificationDoc: Notification = {
         ...notificationPayload,
         audience: {
           audienceType: AudienceType.Campus,
           isGlobal: false,
-          recipients: campusIds.map((id) => ({ id, isRead: false })),
+          recipients: campusIds.map((id) => new Types.ObjectId(id)),
         },
       };
       const notification = new this.notificationModel(notificationDoc);
@@ -135,7 +144,11 @@ export class NotificationService {
   async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
     const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
 
-    const match = this.getSharedNotificationsQuery(userId, { read_status, scope }, AudienceType.User);
+    const match = this.getSharedNotificationsQuery(
+      userId,
+      { read_status, scope },
+      AudienceType.User,
+    );
 
     // Run aggregation or find
     const notifications = await this.notificationModel
@@ -159,7 +172,11 @@ export class NotificationService {
    * @param notificationIds - The list of notification document IDs to mark as read
    * @returns The number of notification documents updated (where the user's read status was changed)
    */
-  async markNotificationsAsRead(recipientId: string, notificationIds: string[], audienceType: AudienceType): Promise<number> {
+  async markNotificationsAsRead(
+    recipientId: string,
+    notificationIds: string[],
+    audienceType: AudienceType,
+  ): Promise<number> {
     // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
     // if (audienceType === AudienceType.Campus) {
     //   const campus = await this.campusModel.findById(recipientId);
@@ -167,7 +184,6 @@ export class NotificationService {
     //     throw new BadRequestException('Campus not found');
     //   }
     // }
-
 
     // Only update notifications where:
     // - The notification _id is in the provided list
@@ -177,7 +193,9 @@ export class NotificationService {
       {
         _id: { $in: notificationIds }, // Only notifications with these IDs
         'audience.audienceType': audienceType,
-        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } }, // Only if user is a recipient and not already read
+        'audience.recipients': {
+          $elemMatch: { id: recipientId, isRead: false },
+        }, // Only if user is a recipient and not already read
       },
       {
         // Set isRead to true for the recipient entry matching the recipientId
@@ -203,8 +221,11 @@ export class NotificationService {
    * @param notificationId - The notification document ID to mark as read
    * @returns True if the notification was updated, false otherwise
    */
-  async markSingleNotificationAsRead(recipientId: string, notificationId: string, audienceType: AudienceType): Promise<boolean> {
-
+  async markSingleNotificationAsRead(
+    recipientId: string,
+    notificationId: string,
+    audienceType: AudienceType,
+  ): Promise<boolean> {
     // TODO: if audienceType is Campus, then we need to get the campusId from the recipientId
     // if (audienceType === AudienceType.Campus) {
     //   const campus = await this.campusModel.findById(recipientId);
@@ -213,12 +234,13 @@ export class NotificationService {
     //   }
     // }
 
-
     const result = await this.notificationModel.updateOne(
       {
         _id: notificationId, // Only the specified notification
         'audience.audienceType': audienceType,
-        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } }, // Only if user is a recipient and not already read
+        'audience.recipients': {
+          $elemMatch: { id: recipientId, isRead: false },
+        }, // Only if user is a recipient and not already read
       },
       {
         $set: { 'audience.recipients.$[elem].isRead': true },
@@ -246,29 +268,46 @@ export class NotificationService {
     const { read_status, scope } = queryDto;
 
     // Combination: ALL + ANY
-    if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.ANY) {
+    if (
+      scope === NotificationQuery.Scope.ALL &&
+      read_status === NotificationQuery.ReadStatus.ANY
+    ) {
       return {
         'audience.audienceType': audienceType,
         $or: [
           { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId } } },
+          {
+            'audience.isGlobal': false,
+            'audience.recipients': { $elemMatch: { id: recipientId } },
+          },
         ],
       };
     }
 
     // Combination: ALL + UNREAD
-    if (scope === NotificationQuery.Scope.ALL && read_status === NotificationQuery.ReadStatus.UNREAD) {
+    if (
+      scope === NotificationQuery.Scope.ALL &&
+      read_status === NotificationQuery.ReadStatus.UNREAD
+    ) {
       return {
         'audience.audienceType': audienceType,
         $or: [
           { 'audience.isGlobal': true },
-          { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } } },
+          {
+            'audience.isGlobal': false,
+            'audience.recipients': {
+              $elemMatch: { id: recipientId, isRead: false },
+            },
+          },
         ],
       };
     }
 
     // Combination: GLOBAL + ANY
-    if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.ANY) {
+    if (
+      scope === NotificationQuery.Scope.GLOBAL &&
+      read_status === NotificationQuery.ReadStatus.ANY
+    ) {
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': true,
@@ -276,7 +315,10 @@ export class NotificationService {
     }
 
     // Combination: GLOBAL + UNREAD
-    if (scope === NotificationQuery.Scope.GLOBAL && read_status === NotificationQuery.ReadStatus.UNREAD) {
+    if (
+      scope === NotificationQuery.Scope.GLOBAL &&
+      read_status === NotificationQuery.ReadStatus.UNREAD
+    ) {
       // No read tracking for global, so just return all global
       return {
         'audience.audienceType': audienceType,
@@ -286,7 +328,10 @@ export class NotificationService {
     }
 
     // Combination: SPECIFIC + ANY
-    if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.ANY) {
+    if (
+      scope === NotificationQuery.Scope.SPECIFIC &&
+      read_status === NotificationQuery.ReadStatus.ANY
+    ) {
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': false,
@@ -295,11 +340,16 @@ export class NotificationService {
     }
 
     // Combination: SPECIFIC + UNREAD
-    if (scope === NotificationQuery.Scope.SPECIFIC && read_status === NotificationQuery.ReadStatus.UNREAD) {
+    if (
+      scope === NotificationQuery.Scope.SPECIFIC &&
+      read_status === NotificationQuery.ReadStatus.UNREAD
+    ) {
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': false,
-        'audience.recipients': { $elemMatch: { id: recipientId, isRead: false } },
+        'audience.recipients': {
+          $elemMatch: { id: recipientId, isRead: false },
+        },
       };
     }
 
@@ -308,7 +358,10 @@ export class NotificationService {
       'audience.audienceType': audienceType,
       $or: [
         { 'audience.isGlobal': true },
-        { 'audience.isGlobal': false, 'audience.recipients': { $elemMatch: { id: recipientId } } },
+        {
+          'audience.isGlobal': false,
+          'audience.recipients': { $elemMatch: { id: recipientId } },
+        },
       ],
     };
   }
@@ -318,16 +371,28 @@ export class NotificationService {
    * @param user - The authenticated user object
    * @param queryDto - QueryCampusNotificationDto (pagination, scope, read_status)
    */
-  async getCampusNotifications(user: AuthenticatedRequest['user'], queryDto: QueryCampusNotificationDto) {
-
+  async getCampusNotifications(
+    user: AuthenticatedRequest['user'],
+    queryDto: QueryCampusNotificationDto,
+  ) {
     // Check if user is a campus admin
-    if (!user || user.user_type !== UserNS.UserType.Campus_Admin || !user.campus_id) {
-      throw new ForbiddenException('Only campus admins can access campus notifications');
+    if (
+      !user ||
+      user.user_type !== UserNS.UserType.Campus_Admin ||
+      !user.campus_id
+    ) {
+      throw new ForbiddenException(
+        'Only campus admins can access campus notifications',
+      );
     }
     const { limit, sortBy, sortOrder, skip, read_status, scope } = queryDto;
 
     const campusId = user.campus_id;
-    const match = this.getSharedNotificationsQuery(campusId, { read_status, scope }, AudienceType.Campus);
+    const match = this.getSharedNotificationsQuery(
+      campusId,
+      { read_status, scope },
+      AudienceType.Campus,
+    );
     // Add pagination and sorting
     const notifications = await this.notificationModel
       .find(match)

@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
+import { Document, Types } from 'mongoose';
 
 // export enum NotificationType {
 //   APPLICATION_REJECTED = 'application/rejected',
@@ -10,16 +9,16 @@ import { Document } from 'mongoose';
 // }
 
 // Embedded subdocument for each recipient (no _id field)
-@Schema({ _id: false })
-export class Recipient {
-  @Prop({ type: String, required: true, refPath: 'audience.audienceType' })
-  id: string; // The id of the user, campus, university, etc.
-
-  @Prop({ type: Boolean, default: false })
-  isRead: boolean; // Read status for this recipient
-}
-
-export const RecipientSchema = SchemaFactory.createForClass(Recipient);
+// @Schema({ _id: false })
+// export class Recipient {
+//   @Prop({ type: String, required: true, refPath: 'audience.audienceType' })
+//   id: string; // The id of the user, campus, university, etc.
+//
+//   @Prop({ type: Boolean, default: false })
+//   isRead: boolean; // Read status for this recipient
+// }
+//
+// export const RecipientSchema = SchemaFactory.createForClass(Recipient);
 
 export enum AudienceType {
   User = 'User', // User.name
@@ -40,8 +39,14 @@ class Audience {
   @Prop({ type: Boolean, required: true })
   isGlobal: boolean;
 
-  @Prop({ type: [RecipientSchema], required: false })
-  recipients?: Recipient[];
+  @Prop({
+    type: [{ type: Types.ObjectId, refPath: 'audienceType' }],
+    required: function (this: Audience) {
+      return !this.isGlobal;
+    },
+    // minlength: 1,
+  })
+  recipients?: Types.ObjectId[];
 }
 
 const AudienceSchema = SchemaFactory.createForClass(Audience);
@@ -63,32 +68,7 @@ export class Notification {
 
 const NotificationSchema = SchemaFactory.createForClass(Notification);
 
-// Add custom validation for mutual exclusivity
-NotificationSchema.pre('validate', function (next) {
-  // @ts-ignore
-  const doc = this as Notification;
-  if (
-    doc.audience.isGlobal &&
-    doc.audience.recipients &&
-    doc.audience.recipients.length > 0
-  ) {
-    return next(
-      new Error('If isGlobal is true, recipients must be undefined or empty.'),
-    );
-  }
-  if (
-    !doc.audience.isGlobal &&
-    (!doc.audience.recipients || doc.audience.recipients.length === 0)
-  ) {
-    return next(
-      new Error(
-        'If isGlobal is false, recipients must be provided and not empty.',
-      ),
-    );
-  }
-  next();
-});
-
 type NotificationDocument = Notification & Document;
 
 export { NotificationSchema, type NotificationDocument };
+

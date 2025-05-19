@@ -41,35 +41,35 @@ export class RequiredDocumentDto {
 
 
 export class CreateStudentScholarshipDto {
-    @IsNotEmpty()
-    @ParseObjectId()
-    student_id: StudentScholarship['student_id'];
+  @IsNotEmpty()
+  @ParseObjectId()
+  student_id: StudentScholarship['student_id'];
 
-    @ParseObjectId()
-    @IsNotEmpty()
-    scholarship_id: StudentScholarship['scholarship_id'];
+  @ParseObjectId()
+  @IsNotEmpty()
+  scholarship_id: StudentScholarship['scholarship_id'];
 
-    @IsOptional()
-    @IsString()
-    reference_1: StudentScholarship['reference_1'];
+  @IsOptional()
+  @IsString()
+  reference_1: StudentScholarship['reference_1'];
 
-    @IsOptional()
-    @IsString()
-    reference_2: StudentScholarship['reference_2'];
+  @IsOptional()
+  @IsString()
+  reference_2: StudentScholarship['reference_2'];
 
-    // @IsOptional()
-    // @IsString()
-    // personal_statement: StudentScholarship['personal_statement'];
+  @IsOptional()
+  @IsString()
+  personal_statement: StudentScholarship['personal_statement'];
 
-    @IsNotEmpty()
-    @IsObject()
-    @ValidateNested()
-    @Type(() => StudentSnapshotDto)
-    student_snapshot: StudentSnapshotDto;
+  @IsNotEmpty()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => StudentSnapshotDto)
+  student_snapshot: StudentSnapshotDto;
 
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => RequiredDocumentDto)
-    required_documents?: RequiredDocumentDto[];
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RequiredDocumentDto)
+  required_documents?: RequiredDocumentDto[];
 }

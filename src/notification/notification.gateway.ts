@@ -59,10 +59,12 @@ export class NotificationGateway extends AuthenticatedGateway {
       // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
       if (authSocket.data.user.user_type === UserNS.UserType.Admin) {
         // Join the `campus/{campus_id}` room
-        authSocket.join(`campus/${authSocket.data.user.campus_id}`);
+        authSocket.join(
+          notificationRooms.campus_specific(authSocket.data.user.campus_id),
+        );
 
         // Join the `campus/global` room
-        authSocket.join('campus/global');
+        authSocket.join(notificationRooms.campus_global);
       }
     } catch (error) {
       if (this.socketStoreService === undefined) {

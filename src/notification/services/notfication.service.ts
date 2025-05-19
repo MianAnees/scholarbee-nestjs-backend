@@ -304,7 +304,7 @@ export class NotificationService {
                 $expr: {
                   $and: [
                     { $eq: ['$notificationId', '$$notificationId'] },
-                    { $eq: ['$userId', new Types.ObjectId(userId)] },
+                    { $eq: ['$userId', userObjectId] },
                   ],
                 },
               },
@@ -324,6 +324,20 @@ export class NotificationService {
         },
       },
     ];
+
+    // Add filtering by read_status if specified
+    // Handles: 'any' (default, no filter), 'read' (isRead: true), 'unread' (isRead: false)
+    if (read_status === NotificationQuery.ReadStatus.READ) {
+      console.log('READ:', read_status);
+      pipeline.push({ $match: { isRead: true } });
+    } else if (read_status === NotificationQuery.ReadStatus.UNREAD) {
+      console.log('UNREAD:', read_status);
+      pipeline.push({ $match: { isRead: false } });
+    }
+    // If read_status is 'any' or undefined, do not filter by isRead
+
+    // (Optional) Add pagination and sorting here if needed
+
     const notificationsWithRead =
       await this.notificationModel.aggregate(pipeline);
 

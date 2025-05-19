@@ -13,6 +13,7 @@ export namespace NotificationQuery {
   export enum ReadStatus {
     ANY = 'any',
     UNREAD = 'unread',
+    READ = 'read',
   }
 }
 

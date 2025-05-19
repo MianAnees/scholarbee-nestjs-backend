@@ -44,8 +44,10 @@ export class NotificationController {
     @AuthReq() authReq: AuthenticatedRequest,
     @Query() queryDto: QueryNotificationDto,
   ) {
-    const userId = authReq.user._id;
-    return this.notificationService.getUserNotifications(userId, queryDto);
+    return this.notificationService.getUserNotifications(
+      authReq.user,
+      queryDto,
+    );
   }
 
   @Post('user/global')

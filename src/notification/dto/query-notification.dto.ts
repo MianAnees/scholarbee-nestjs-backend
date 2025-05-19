@@ -26,6 +26,10 @@ export class QueryNotificationDto extends PaginationDto {
   @IsEnum(NotificationQuery.ReadStatus)
   read_status?: NotificationQuery.ReadStatus =
     NotificationQuery.ReadStatus.UNREAD;
+
+  @IsOptional()
+  @IsBoolean()
+  get_campus_notifications?: boolean = false;
 }
 
 // DTO for querying campus notifications (for campus admins)

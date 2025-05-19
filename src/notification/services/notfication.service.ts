@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, RootFilterQuery, Types } from 'mongoose';
+import { Model, PipelineStage, RootFilterQuery, Types } from 'mongoose';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { NotificationGateway } from 'src/notification/notification.gateway';
 import { UserNS } from 'src/users/schemas/user.schema';
@@ -249,7 +249,6 @@ export class NotificationService {
   ): RootFilterQuery<NotificationDocument> {
     // Global notifications only
     if (scope === NotificationQuery.Scope.GLOBAL) {
-      console.log('🚀 ~ GLOBAL:', scope);
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': true,
@@ -258,7 +257,6 @@ export class NotificationService {
 
     // Specific notifications only
     if (scope === NotificationQuery.Scope.SPECIFIC) {
-      console.log('🚀 ~ SPECIFIC:', scope);
       return {
         'audience.audienceType': audienceType,
         'audience.isGlobal': false,
@@ -268,7 +266,6 @@ export class NotificationService {
     }
 
     // All notifications (global + specific)
-    console.log('🚀 ~ All notifications:', scope);
     return {
       'audience.audienceType': audienceType,
       $or: [
@@ -281,19 +278,81 @@ export class NotificationService {
     };
   }
 
-  async getUserNotifications(userId: string, queryDto: QueryNotificationDto) {
-    const { read_status, scope, limit, sortBy, sortOrder, skip } = queryDto;
-
+  /**
+   * Get all notifications relevant to a user, including:
+   * 1. User-specific notifications
+   * 2. Global user notifications
+   * 3. Campus-specific notifications (if user is a campus admin AND getCampusNotifications is true)
+   * 4. Global campus notifications (if user is a campus admin AND getCampusNotifications is true)
+   *
+   * This unified approach allows fetching all relevant notifications in a single request.
+   * Read status is determined by checking for entries in the notification_read_receipts collection.
+   *
+   * @param user - The authenticated user object
+   * @param queryDto - Query parameters (scope, read_status, pagination, etc.)
+   * @returns Array of notifications with isRead status
+   */
+  async getUserNotifications(
+    user: AuthenticatedRequest['user'],
+    queryDto: QueryNotificationDto,
+  ) {
+    const {
+      read_status,
+      scope,
+      limit,
+      sortBy,
+      sortOrder,
+      skip,
+      get_campus_notifications,
+    } = queryDto;
+    const userId = user._id.toString();
     const userObjectId = new Types.ObjectId(userId);
 
-    const match = this.getSharedNotificationsQuery(
+    // Prepare match conditions for the aggregation pipeline
+    const matchConditions = [];
+
+    // 1. Add user-specific notifications match
+    const userMatch = this.getSharedNotificationsQuery(
       userObjectId,
       scope,
       AudienceType.User,
     );
+    matchConditions.push(userMatch);
 
-    const pipeline = [
-      { $match: match },
+    // 2. Add campus-specific notifications match if:
+    // - User is a campus admin with a campus_id
+    // - AND getCampusNotifications flag is true
+    const isCampusAdmin =
+      user.user_type === UserNS.UserType.Campus_Admin && user.campus_id;
+    if (isCampusAdmin && get_campus_notifications) {
+      const campusObjectId = new Types.ObjectId(user.campus_id);
+      const campusMatch = this.getSharedNotificationsQuery(
+        campusObjectId,
+        scope,
+        AudienceType.Campus,
+      );
+      matchConditions.push(campusMatch);
+    }
+
+    // Build the aggregation pipeline
+    const pipeline: PipelineStage[] = [
+      // Match notifications for this user (user or campus)
+      // Only use $or if we have multiple match conditions
+      {
+        $match:
+          matchConditions.length > 1
+            ? { $or: matchConditions }
+            : matchConditions[0], // Just use the first (and only) condition if there's only one
+      },
+
+      // Add type field to identify notification audience (for client-side filtering if needed)
+      {
+        $addFields: {
+          notificationType: '$audience.audienceType',
+        },
+      },
+
+      // Lookup read receipts to determine if each notification has been read
       {
         $lookup: {
           from: 'notificationreadreceipts',
@@ -313,11 +372,15 @@ export class NotificationService {
           as: 'readReceipts',
         },
       },
+
+      // Add isRead field based on whether there are any matching read receipts
       {
         $addFields: {
           isRead: { $gt: [{ $size: '$readReceipts' }, 0] },
         },
       },
+
+      // Remove read receipts from output to reduce payload size
       {
         $project: {
           readReceipts: 0,
@@ -325,22 +388,19 @@ export class NotificationService {
       },
     ];
 
-    // Add filtering by read_status if specified
-    // Handles: 'any' (default, no filter), 'read' (isRead: true), 'unread' (isRead: false)
+    // Filter by read status if specified
+    // This works because we added the isRead field in the previous stage
     if (read_status === NotificationQuery.ReadStatus.READ) {
-      console.log('READ:', read_status);
       pipeline.push({ $match: { isRead: true } });
     } else if (read_status === NotificationQuery.ReadStatus.UNREAD) {
-      console.log('UNREAD:', read_status);
       pipeline.push({ $match: { isRead: false } });
     }
-    // If read_status is 'any' or undefined, do not filter by isRead
 
-    // (Optional) Add pagination and sorting here if needed
-
-    const notificationsWithRead =
-      await this.notificationModel.aggregate(pipeline);
-
+    const notificationsWithRead = await this.notificationModel
+      .aggregate(pipeline)
+      .skip(skip)
+      .limit(limit)
+      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
     return notificationsWithRead;
   }
 

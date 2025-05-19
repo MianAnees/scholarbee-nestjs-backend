@@ -11,7 +11,7 @@ import { UserNS } from 'src/users/schemas/user.schema';
 import {
   CreateCampusGlobalNotificationDto,
   CreateGlobalNotificationDto,
-  CreateSpecificCampusesNotificationDto,
+  CreateCampusSpecificNotificationsDto,
   CreateSpecificNotificationDto,
 } from '../dto/create-notification.dto';
 import {
@@ -81,10 +81,7 @@ export class NotificationService {
           recipients: userObjectIds,
         },
       };
-      console.log(
-        '🚀 ~ NotificationService ~ notificationDoc:',
-        notificationDoc,
-      );
+
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
 
@@ -120,7 +117,12 @@ export class NotificationService {
       };
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
-      // (WS emit will be handled in controller or a separate method)
+
+      // Emit to all campus admins via gateway
+      this.notificationGateway.emitCampusGlobalNotification(
+        savedNotification.toObject(),
+      );
+
       return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);
@@ -130,25 +132,36 @@ export class NotificationService {
   /**
    * Creates a notification for specific campuses.
    *
-   * @param createSpecificCampusesNotificationDto - DTO containing title, message, and campusIds
+   * @param createCampusSpecificNotificationDto - DTO containing title, message, and campusId
    * @returns The created notification document
    */
-  async createSpecificCampusesNotification(
-    createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
+  async createCampusSpecificNotification(
+    createCampusSpecificNotificationDto: CreateCampusSpecificNotificationsDto,
   ): Promise<NotificationDocument> {
     try {
       const { campusIds, ...notificationPayload } =
-        createSpecificCampusesNotificationDto;
+        createCampusSpecificNotificationDto;
+
+      const campusObjectIds = campusIds.map((id) => new Types.ObjectId(id));
+
       const notificationDoc: Notification = {
         ...notificationPayload,
         audience: {
           audienceType: AudienceType.Campus,
           isGlobal: false,
-          recipients: campusIds.map((id) => new Types.ObjectId(id)),
+          recipients: campusObjectIds,
         },
       };
+
       const notification = new this.notificationModel(notificationDoc);
       const savedNotification = await notification.save();
+
+      // Emit to specific campuses via gateway
+      this.notificationGateway.emitMultipleCampusSpecificNotification(
+        campusIds,
+        savedNotification.toObject(),
+      );
+
       return savedNotification;
     } catch (error) {
       throw new BadRequestException(error);

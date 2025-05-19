@@ -8,7 +8,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
-  ValidationPipe
+  ValidationPipe,
 } from '@nestjs/common';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.guard';
@@ -17,7 +17,7 @@ import { ResponseInterceptor } from 'src/common/interceptors/response.intercepto
 import {
   CreateCampusGlobalNotificationDto,
   CreateGlobalNotificationDto,
-  CreateSpecificCampusesNotificationDto,
+  CreateCampusSpecificNotificationsDto,
   CreateSpecificNotificationDto,
   MarkBulkNotificationsAsReadDto,
   MarkNotificationAsReadDto,
@@ -84,26 +84,19 @@ export class NotificationController {
       await this.notificationService.createGlobalCampusNotification(
         createCampusGlobalNotificationDto,
       );
-    this.notificationGateway.emitCampusGlobalNotification(
-      notification.toObject(),
-    );
     return notification;
   }
 
   @Post('campus/specific')
-  async createSpecificCampusesNotification(
+  async createCampusSpecificNotification(
     @AuthReq() authReq: AuthenticatedRequest,
     @Body()
-    createSpecificCampusesNotificationDto: CreateSpecificCampusesNotificationDto,
+    createCampusSpecificNotificationDto: CreateCampusSpecificNotificationsDto,
   ) {
     const notification =
-      await this.notificationService.createSpecificCampusesNotification(
-        createSpecificCampusesNotificationDto,
+      await this.notificationService.createCampusSpecificNotification(
+        createCampusSpecificNotificationDto,
       );
-    this.notificationGateway.emitSpecificCampusesNotification(
-      createSpecificCampusesNotificationDto.campusIds,
-      notification.toObject(),
-    );
     return notification;
   }
 

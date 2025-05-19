@@ -13,20 +13,11 @@ import { SocketStoreService } from 'src/common/services/socket-store.service';
 import { NotificationNamespace } from './notification.types';
 import { UserNS } from 'src/users/schemas/user.schema';
 
-/**
- * Server should be listening to these events from the client
- */
-enum ServerEventListeners {
-  JOIN = 'join',
-  NOTIFICATION = 'notification',
-}
 
-/**
- * Client should be listening to these events from the server
- */
-enum ClientEventListeners {
-  NOTIFICATION = 'notification',
-}
+const notificationRooms = {
+  campus_global: 'campus/global',
+  campus_specific: (campusId: string) => `campus/${campusId}`,
+};
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -103,6 +94,43 @@ export class NotificationGateway extends AuthenticatedGateway {
   // Event methods
   // ***********************
 
+  emitNotificationToEveryone(notification: any) {
+    try {
+      this.logger.log('Emitting notification to all users');
+      // return all users
+      const allUserSockets = this.server.sockets.sockets;
+
+      if (allUserSockets.size === 0) {
+        throw new NotFoundException('No users connected');
+      }
+
+      this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+      this.server.serverSideEmit(
+        NotificationNamespace.Event.USER_GLOBAL,
+        notification,
+      );
+      return {
+        success: true,
+        message: 'Notification sent to all users',
+        data: {
+          // users: allUsers,
+          allUserSockets,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error emitting notification to all users', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      return {
+        success: false,
+        message: 'Error emitting notification to all users',
+      };
+    }
+  }
+
   emitUserGlobalNotification(notification: Record<string, any>) {
     this.logger.log(`Emitting notification to all users`);
     // emit notification to `user/global` event on all sockets
@@ -150,50 +178,6 @@ export class NotificationGateway extends AuthenticatedGateway {
       .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
   }
 
-  emitNotificationToUser(userId: string, notification: any) {
-    this.logger.log(`Emitting notification to user: ${userId}`);
-    this.server
-      .to(`user_${userId}`)
-      .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
-  }
-
-  emitNotificationToAll(notification: any) {
-    try {
-      this.logger.log('Emitting notification to all users');
-      // return all users
-      const allUserSockets = this.server.sockets.sockets;
-
-      if (allUserSockets.size === 0) {
-        throw new NotFoundException('No users connected');
-      }
-
-      this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
-      this.server.serverSideEmit(
-        NotificationNamespace.Event.USER_GLOBAL,
-        notification,
-      );
-      return {
-        success: true,
-        message: 'Notification sent to all users',
-        data: {
-          // users: allUsers,
-          allUserSockets,
-        },
-      };
-    } catch (error) {
-      this.logger.error('Error emitting notification to all users', error);
-
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      return {
-        success: false,
-        message: 'Error emitting notification to all users',
-      };
-    }
-  }
-
   /**
    * Emit a global notification to all users in a campus
    * @param campusId - The campus ID
@@ -202,21 +186,32 @@ export class NotificationGateway extends AuthenticatedGateway {
   emitCampusGlobalNotification(notification: Record<string, any>) {
     this.logger.log(`Emitting campus global notification to all users`);
     // For now, emit to all sockets; clients should filter by campusId
-    this.server.emit(NotificationNamespace.Event.CAMPUS_GLOBAL, notification);
+    // Emit to Room: campus/global at the Event: CAMPUS_GLOBAL
+    this.server
+      .to(notificationRooms.campus_global) // the event is sent to specific event to prevent leaking notifications to users who are don't belong to the campus
+      .emit(NotificationNamespace.Event.CAMPUS_GLOBAL, notification);
   }
 
   /**
-   * Emit a notification to all users for specific campuses
+   * Emit a notification to all users for multiple campuses
    * @param campusIds - The campus IDs
    * @param notification - The notification payload
    */
-  emitSpecificCampusesNotification(
+  emitMultipleCampusSpecificNotification(
     campusIds: string[],
     notification: Record<string, any>,
   ) {
     this.logger.log(
       `Emitting specific campuses notification to campuses: ${campusIds.join(',')}`,
     );
-    this.server.emit('campus/specific', { campusIds, notification });
+
+    // TODO: Do not emit any notifications against any campus if the room doesn't exist or is empty. (Rooms must be a part of the socket store service just like users)
+    // Get the rooms for the campuses
+    const rooms = campusIds.map((id) => notificationRooms.campus_specific(id));
+
+    // Emit to Room: campus/{campusId} at the Event: CAMPUS_SPECIFIC
+    this.server
+      .to(rooms)
+      .emit(NotificationNamespace.Event.CAMPUS_SPECIFIC, notification);
   }
 }

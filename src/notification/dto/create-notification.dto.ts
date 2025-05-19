@@ -8,15 +8,13 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 import { Types } from 'mongoose';
 import { ToObjectId } from 'src/common/transformers/object-id.transformer';
 import { IsObjectId } from 'src/common/validators/object-id.validator';
 import { AudienceType } from '../schemas/notification.schema';
-import {
-  NotificationAudience
-} from './notification.validator';
+import { NotificationAudience } from './notification.validator';
 
 export class RecipientDto {
   @IsObjectId()
@@ -70,7 +68,7 @@ export class CreateNotificationDto {
 }
 
 // DTO for global notification creation
-export class CreateGlobalNotificationDto extends CreateNotificationDto { }
+export class CreateGlobalNotificationDto extends CreateNotificationDto {}
 
 // DTO for specific users notification creation
 export class CreateSpecificNotificationDto extends CreateNotificationDto {
@@ -108,9 +106,12 @@ export class CreateCampusGlobalNotificationDto extends CreateNotificationDto {
 }
 
 // DTO for creating a notification for specific campuses
-export class CreateSpecificCampusesNotificationDto extends CreateNotificationDto {
+export class CreateCampusSpecificNotificationsDto extends CreateNotificationDto {
   @IsArray()
   @ArrayNotEmpty()
-  @IsObjectId({ each: true, message: 'Each campus ID must be a valid MongoDB ObjectId' })
+  @IsObjectId({
+    each: true,
+    message: 'Each campus ID must be a valid MongoDB ObjectId',
+  })
   campusIds: string[];
 }

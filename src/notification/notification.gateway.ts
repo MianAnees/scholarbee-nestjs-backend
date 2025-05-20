@@ -57,7 +57,7 @@ export class NotificationGateway extends AuthenticatedGateway {
 
       // Join a room with `campus/{campus_id}` and `campus/global`, if the user is a campus admin
       // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
-      if (authSocket.data.user.user_type === UserNS.UserType.Admin) {
+      if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
         // Join the `campus/{campus_id}` room
         authSocket.join(
           notificationRooms.campus_specific(authSocket.data.user.campus_id),

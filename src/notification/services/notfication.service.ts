@@ -37,6 +37,19 @@ export class NotificationService {
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
+  private sanitizeNotification(notification: NotificationDocument) {
+    const notificationObject = notification.toObject<Notification>();
+    return {
+      _id: notificationObject._id,
+      title: notificationObject.title,
+      message: notificationObject.message,
+      audience: {
+        audienceType: notificationObject.audience.audienceType,
+        isGlobal: notificationObject.audience.isGlobal,
+      },
+    };
+  }
+
   // Creates a global notification for all users
   async createGlobalUserNotification(
     createGlobalNotificationDto: CreateGlobalNotificationDto,
@@ -56,7 +69,7 @@ export class NotificationService {
       const savedNotification = await notification.save();
       // Emit to all active users via gateway
       this.notificationGateway.emitUserGlobalNotification(
-        savedNotification.toObject(),
+        this.sanitizeNotification(savedNotification),
       );
       return savedNotification;
     } catch (error) {
@@ -88,7 +101,7 @@ export class NotificationService {
       // Emit to each active user via gateway
       this.notificationGateway.emitMultipleUserSpecificNotifications(
         userIds,
-        savedNotification.toObject(),
+        this.sanitizeNotification(savedNotification),
       );
 
       return savedNotification;
@@ -120,7 +133,7 @@ export class NotificationService {
 
       // Emit to all campus admins via gateway
       this.notificationGateway.emitCampusGlobalNotification(
-        savedNotification.toObject(),
+        this.sanitizeNotification(savedNotification),
       );
 
       return savedNotification;
@@ -159,7 +172,7 @@ export class NotificationService {
       // Emit to specific campuses via gateway
       this.notificationGateway.emitMultipleCampusSpecificNotification(
         campusIds,
-        savedNotification.toObject(),
+        this.sanitizeNotification(savedNotification),
       );
 
       return savedNotification;
@@ -402,10 +415,11 @@ export class NotificationService {
         },
       },
 
-      // Remove read receipts from output to reduce payload size
+      // Remove read receipts and recipients from output to reduce payload size and protect privacy
       {
         $project: {
           readReceipts: 0,
+          'audience.recipients': 0, // ? Sanitize the notification recipients to protect privacy
         },
       },
     ];

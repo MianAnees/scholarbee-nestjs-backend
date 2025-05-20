@@ -203,11 +203,17 @@ export class NotificationService {
     userId: string,
     notificationIds: string[],
   ): Promise<number> {
-    // Convert userId and notificationIds to ObjectId for MongoDB
-    const userObjectId = new Types.ObjectId(userId);
-    const notificationObjectIds = notificationIds.map(
-      (id) => new Types.ObjectId(id),
+    // Only allow marking as read if the user is a valid recipient or it's global
+    const validIds = await this.getAssociatedNotificationIdsForUser(
+      userId,
+      notificationIds,
     );
+    if (validIds.length === 0) {
+      throw new ForbiddenException('No valid notifications to mark as read.');
+    }
+
+    const userObjectId = new Types.ObjectId(userId);
+    const notificationObjectIds = validIds.map((id) => new Types.ObjectId(id));
     const readTime = new Date();
 
     // Prepare bulkWrite operations: one upsert per notificationId
@@ -248,7 +254,16 @@ export class NotificationService {
     userId: string,
     notificationId: string,
   ): Promise<boolean> {
-    // Convert IDs to ObjectId for MongoDB
+    // Only allow marking as read if the user is a valid recipient or it's global
+    const validIds = await this.getAssociatedNotificationIdsForUser(userId, [
+      notificationId,
+    ]);
+    if (validIds.length === 0) {
+      throw new ForbiddenException(
+        'You are not allowed to mark this notification as read.',
+      );
+    }
+
     const userObjectId = new Types.ObjectId(userId);
     const notificationObjectId = new Types.ObjectId(notificationId);
     const readTime = new Date();
@@ -438,5 +453,34 @@ export class NotificationService {
       .limit(limit)
       .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 });
     return notificationsWithRead;
+  }
+
+  /**
+   * Get all notification IDs associated with a user.
+   *
+   * This method checks if the user is a valid recipient or it's global.
+   * If any of the notificationIds does not belong to the user, it will be removed from the list.
+   *
+   * @param userId - The ID of the user
+   * @param notificationIds - The list of notification document IDs to check
+   * @returns Array of valid notification IDs
+   */
+  private async getAssociatedNotificationIdsForUser(
+    userId: string,
+    notificationIds: string[],
+  ): Promise<string[]> {
+    const userObjectId = new Types.ObjectId(userId);
+    const notifications = await this.notificationModel
+      .find({
+        _id: { $in: notificationIds.map((id) => new Types.ObjectId(id)) },
+        $or: [
+          { 'audience.isGlobal': true },
+          { 'audience.recipients': userObjectId },
+        ],
+      })
+      .select('_id')
+      .lean();
+
+    return notifications.map((n) => n._id.toString());
   }
 }

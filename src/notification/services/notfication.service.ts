@@ -335,11 +335,18 @@ export class NotificationService {
     // 2. Add campus-specific notifications match if:
     // - User is a campus admin with a campus_id
     // - AND getCampusNotifications flag is true
-    const isCampusAdmin =
-      // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
-      user.user_type === UserNS.UserType.Campus_Admin && user.campus_id;
-    if (isCampusAdmin && get_campus_notifications) {
+    if (get_campus_notifications) {
+      const isCampusAdmin =
+        // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
+        user.user_type === UserNS.UserType.Campus_Admin && user.campus_id;
+
       const campusObjectId = new Types.ObjectId(user.campus_id);
+      if (!isCampusAdmin || !campusObjectId) {
+        throw new ForbiddenException(
+          'Cannot fetch campus notifications. (User is not a valid campus admin)',
+        );
+      }
+
       const campusMatch = this.getSharedNotificationsQuery(
         campusObjectId,
         scope,

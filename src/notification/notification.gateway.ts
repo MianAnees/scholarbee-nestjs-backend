@@ -176,9 +176,11 @@ export class NotificationGateway extends AuthenticatedGateway {
     // Retrieve the socket ids of the active connections
     const activeSockets = activeConnections.map(({ socketId }) => socketId);
     // Emit the notification to the active sockets
-    this.server
-      .to(activeSockets)
-      .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    if (activeSockets.length === 0) {
+      this.server
+        .to(activeSockets)
+        .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
+    }
   }
 
   /**

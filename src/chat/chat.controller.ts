@@ -185,6 +185,9 @@ export class ChatController {
         'campus',
       );
 
+      // TODO: If the receiver is active on the chat-socket, then send a messge on the chat-socket.
+      // Otherwise, send a message-notification to the receiver.
+
       // Then emit the event with the saved message
       this.chatGateway.emitToConversation(
         createMessageDto.conversation_id,

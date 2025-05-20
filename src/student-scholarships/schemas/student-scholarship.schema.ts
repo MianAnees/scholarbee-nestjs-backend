@@ -63,7 +63,7 @@ export enum RequiredDocumentTitleEnum {
   birth_certificate = 'birth_certificate',
   academic_transcripts = 'academic_transcripts',
   recommendation_letter = 'recommendation_letter',
-  personal_statement = 'personal_statement',
+  // personal_statement = 'personal_statement', // ! If this is received from frontend as text, then it shouldn't be validated against uploaded documents
   financial_statements = 'financial_statements',
   english_proficiency_certificate = 'english_proficiency_certificate',
   resume_cv = 'resume_cv',
@@ -74,8 +74,6 @@ export enum ScholarshipApprovalStatusEnum {
   Approved = 'Approved',
   Rejected = 'Rejected',
 }
-
-
 
 interface IStudentSnapshotLastDegree {
   level: LastDegreeLevelEnum;
@@ -96,7 +94,6 @@ interface IRequiredDocument {
   document_link: string;
 }
 
-
 export interface IStudentScholarship {
   student_id: Types.ObjectId;
   scholarship_id: Types.ObjectId;
@@ -104,14 +101,12 @@ export interface IStudentScholarship {
   application_date: Date;
   approval_status?: ScholarshipApprovalStatusEnum;
   required_documents?: IRequiredDocument[];
-  // personal_statement: string;
+  personal_statement: string;
   reference_1: string;
   reference_2: string;
   created_at?: Date;
   createdBy: Types.ObjectId;
 }
-
-
 
 @Schema({ timestamps: false, _id: false })
 export class RequiredDocument implements IRequiredDocument {
@@ -126,9 +121,8 @@ export class RequiredDocument implements IRequiredDocument {
   document_link: IRequiredDocument['document_link'];
 }
 
-export const RequiredDocumentSchema = SchemaFactory.createForClass(RequiredDocument);
-
-
+export const RequiredDocumentSchema =
+  SchemaFactory.createForClass(RequiredDocument);
 
 @Schema({ _id: false })
 class StudentSnapshotDto implements IStudentSnapshot {
@@ -152,22 +146,23 @@ class StudentSnapshotDto implements IStudentSnapshot {
     type: {
       level: { type: String, enum: LastDegreeLevelEnum, required: true },
       percentage: { type: Number, required: true },
-    }
+    },
   })
-  last_degree: IStudentSnapshot['last_degree']
+  last_degree: IStudentSnapshot['last_degree'];
 }
 
 const StudentSnapshotSchema = SchemaFactory.createForClass(StudentSnapshotDto);
-
-
-
 
 @Schema({ timestamps: false, collection: 'student_scholarships' })
 export class StudentScholarship implements IStudentScholarship {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   student_id: IStudentScholarship['student_id'];
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Scholarship', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Scholarship',
+    required: true,
+  })
   scholarship_id: IStudentScholarship['scholarship_id'];
 
   @Prop({ type: StudentSnapshotSchema, default: {}, required: true })
@@ -179,13 +174,12 @@ export class StudentScholarship implements IStudentScholarship {
   @Prop({
     type: String,
     enum: ScholarshipApprovalStatusEnum,
-    default: ScholarshipApprovalStatusEnum.Applied
+    default: ScholarshipApprovalStatusEnum.Applied,
   })
   approval_status?: IStudentScholarship['approval_status'];
 
-
-  // @Prop({ type: String, required: true })
-  // personal_statement: IStudentScholarship['personal_statement'];
+  @Prop({ type: String, required: true })
+  personal_statement: IStudentScholarship['personal_statement'];
 
   @Prop({ type: String, required: true })
   reference_1: IStudentScholarship['reference_1'];
@@ -193,7 +187,11 @@ export class StudentScholarship implements IStudentScholarship {
   @Prop({ type: String, required: true })
   reference_2: IStudentScholarship['reference_2'];
 
-  @Prop({ type: [RequiredDocumentSchema], default: [], required:false,/* , min:1 */ })
+  @Prop({
+    type: [RequiredDocumentSchema],
+    default: [],
+    required: false /* , min:1 */,
+  })
   required_documents?: IStudentScholarship['required_documents'];
 
   @Prop({ type: Date, default: Date.now })

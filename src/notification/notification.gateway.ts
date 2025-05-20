@@ -8,11 +8,9 @@ import {
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
-import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
-import { SocketStoreService } from 'src/common/services/socket-store.service';
+import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 import { NotificationNamespace } from './notification.types';
 import { UserNS } from 'src/users/schemas/user.schema';
-
 
 const notificationRooms = {
   campus_global: 'campus/global',
@@ -24,74 +22,70 @@ const notificationRooms = {
   namespace: 'notifications',
   transports: ['websocket', 'polling'],
 })
-export class NotificationGateway extends AuthenticatedGateway {
-  private socketStoreService: SocketStoreService;
-
+export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   constructor(protected readonly authService: AuthService) {
     super(authService);
   }
 
   // ***********************
-  // Lifecycle methods
+  // Override store-managing methods
   // ***********************
 
-  protected onAuthenticatedInit(server: Server): void {
+  protected onAuthenticatedConnectionStoreInit(server: Server): void {
     this.logger.log('NotificationGateway initialized');
-
-    // initialize the socket store service
-    this.socketStoreService = new SocketStoreService();
   }
 
-  // Custom logic for authenticated connections
-  protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
-    try {
-      this.logger.log(
-        `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
+  protected async onAuthenticatedConnectionStoreConnection(
+    authSocket: AuthenticatedSocket,
+  ) {
+    // Join a room with `campus/{campus_id}` and `campus/global`, if the user is a campus admin
+    if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
+      // Join the `campus/{campus_id}` room
+      authSocket.join(
+        notificationRooms.campus_specific(authSocket.data.user.campus_id),
       );
 
-      // TODO: Make this reusable as well, like auth gateway logic (by optionally adding a decorator or extending another class)
-      this.socketStoreService.addConnection({
-        userId: authSocket.data.user._id,
-        socketId: authSocket.id,
-      });
-
-      // Join a room with `campus/{campus_id}` and `campus/global`, if the user is a campus admin
-      // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
-      if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
-        // Join the `campus/{campus_id}` room
-        authSocket.join(
-          notificationRooms.campus_specific(authSocket.data.user.campus_id),
-        );
-
-        // Join the `campus/global` room
-        authSocket.join(notificationRooms.campus_global);
-      }
-    } catch (error) {
-      if (this.socketStoreService === undefined) {
-        this.logger.error('Socket store service not initialized');
-      }
-      throw error;
+      // Join the `campus/global` room
+      authSocket.join(notificationRooms.campus_global);
     }
   }
 
-  // Custom logic for disconnects
-  protected onAuthenticatedDisconnect(authSocket: AuthenticatedSocket) {
-    this.logger.log(`Notification socket disconnected: ${authSocket.id}`);
-    this.socketStoreService.removeAssociatedConnection({
-      socketId: authSocket.id,
-    });
+  protected onAuthenticatedConnectionStoreDisconnect(
+    authSocket: AuthenticatedSocket,
+  ): void {
+    // Any notification-specific disconnect logic
   }
 
   // ***********************
-  // Subscription methods
+  // Event methods (simplified using parent class methods)
   // ***********************
 
-  // // Server-side event handler
-  // @SubscribeMessage(ServerEventListeners.JOIN)
-  // handleJoin(client: Socket, payload: any) {
-  //   this.logger.log(`Notification client joined: ${client.id}`);
-  //   client.join(payload.userId); // TODO: REVIEW: Might not be needed for now. But can be used later if we want to send notifications to specific users i.e. admins, campus-admins, students, etc
-  // }
+  emitUserGlobalNotification(notification: Record<string, any>) {
+    this.logger.log(`Emitting notification to all users`);
+    this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+  }
+
+  emitUserSpecificNotification(
+    userId: string,
+    notification: Record<string, any>,
+  ) {
+    this.emitToUser(
+      userId,
+      NotificationNamespace.Event.USER_SPECIFIC,
+      notification,
+    );
+  }
+
+  emitMultipleUserSpecificNotifications(
+    userIds: string[],
+    notification: Record<string, any>,
+  ) {
+    this.emitToUsers(
+      userIds,
+      NotificationNamespace.Event.USER_SPECIFIC,
+      notification,
+    );
+  }
 
   // ***********************
   // Event methods
@@ -108,10 +102,7 @@ export class NotificationGateway extends AuthenticatedGateway {
       }
 
       this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
-      this.server.serverSideEmit(
-        NotificationNamespace.Event.USER_GLOBAL,
-        notification,
-      );
+
       return {
         success: true,
         message: 'Notification sent to all users',
@@ -131,56 +122,6 @@ export class NotificationGateway extends AuthenticatedGateway {
         success: false,
         message: 'Error emitting notification to all users',
       };
-    }
-  }
-
-  emitUserGlobalNotification(notification: Record<string, any>) {
-    this.logger.log(`Emitting notification to all users`);
-    // emit notification to `user/global` event on all sockets
-    this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
-  }
-
-  emitUserSpecificNotification(
-    userId: string,
-    notification: Record<string, any>,
-  ) {
-    try {
-      this.logger.log(`Emitting notification to user: ${userId}`);
-      // retrieve the socket id of the user from the socket store service
-      const { socketId } = this.socketStoreService.getConnection({ userId });
-      // emit notification to the user's socket
-      this.server
-        .to(socketId)
-        .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
-    } catch (error) {
-      this.logger.error(
-        `Error emitting notification to user: ${userId}`,
-        error,
-      );
-    }
-  }
-
-  /**
-   * Emit a notification to multiple users
-   * Checks
-   * @param userIds - The list of user ids to emit the notification to
-   * @param notification - The notification to emit
-   */
-  emitMultipleUserSpecificNotifications(
-    userIds: string[],
-    notification: Record<string, any>,
-  ) {
-    // Finds the active connections for the target users (filter out the inactive ones)
-    const activeConnections =
-      this.socketStoreService.getAllConnections(userIds);
-
-    // Retrieve the socket ids of the active connections
-    const activeSockets = activeConnections.map(({ socketId }) => socketId);
-    // Emit the notification to the active sockets
-    if (activeSockets.length > 0) {
-      this.server
-        .to(activeSockets)
-        .emit(NotificationNamespace.Event.USER_SPECIFIC, notification);
     }
   }
 

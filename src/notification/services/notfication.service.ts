@@ -340,6 +340,7 @@ export class NotificationService {
         // TODO: REVIEW: Why is the 'Campus_Admin' having the type of 'Admin'
         user.user_type === UserNS.UserType.Campus_Admin && user.campus_id;
 
+      // TODO: Use RoleBasedAuth and create a new decorator for AuthCampusAdminReq for this
       const campusObjectId = new Types.ObjectId(user.campus_id);
       if (!isCampusAdmin || !campusObjectId) {
         throw new ForbiddenException(

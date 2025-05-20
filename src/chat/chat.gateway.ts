@@ -1,18 +1,9 @@
 import { UseGuards } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
-  WebSocketGateway,
-  WebSocketServer
-} from '@nestjs/websockets';
+import { WebSocketGateway } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtGuard } from 'src/auth/guards/ws-jwt.guard';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
-import { ChatService } from './chat.service';
-import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 
 @WebSocketGateway({
@@ -31,7 +22,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
   // Only inject the services needed for this gateway
   constructor(
-    private readonly chatService: ChatService,
+    // private readonly chatService: ChatService,
     protected readonly authService: AuthService, // Do not redeclare as private/protected, just pass to super
   ) {
     super(authService);
@@ -78,4 +69,3 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     });
   }
 }
-

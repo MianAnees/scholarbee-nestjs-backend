@@ -189,12 +189,12 @@ export abstract class AuthenticatedConnectionStoreGateway extends AuthenticatedG
   }
 
   // Abstract methods for child classes to implement
-  protected abstract onAuthenticatedConnectionStoreInit(server: Server): void;
-  protected abstract onAuthenticatedConnectionStoreConnection(
+  protected onAuthenticatedConnectionStoreInit(server: Server): void {}
+  protected onAuthenticatedConnectionStoreConnection(
     client: AuthenticatedSocket,
     ...args: any[]
-  ): Promise<void> | void;
-  protected abstract onAuthenticatedConnectionStoreDisconnect(
+  ): Promise<void> | void {}
+  protected onAuthenticatedConnectionStoreDisconnect(
     client: AuthenticatedSocket,
-  ): void;
+  ): void {}
 }

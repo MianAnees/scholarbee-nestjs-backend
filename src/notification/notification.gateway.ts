@@ -29,18 +29,6 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
     this.logger.log('NotificationGateway initialized');
   }
 
-  protected async onAuthenticatedConnectionStoreConnection(
-    authSocket: AuthenticatedSocket,
-  ) {
-    // Any notification-specific connection logic
-  }
-
-  protected onAuthenticatedConnectionStoreDisconnect(
-    authSocket: AuthenticatedSocket,
-  ): void {
-    // Any notification-specific disconnect logic
-  }
-
   // ***********************
   // Event methods (simplified using parent class methods)
   // ***********************

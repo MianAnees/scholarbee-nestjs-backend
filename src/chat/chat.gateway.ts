@@ -28,9 +28,9 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     super(authService);
   }
 
-  protected onAuthenticatedConnectionStoreInit(server: Server): void {
-    this.logger.log('ChatGateway initialized');
-  }
+  // ***********************
+  // Override store-managing methods
+  // ***********************
 
   // Custom logic for authenticated connections
   protected async onAuthenticatedConnectionStoreConnection(
@@ -47,13 +47,9 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     });
   }
 
-  // Custom logic for disconnects
-  protected onAuthenticatedConnectionStoreDisconnect(
-    client: AuthenticatedSocket,
-  ) {
-    this.logger.log(`Client disconnected: ${client.id}`);
-    // ... your custom logic here ...
-  }
+  // ***********************
+  // Event methods
+  // ***********************
 
   // Method to emit events from outside the gateway
   emitToConversation(conversationId: string, event: string, data: any) {

@@ -1,18 +1,10 @@
 import { UseGuards } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
-  WebSocketGateway,
-  WebSocketServer
-} from '@nestjs/websockets';
+import { WebSocketGateway } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtGuard } from 'src/auth/guards/ws-jwt.guard';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
-import { ChatService } from './chat.service';
-import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
+import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 
 @WebSocketGateway({
   cors: {
@@ -24,24 +16,26 @@ import { AuthenticatedGateway } from 'src/common/gateway/authenticated.gateway';
   transports: ['websocket', 'polling'], // Allow both WebSocket and polling
 })
 @UseGuards(WsJwtGuard)
-export class ChatGateway extends AuthenticatedGateway {
+export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   // @WebSocketServer()
   // server: Server;
 
   // Only inject the services needed for this gateway
   constructor(
-    private readonly chatService: ChatService,
+    // private readonly chatService: ChatService,
     protected readonly authService: AuthService, // Do not redeclare as private/protected, just pass to super
   ) {
     super(authService);
   }
 
-  protected onAuthenticatedInit(server: Server): void {
+  protected onAuthenticatedConnectionStoreInit(server: Server): void {
     this.logger.log('ChatGateway initialized');
   }
 
   // Custom logic for authenticated connections
-  protected async onAuthenticatedConnection(authSocket: AuthenticatedSocket) {
+  protected async onAuthenticatedConnectionStoreConnection(
+    authSocket: AuthenticatedSocket,
+  ) {
     this.logger.log(
       `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
     );
@@ -57,7 +51,9 @@ export class ChatGateway extends AuthenticatedGateway {
   }
 
   // Custom logic for disconnects
-  protected onAuthenticatedDisconnect(client: AuthenticatedSocket) {
+  protected onAuthenticatedConnectionStoreDisconnect(
+    client: AuthenticatedSocket,
+  ) {
     this.logger.log(`Client disconnected: ${client.id}`);
     // ... your custom logic here ...
   }
@@ -73,4 +69,3 @@ export class ChatGateway extends AuthenticatedGateway {
     });
   }
 }
-

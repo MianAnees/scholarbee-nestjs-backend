@@ -9,16 +9,19 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
+import { ChatGateway } from './chat.gateway';
 
 @Injectable()
 export class ChatService {
     constructor(
-        @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
+    @InjectModel(Conversation.name)
+    private conversationModel: Model<ConversationDocument>,
         @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
-        private readonly chatSessionService: ChatSessionService
-    ) { }
+    private readonly chatSessionService: ChatSessionService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
     async createConversation(createConversationDto: CreateConversationDto, userId: string): Promise<Conversation> {
         try {
@@ -218,19 +221,30 @@ export class ChatService {
      * @param senderType 
      * @returns 
      */
-    async createMessage(createMessageDto: CreateMessageDto, userId: string, senderType: 'user' | 'campus'): Promise<Message> {
+  async createMessage(
+    createMessageDto: CreateMessageDto,
+    userId: string,
+    senderType: 'user' | 'campus',
+  ): Promise<Message> {
         try {
             // Validate IDs
             if (!Types.ObjectId.isValid(userId)) {
                 throw new BadRequestException(`Invalid user ID: ${userId}`);
             }
             if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
-                throw new BadRequestException(`Invalid conversation ID: ${createMessageDto.conversation_id}`);
+        throw new BadRequestException(
+          `Invalid conversation ID: ${createMessageDto.conversation_id}`,
+        );
             }
-            const conversationId = new Types.ObjectId(createMessageDto.conversation_id);
-            const currentConversation = await this.conversationModel.findById(conversationId);
+      const conversationId = new Types.ObjectId(
+        createMessageDto.conversation_id,
+      );
+      const currentConversation =
+        await this.conversationModel.findById(conversationId);
             if (!currentConversation) {
-                throw new NotFoundException(`Conversation with ID ${createMessageDto.conversation_id} not found`);
+        throw new NotFoundException(
+          `Conversation with ID ${createMessageDto.conversation_id} not found`,
+        );
             }
 
             // Get current time
@@ -245,11 +259,12 @@ export class ChatService {
             }
 
             // Delegate all session logic to ChatSessionService
-            const sessionResult = await this.chatSessionService.handleSessionOnMessage({
+      const sessionResult =
+        await this.chatSessionService.handleSessionOnMessage({
                 conversation: currentConversation,
                 senderType,
                 curMsgTime,
-                conversationId
+          conversationId,
             });
 
             // Create message object
@@ -273,18 +288,62 @@ export class ChatService {
             // Create new message
             const newMessage = new this.messageModel(messageData);
             const savedMessage = await newMessage.save();
+
             // Update conversation with last message info and session updates
-            await this.conversationModel.findByIdAndUpdate(
-                conversationId,
-                {
+      await this.conversationModel.findByIdAndUpdate(conversationId, {
                     last_message: createMessageDto.content,
                     last_message_time: curMsgTime,
                     last_message_sender: senderType,
                     is_read_by_user: senderType === 'user',
                     is_read_by_campus: senderType === 'campus',
-                    ...sessionResult.conversationDocUpdate
-                }
-            );
+        ...sessionResult.conversationDocUpdate,
+      });
+
+      // Check if either the sender or the receiver is inactive
+      // Send the message-notification in `message-notification-socket` to the participants who are inactive in `chat-socket`
+      /* 
+        const senderChatConnection = await this.chatGateway.getConnection(userId).catch(()=>false)
+        if (!senderChatConnection) {
+
+            const senderMessageNotificationConnection = await this.messageNotificationGateway.getConnection(userId).catch(()=>false)
+            if (!senderMessageNotificationConnection) {
+                console.log('Sender is inactive in chat-socket and message-notification-socket. Cannot send message-notification to the sender.')
+            }
+                
+            this.messageNotificationGateway.emitToUser(userId, 'new_message_notification', {
+                senderId,
+                chatId:conversationId,
+                messageId:savedMessage._id,
+                messageSnippet:savedMessage.content,
+                timestamp:savedMessage.created_at,
+                isGroupChat:false,
+            
+                message: savedMessage,
+                conversationId: createMessageDto.conversation_id,
+            })
+
+        }
+*/
+
+      //   Check if the receiver is active on the chat-socket
+      // const receiverSocket = this.chatGateway.getReceiverSocket(createMessageDto.conversation_id);
+
+      // if (receiverSocket) {
+      // Emit to the user via the gateway
+
+      // TODO: If the receiver is active on the chat-socket, then send a messge on the chat-socket.
+      // Otherwise, send a message-notification to the receiver.
+
+      // Then emit the event with the saved message
+      this.chatGateway.emitToConversation(
+        createMessageDto.conversation_id,
+        'newMessage',
+        {
+          message: savedMessage,
+          conversationId: createMessageDto.conversation_id,
+        },
+      );
+
             return savedMessage;
         } catch (error) {
             if (error instanceof BadRequestException || error instanceof NotFoundException) {

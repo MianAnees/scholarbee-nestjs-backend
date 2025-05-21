@@ -9,7 +9,7 @@ import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
-import { NotificationNamespace } from './notification.types';
+import notification_gateway_events from './notification-gateway.events';
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -47,7 +47,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
 
   emitUserGlobalNotification(notification: Record<string, any>) {
     this.logger.log(`Emitting notification to all users`);
-    this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+    this.server.emit(notification_gateway_events.USER_GLOBAL, notification);
   }
 
   // emitUserSpecificNotification(
@@ -67,7 +67,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   ) {
     this.emitToUsers(
       userIds,
-      NotificationNamespace.Event.USER_SPECIFIC,
+      notification_gateway_events.USER_SPECIFIC,
       notification,
     );
   }
@@ -86,7 +86,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
         throw new NotFoundException('No users connected');
       }
 
-      this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
+      this.server.emit(notification_gateway_events.USER_GLOBAL, notification);
 
       return {
         success: true,
@@ -117,7 +117,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
    */
   emitCampusGlobalNotification(notification: Record<string, any>) {
     return this.emitToGlobalCampusRoom(
-      NotificationNamespace.Event.CAMPUS_GLOBAL,
+      notification_gateway_events.CAMPUS_GLOBAL,
       notification,
     );
   }
@@ -132,7 +132,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
     notification: Record<string, any>,
   ) {
     return this.emitToCampusSpecificRooms(
-      NotificationNamespace.Event.CAMPUS_SPECIFIC,
+      notification_gateway_events.CAMPUS_SPECIFIC,
       campusIds,
       notification,
     );

@@ -1,12 +1,10 @@
 // src/common/gateway/store-managing.gateway.ts
-import { Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { SocketStoreService } from 'src/common/services/socket-store.service';
-import { AuthenticatedGateway } from './authenticated.gateway';
 import { UserNS } from 'src/users/schemas/user.schema';
-import { NotificationNamespace } from 'src/notification/notification.types';
+import { AuthenticatedGateway } from './authenticated.gateway';
 
 const userRooms = {
   user_global: 'user/global',
@@ -133,6 +131,8 @@ export abstract class AuthenticatedConnectionStoreGateway extends AuthenticatedG
     // Emit to Room: campus/{campusId} at the Event: CAMPUS_SPECIFIC
     return this.server.to(specificCampusRooms).emit(event, data);
   }
+
+  // TODO: Make the lifecycle methods optionalal for child classes that don't need them
 
   // Override onAuthenticatedInit from AuthenticatedGateway
   protected onAuthenticatedInit(server: Server): void {

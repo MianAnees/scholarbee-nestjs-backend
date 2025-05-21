@@ -35,7 +35,7 @@ export class Scholarship {
   @Prop({ type: String })
   application_process?: string;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String, required: false })
   eligibility_criteria: string;
 
   @Prop({ type: [Object], default: [] })

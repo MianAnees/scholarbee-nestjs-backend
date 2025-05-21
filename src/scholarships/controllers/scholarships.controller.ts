@@ -65,12 +65,15 @@ export class ScholarshipsController {
   }
 
   @UseGuards(ResourceProtectionGuard)
-  @Post(':id/favorites')
+  @Post(':scholarshipId/favorites')
   addToFavorites(
-    @Param('id') id: string,
+    @Param('scholarshipId') scholarshipId: string,
     @AuthReq() authReq: AuthenticatedRequest,
   ) {
-    return this.scholarshipsService.addToFavorites(id, authReq.user.sub);
+    return this.scholarshipsService.addToFavorites(
+      scholarshipId,
+      authReq.user.sub,
+    );
   }
 
   @UseGuards(ResourceProtectionGuard)
@@ -84,7 +87,10 @@ export class ScholarshipsController {
 
   @UseGuards(ResourceProtectionGuard)
   @Get('user/favorites')
-  findFavorites(@Req() req, @Query() queryDto: QueryScholarshipDto) {
-    return this.scholarshipsService.findFavorites(req.user.sub, queryDto);
+  findFavorites(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Query() queryDto: QueryScholarshipDto,
+  ) {
+    return this.scholarshipsService.findFavorites(authReq.user.sub, queryDto);
   }
 } 

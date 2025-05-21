@@ -40,9 +40,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       `Authenticated client connected: ${authSocket.id}, user: ${authSocket.data.user.userId}`,
     );
 
-    // Join a room specific to this user
-    authSocket.join(`user_${authSocket.data.user._id}`);
-
     // Notify the client of successful connection
     authSocket.emit('connection_established', {
       message: 'Successfully connected to chat server',

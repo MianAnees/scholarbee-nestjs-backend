@@ -57,6 +57,7 @@ export enum LastDegreeLevelEnum {
 }
 
 
+// TODO: Ensure that the same enums are used in scholarship schema as well
 export enum RequiredDocumentTitleEnum {
   passport = 'passport',
   national_id = 'national_id',
@@ -192,6 +193,7 @@ export class StudentScholarship implements IStudentScholarship {
     default: [],
     required: false /* , min:1 */,
   })
+  // TODO: Ensure that add-required-documents dto required
   required_documents?: IStudentScholarship['required_documents'];
 
   @Prop({ type: Date, default: Date.now })

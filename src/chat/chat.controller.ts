@@ -136,16 +136,6 @@ export class ChatController {
         'user',
       );
 
-      // Then emit the event with the saved message
-      this.chatGateway.emitToConversation(
-        createMessageDto.conversation_id,
-        'newMessage',
-        {
-          message,
-          conversationId: createMessageDto.conversation_id,
-        },
-      );
-
       return message;
     } catch (error) {
       if (
@@ -183,16 +173,6 @@ export class ChatController {
         createMessageDto,
         userId,
         'campus',
-      );
-
-      // Then emit the event with the saved message
-      this.chatGateway.emitToConversation(
-        createMessageDto.conversation_id,
-        'newMessage',
-        {
-          message,
-          conversationId: createMessageDto.conversation_id,
-        },
       );
 
       return message;

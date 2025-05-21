@@ -24,7 +24,7 @@ export function IsObjectId(validationOptions?: ValidationOptions) {
       target: object.constructor,
       propertyName: propertyName,
       options: validationOptions,
-      validator: ValidatorConstraint,
+      validator: IsValidObjectId,
     });
   };
 }

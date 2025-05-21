@@ -10,12 +10,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 import { NotificationNamespace } from './notification.types';
-import { UserNS } from 'src/users/schemas/user.schema';
-
-const notificationRooms = {
-  campus_global: 'campus/global',
-  campus_specific: (campusId: string) => `campus/${campusId}`,
-};
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -38,16 +32,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   protected async onAuthenticatedConnectionStoreConnection(
     authSocket: AuthenticatedSocket,
   ) {
-    // Join a room with `campus/{campus_id}` and `campus/global`, if the user is a campus admin
-    if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
-      // Join the `campus/{campus_id}` room
-      authSocket.join(
-        notificationRooms.campus_specific(authSocket.data.user.campus_id),
-      );
-
-      // Join the `campus/global` room
-      authSocket.join(notificationRooms.campus_global);
-    }
+    // Any notification-specific connection logic
   }
 
   protected onAuthenticatedConnectionStoreDisconnect(
@@ -65,16 +50,16 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
     this.server.emit(NotificationNamespace.Event.USER_GLOBAL, notification);
   }
 
-  emitUserSpecificNotification(
-    userId: string,
-    notification: Record<string, any>,
-  ) {
-    this.emitToUser(
-      userId,
-      NotificationNamespace.Event.USER_SPECIFIC,
-      notification,
-    );
-  }
+  // emitUserSpecificNotification(
+  //   userId: string,
+  //   notification: Record<string, any>,
+  // ) {
+  //   this.emitToUser(
+  //     userId,
+  //     NotificationNamespace.Event.USER_SPECIFIC,
+  //     notification,
+  //   );
+  // }
 
   emitMultipleUserSpecificNotifications(
     userIds: string[],
@@ -131,12 +116,10 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
    * @param notification - The notification payload
    */
   emitCampusGlobalNotification(notification: Record<string, any>) {
-    this.logger.log(`Emitting campus global notification to all users`);
-    // For now, emit to all sockets; clients should filter by campusId
-    // Emit to Room: campus/global at the Event: CAMPUS_GLOBAL
-    this.server
-      .to(notificationRooms.campus_global) // the event is sent to specific event to prevent leaking notifications to users who are don't belong to the campus
-      .emit(NotificationNamespace.Event.CAMPUS_GLOBAL, notification);
+    return this.emitToGlobalCampusRoom(
+      NotificationNamespace.Event.CAMPUS_GLOBAL,
+      notification,
+    );
   }
 
   /**
@@ -148,17 +131,10 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
     campusIds: string[],
     notification: Record<string, any>,
   ) {
-    this.logger.log(
-      `Emitting specific campuses notification to campuses: ${campusIds.join(',')}`,
+    return this.emitToCampusSpecificRooms(
+      NotificationNamespace.Event.CAMPUS_SPECIFIC,
+      campusIds,
+      notification,
     );
-
-    // TODO: Do not emit any notifications against any campus if the room doesn't exist or is empty. (Rooms must be a part of the socket store service just like users)
-    // Get the rooms for the campuses
-    const rooms = campusIds.map((id) => notificationRooms.campus_specific(id));
-
-    // Emit to Room: campus/{campusId} at the Event: CAMPUS_SPECIFIC
-    this.server
-      .to(rooms)
-      .emit(NotificationNamespace.Event.CAMPUS_SPECIFIC, notification);
   }
 }

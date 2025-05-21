@@ -69,6 +69,9 @@ export class Scholarship {
 
   @Prop({ type: Date, default: Date.now })
   created_at: Date;
+
+  @Prop({ type: [String], default: [] })
+  favouriteBy: string[];
 }
 
 export const ScholarshipSchema = SchemaFactory.createForClass(Scholarship);

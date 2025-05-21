@@ -17,6 +17,8 @@ import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.g
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
 @Controller('scholarships')
 export class ScholarshipsController {
@@ -25,8 +27,14 @@ export class ScholarshipsController {
   @UseGuards(ResourceProtectionGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
-  create(@Body() createScholarshipDto: CreateScholarshipDto, @Req() req) {
-    return this.scholarshipsService.create(createScholarshipDto, req.user.sub);
+  create(
+    @Body() createScholarshipDto: CreateScholarshipDto,
+    @AuthReq() authReq: AuthenticatedRequest,
+  ) {
+    return this.scholarshipsService.create(
+      createScholarshipDto,
+      authReq.user.sub,
+    );
   }
 
   @Get()
@@ -54,5 +62,29 @@ export class ScholarshipsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.scholarshipsService.remove(id);
+  }
+
+  @UseGuards(ResourceProtectionGuard)
+  @Post(':id/favorites')
+  addToFavorites(
+    @Param('id') id: string,
+    @AuthReq() authReq: AuthenticatedRequest,
+  ) {
+    return this.scholarshipsService.addToFavorites(id, authReq.user.sub);
+  }
+
+  @UseGuards(ResourceProtectionGuard)
+  @Delete(':id/favorites')
+  removeFromFavorites(
+    @Param('id') id: string,
+    @AuthReq() authReq: AuthenticatedRequest,
+  ) {
+    return this.scholarshipsService.removeFromFavorites(id, authReq.user.sub);
+  }
+
+  @UseGuards(ResourceProtectionGuard)
+  @Get('user/favorites')
+  findFavorites(@Req() req, @Query() queryDto: QueryScholarshipDto) {
+    return this.scholarshipsService.findFavorites(req.user.sub, queryDto);
   }
 } 

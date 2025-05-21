@@ -39,6 +39,7 @@ export class ScholarshipsService {
             deadlineTo,
             amountMin,
             amountMax,
+            favouriteBy,
             page = 1,
             limit = 10,
             sortBy = 'created_at',
@@ -97,6 +98,10 @@ export class ScholarshipsService {
             if (amountMax !== undefined) {
                 filter.amount.$lte = amountMax;
             }
+        }
+
+        if (favouriteBy && favouriteBy.length > 0) {
+            filter.favouriteBy = { $in: favouriteBy };
         }
 
         const skip = (page - 1) * limit;
@@ -185,5 +190,45 @@ export class ScholarshipsService {
         }
 
         return { deleted: true };
+    }
+
+    async addToFavorites(id: string, userId: string): Promise<ScholarshipDocument> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid scholarship ID');
+        }
+        const scholarship = await this.scholarshipModel.findById(id);
+        if (!scholarship) {
+            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+        }
+        if (!scholarship.favouriteBy) {
+            scholarship.favouriteBy = [];
+        }
+        if (!scholarship.favouriteBy.includes(userId)) {
+            scholarship.favouriteBy.push(userId);
+            await scholarship.save();
+        }
+        return scholarship;
+    }
+
+    async removeFromFavorites(id: string, userId: string): Promise<ScholarshipDocument> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid scholarship ID');
+        }
+        const scholarship = await this.scholarshipModel.findById(id);
+        if (!scholarship) {
+            throw new NotFoundException(`Scholarship with ID ${id} not found`);
+        }
+        if (scholarship.favouriteBy && scholarship.favouriteBy.includes(userId)) {
+            scholarship.favouriteBy = scholarship.favouriteBy.filter(uid => uid !== userId);
+            await scholarship.save();
+        }
+        return scholarship;
+    }
+
+    async findFavorites(userId: string, queryDto: QueryScholarshipDto): Promise<{ data: ScholarshipDocument[]; meta: any }> {
+        return this.findAll({
+            ...queryDto,
+            favouriteBy: [userId],
+        });
     }
 } 

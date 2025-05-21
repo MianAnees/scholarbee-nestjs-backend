@@ -9,6 +9,7 @@ import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import { ConversationModelModule } from './conversation-models.module';
 import { Message, MessageSchema } from './schemas/message.schema';
+import { ChatNotificationGateway } from './chat-notification.gateway';
 
 @Module({
   imports: [
@@ -21,7 +22,12 @@ import { Message, MessageSchema } from './schemas/message.schema';
     ]),
   ],
   controllers: [ChatController],
-  providers: [ChatService, ChatGateway, ChatSessionService],
+  providers: [
+    ChatService,
+    ChatGateway,
+    ChatSessionService,
+    ChatNotificationGateway,
+  ],
   exports: [ChatService, ChatGateway, ChatSessionService],
 })
 export class ChatModule {}

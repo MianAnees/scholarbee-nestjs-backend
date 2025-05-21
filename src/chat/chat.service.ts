@@ -17,7 +17,8 @@ import {
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { ChatGateway } from './chat.gateway';
-
+import { ChatNotificationGateway } from './chat-notification.gateway';
+import chat_events from './chat-gateway.events';
 @Injectable()
 export class ChatService {
   constructor(
@@ -27,12 +28,13 @@ export class ChatService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
     private readonly chatSessionService: ChatSessionService,
-    private readonly chatGateway: ChatGateway
+    private readonly chatGateway: ChatGateway,
+    private readonly chatNotificationGateway: ChatNotificationGateway,
   ) {}
 
   async createConversation(
     createConversationDto: CreateConversationDto,
-    userId: string
+    userId: string,
   ): Promise<Conversation> {
     try {
       // Validate IDs
@@ -42,7 +44,7 @@ export class ChatService {
 
       if (!Types.ObjectId.isValid(createConversationDto.campus_id)) {
         throw new BadRequestException(
-          `Invalid campus ID: ${createConversationDto.campus_id}`
+          `Invalid campus ID: ${createConversationDto.campus_id}`,
         );
       }
 
@@ -86,13 +88,13 @@ export class ChatService {
         }
 
         throw new BadRequestException(
-          'Conversation already exists between this user and campus'
+          'Conversation already exists between this user and campus',
         );
       }
 
       if (error.message.includes('hex string must be 24 characters')) {
         throw new BadRequestException(
-          'Invalid ID format. IDs must be valid MongoDB ObjectIds.'
+          'Invalid ID format. IDs must be valid MongoDB ObjectIds.',
         );
       }
 
@@ -154,12 +156,12 @@ export class ChatService {
 
   async updateConversation(
     id: string,
-    updateConversationDto: UpdateConversationDto
+    updateConversationDto: UpdateConversationDto,
   ) {
     const conversation = await this.conversationModel.findByIdAndUpdate(
       id,
       updateConversationDto,
-      { new: true }
+      { new: true },
     );
 
     if (!conversation) {
@@ -173,7 +175,7 @@ export class ChatService {
     return await this.conversationModel.findByIdAndUpdate(
       id,
       { is_read_by_user: true },
-      { new: true }
+      { new: true },
     );
   }
 
@@ -181,7 +183,7 @@ export class ChatService {
     return await this.conversationModel.findByIdAndUpdate(
       id,
       { is_read_by_campus: true },
-      { new: true }
+      { new: true },
     );
   }
 
@@ -190,7 +192,7 @@ export class ChatService {
     const conversation = await this.conversationModel.findByIdAndUpdate(
       id,
       { is_active: false },
-      { new: true }
+      { new: true },
     );
 
     if (!conversation) {
@@ -246,7 +248,7 @@ export class ChatService {
   async createMessage(
     createMessageDto: CreateMessageDto,
     userId: string,
-    senderType: 'user' | 'campus'
+    senderType: 'user' | 'campus',
   ): Promise<Message> {
     try {
       // Validate IDs
@@ -255,17 +257,17 @@ export class ChatService {
       }
       if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
         throw new BadRequestException(
-          `Invalid conversation ID: ${createMessageDto.conversation_id}`
+          `Invalid conversation ID: ${createMessageDto.conversation_id}`,
         );
       }
       const conversationId = new Types.ObjectId(
-        createMessageDto.conversation_id
+        createMessageDto.conversation_id,
       );
       const currentConversation =
         await this.conversationModel.findById(conversationId);
       if (!currentConversation) {
         throw new NotFoundException(
-          `Conversation with ID ${createMessageDto.conversation_id} not found`
+          `Conversation with ID ${createMessageDto.conversation_id} not found`,
         );
       }
 
@@ -321,6 +323,38 @@ export class ChatService {
         ...sessionResult.conversationDocUpdate,
       });
 
+      // In chat.service.ts
+
+      const isRecipientConnectedToChat = this.chatGateway.isUserConnected(userId);
+
+      if (!isRecipientConnectedToChat) {
+        // User is not in chat, but may be in notification gateway
+        const isRecipientConnectedToChatNotifications =
+          this.chatNotificationGateway.isUserConnected(userId);
+
+        if (!isRecipientConnectedToChatNotifications) {
+          console.log(
+            'Recipient is inactive in both chat and notification sockets. Cannot send notification.',
+          );
+        } else {
+          // TODO: REVIEW: Should this be sent to the room or to the user?
+          this.chatNotificationGateway.emitToUser(
+            userId,
+            chat_events.new_message_notification,
+            {
+              senderId,
+              chatId: conversationId,
+              messageId: savedMessage._id,
+              messageSnippet: savedMessage.content,
+              timestamp: savedMessage.created_at,
+              isGroupChat: false,
+              message: savedMessage,
+              conversationId: createMessageDto.conversation_id,
+            },
+          );
+        }
+      }
+
       // Check if either the sender or the receiver is inactive
       // Send the message-notification in `message-notification-socket` to the participants who are inactive in `chat-socket`
       /* 
@@ -363,7 +397,7 @@ export class ChatService {
         {
           message: savedMessage,
           conversationId: createMessageDto.conversation_id,
-        }
+        },
       );
 
       return savedMessage;
@@ -376,7 +410,7 @@ export class ChatService {
       }
       if (error.message.includes('hex string must be 24 characters')) {
         throw new BadRequestException(
-          'Invalid ID format. IDs must be valid MongoDB ObjectIds.'
+          'Invalid ID format. IDs must be valid MongoDB ObjectIds.',
         );
       }
       throw error;
@@ -386,13 +420,13 @@ export class ChatService {
   async getMessagesByConversation(
     conversationId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ) {
     try {
       // Validate conversationId
       if (!Types.ObjectId.isValid(conversationId)) {
         throw new BadRequestException(
-          `Invalid conversation ID: ${conversationId}`
+          `Invalid conversation ID: ${conversationId}`,
         );
       }
 
@@ -400,12 +434,12 @@ export class ChatService {
 
       // Find the conversation to verify it exists
       const conversation = await this.conversationModel.findById(
-        new Types.ObjectId(conversationId)
+        new Types.ObjectId(conversationId),
       );
 
       if (!conversation) {
         throw new NotFoundException(
-          `Conversation with ID ${conversationId} not found`
+          `Conversation with ID ${conversationId} not found`,
         );
       }
 
@@ -466,12 +500,12 @@ export class ChatService {
           } catch (error) {
             console.error(
               `Error populating sender for message ${messageObj._id}:`,
-              error
+              error,
             );
           }
 
           return messageObj;
-        })
+        }),
       );
 
       return {
@@ -492,7 +526,7 @@ export class ChatService {
       }
       if (error.message.includes('hex string must be 24 characters')) {
         throw new BadRequestException(
-          'Invalid conversation ID format. Must be a valid MongoDB ObjectId.'
+          'Invalid conversation ID format. Must be a valid MongoDB ObjectId.',
         );
       }
       throw error;
@@ -501,13 +535,13 @@ export class ChatService {
 
   async markMessagesAsRead(
     conversationId: string,
-    userType: 'user' | 'campus'
+    userType: 'user' | 'campus',
   ) {
     try {
       // Validate conversationId
       if (!Types.ObjectId.isValid(conversationId)) {
         throw new BadRequestException(
-          `Invalid conversation ID: ${conversationId}`
+          `Invalid conversation ID: ${conversationId}`,
         );
       }
 
@@ -522,7 +556,7 @@ export class ChatService {
           sender_type: senderType,
           [readField]: false,
         },
-        { [readField]: true }
+        { [readField]: true },
       );
 
       // Update conversation read status
@@ -533,7 +567,7 @@ export class ChatService {
 
       await this.conversationModel.findByIdAndUpdate(
         conversationId,
-        updateField
+        updateField,
       );
 
       return { message: 'Messages marked as read' };
@@ -543,7 +577,7 @@ export class ChatService {
       }
       if (error.message.includes('hex string must be 24 characters')) {
         throw new BadRequestException(
-          'Invalid conversation ID format. Must be a valid MongoDB ObjectId.'
+          'Invalid conversation ID format. Must be a valid MongoDB ObjectId.',
         );
       }
       throw error;

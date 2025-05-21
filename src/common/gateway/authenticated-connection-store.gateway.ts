@@ -25,6 +25,15 @@ export abstract class AuthenticatedConnectionStoreGateway extends AuthenticatedG
   // User & Campus Room management methods
   // ***********************
 
+  public isUserConnected(userId: string): boolean {
+    try {
+      const { socketId } = this.socketStoreService.getConnection({ userId });
+      return !!socketId;
+    } catch {
+      return false;
+    }
+  }
+
   private joinCampusRoomsIfCampusAdmin(authSocket: AuthenticatedSocket) {
     if (authSocket.data.user.user_type === UserNS.UserType.Campus_Admin) {
       // Join the `campus/global` room
@@ -45,21 +54,21 @@ export abstract class AuthenticatedConnectionStoreGateway extends AuthenticatedG
   }
 
   // Helper methods for child classes
-  // protected emitToUser<T extends Record<string, unknown>>(
-  //   userId: string,
-  //   event: string,
-  //   data: T,
-  // ): void {
-  //   try {
-  //     // retrieve the socket id of the user from the socket store service
-  //     const { socketId } = this.socketStoreService.getConnection({ userId });
+  emitToUser<T extends Record<string, unknown>>(
+    userId: string,
+    event: string,
+    data: T,
+  ): void {
+    try {
+      // retrieve the socket id of the user from the socket store service
+      const { socketId } = this.socketStoreService.getConnection({ userId });
 
-  //     // emit notification to the user's socket
-  //     this.server.to(socketId).emit(event, data);
-  //   } catch (error) {
-  //     this.logger.error(`Error emitting to user ${userId}`, error);
-  //   }
-  // }
+      // emit notification to the user's socket
+      this.server.to(socketId).emit(event, data);
+    } catch (error) {
+      this.logger.error(`Error emitting to user ${userId}`, error);
+    }
+  }
 
   protected emitToUsers<T extends Record<string, unknown>>(
     userIds: string[],

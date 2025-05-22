@@ -7,183 +7,254 @@ import { QueryScholarshipDto } from '../dto/query-scholarship.dto';
 
 @Injectable()
 export class ScholarshipsService {
-    constructor(
-        @InjectModel(Scholarship.name) private scholarshipModel: Model<ScholarshipDocument>
-    ) { }
+  constructor(
+    @InjectModel(Scholarship.name)
+    private scholarshipModel: Model<ScholarshipDocument>,
+  ) {}
 
-    async create(createScholarshipDto: CreateScholarshipDto, userId: string): Promise<ScholarshipDocument> {
-        try {
-            const scholarship = new this.scholarshipModel({
-                ...createScholarshipDto,
-                createdBy: userId
-            });
-            return await scholarship.save();
-        } catch (error) {
-            if (error.name === 'ValidationError') {
-                throw new BadRequestException(error.message);
-            }
-            throw error;
-        }
+  async create(
+    createScholarshipDto: CreateScholarshipDto,
+    userId: string,
+  ): Promise<ScholarshipDocument> {
+    try {
+      const scholarship = new this.scholarshipModel({
+        ...createScholarshipDto,
+        createdBy: userId,
+      });
+      return await scholarship.save();
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  async findAll(
+    queryDto: QueryScholarshipDto,
+  ): Promise<{ data: ScholarshipDocument[]; meta: any }> {
+    const {
+      search,
+      scholarship_name,
+      scholarship_type,
+      university_id,
+      country,
+      region,
+      status,
+      deadlineFrom,
+      deadlineTo,
+      amountMin,
+      amountMax,
+      favouriteBy,
+      page = 1,
+      limit = 10,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+      populate = true,
+    } = queryDto;
+
+    const filter: any = {};
+
+    if (search) {
+      filter.$or = [
+        { scholarship_name: { $regex: search, $options: 'i' } },
+        { scholarship_description: { $regex: search, $options: 'i' } },
+      ];
     }
 
-    async findAll(queryDto: QueryScholarshipDto): Promise<{ data: ScholarshipDocument[]; meta: any }> {
-        const {
-            search,
-            scholarship_name,
-            scholarship_type,
-            university_id,
-            country,
-            region,
-            status,
-            deadlineFrom,
-            deadlineTo,
-            amountMin,
-            amountMax,
-            page = 1,
-            limit = 10,
-            sortBy = 'created_at',
-            sortOrder = 'desc',
-            populate = true
-        } = queryDto;
-
-        const filter: any = {};
-
-        if (search) {
-            filter.$or = [
-                { scholarship_name: { $regex: search, $options: 'i' } },
-                { scholarship_description: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (scholarship_name) {
-            filter.scholarship_name = { $regex: scholarship_name, $options: 'i' };
-        }
-
-        if (scholarship_type) {
-            filter.scholarship_type = scholarship_type;
-        }
-
-        if (university_id) {
-            filter.university_id = new Types.ObjectId(university_id);
-        }
-
-        if (country) {
-            filter.country = new Types.ObjectId(country);
-        }
-
-        if (region) {
-            filter.region = new Types.ObjectId(region);
-        }
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (deadlineFrom || deadlineTo) {
-            filter.application_deadline = {};
-            if (deadlineFrom) {
-                filter.application_deadline.$gte = deadlineFrom;
-            }
-            if (deadlineTo) {
-                filter.application_deadline.$lte = deadlineTo;
-            }
-        }
-
-        if (amountMin !== undefined || amountMax !== undefined) {
-            filter.amount = {};
-            if (amountMin !== undefined) {
-                filter.amount.$gte = amountMin;
-            }
-            if (amountMax !== undefined) {
-                filter.amount.$lte = amountMax;
-            }
-        }
-
-        const skip = (page - 1) * limit;
-        const sort: any = {};
-        sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-        let query = this.scholarshipModel.find(filter);
-
-        if (populate) {
-          query = query
-            .populate('university_id')
-            // .populate('country')
-            .populate('region')
-            .populate('organization_id');
-        }
-
-        const [scholarships, total] = await Promise.all([
-            query
-                .sort(sort)
-                .skip(skip)
-                .limit(limit)
-                .exec(),
-            this.scholarshipModel.countDocuments(filter).exec(),
-        ]);
-
-        const totalPages = Math.ceil(total / limit);
-
-        return {
-            data: scholarships,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages
-            }
-        };
+    if (scholarship_name) {
+      filter.scholarship_name = { $regex: scholarship_name, $options: 'i' };
     }
 
-    async findOne(id: string): Promise<ScholarshipDocument> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid scholarship ID');
-        }
-
-        const scholarship = await this.scholarshipModel
-            .findById(id)
-            .populate('university_id')
-            //  .populate('country')
-            .populate('region')
-            .exec();
-
-        if (!scholarship) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
-        }
-
-        return scholarship;
+    if (scholarship_type) {
+      filter.scholarship_type = scholarship_type;
     }
 
-    async update(id: string, updateScholarshipDto: Partial<CreateScholarshipDto>): Promise<ScholarshipDocument> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid scholarship ID');
-        }
-
-        const scholarship = await this.scholarshipModel
-            .findByIdAndUpdate(id, updateScholarshipDto, { new: true })
-            .populate('university_id')
-            // .populate('country')
-            .populate('region')
-            .exec();
-
-        if (!scholarship) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
-        }
-
-        return scholarship;
+    if (university_id) {
+      filter.university_id = new Types.ObjectId(university_id);
     }
 
-    async remove(id: string): Promise<{ deleted: boolean }> {
-        if (!Types.ObjectId.isValid(id)) {
-            throw new BadRequestException('Invalid scholarship ID');
-        }
-
-        const result = await this.scholarshipModel.findByIdAndDelete(id).exec();
-
-        if (!result) {
-            throw new NotFoundException(`Scholarship with ID ${id} not found`);
-        }
-
-        return { deleted: true };
+    if (country) {
+      filter.country = new Types.ObjectId(country);
     }
+
+    if (region) {
+      filter.region = new Types.ObjectId(region);
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (deadlineFrom || deadlineTo) {
+      filter.application_deadline = {};
+      if (deadlineFrom) {
+        filter.application_deadline.$gte = deadlineFrom;
+      }
+      if (deadlineTo) {
+        filter.application_deadline.$lte = deadlineTo;
+      }
+    }
+
+    if (amountMin !== undefined || amountMax !== undefined) {
+      filter.amount = {};
+      if (amountMin !== undefined) {
+        filter.amount.$gte = amountMin;
+      }
+      if (amountMax !== undefined) {
+        filter.amount.$lte = amountMax;
+      }
+    }
+
+    if (favouriteBy && favouriteBy.length > 0) {
+      filter.favouriteBy = { $in: favouriteBy };
+    }
+
+    const skip = (page - 1) * limit;
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    let query = this.scholarshipModel.find(filter);
+
+    if (populate) {
+      query = query
+        .populate('university_id')
+        // .populate('country')
+        .populate('region')
+        .populate('organization_id');
+    }
+
+    const [scholarships, total] = await Promise.all([
+      query.sort(sort).skip(skip).limit(limit).exec(),
+      this.scholarshipModel.countDocuments(filter).exec(),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: scholarships,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  }
+
+  async findOne(id: string): Promise<ScholarshipDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid scholarship ID');
+    }
+
+    const scholarship = await this.scholarshipModel
+      .findById(id)
+      .populate('university_id')
+      //  .populate('country')
+      .populate('region')
+      .exec();
+
+    if (!scholarship) {
+      throw new NotFoundException(`Scholarship with ID ${id} not found`);
+    }
+
+    return scholarship;
+  }
+
+  async update(
+    id: string,
+    updateScholarshipDto: Partial<CreateScholarshipDto>,
+  ): Promise<ScholarshipDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid scholarship ID');
+    }
+
+    const scholarship = await this.scholarshipModel
+      .findByIdAndUpdate(id, updateScholarshipDto, { new: true })
+      .populate('university_id')
+      // .populate('country')
+      .populate('region')
+      .exec();
+
+    if (!scholarship) {
+      throw new NotFoundException(`Scholarship with ID ${id} not found`);
+    }
+
+    return scholarship;
+  }
+
+  async remove(id: string): Promise<{ deleted: boolean }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid scholarship ID');
+    }
+
+    const result = await this.scholarshipModel.findByIdAndDelete(id).exec();
+
+    if (!result) {
+      throw new NotFoundException(`Scholarship with ID ${id} not found`);
+    }
+
+    return { deleted: true };
+  }
+
+  /**
+   * Add a scholarship to the user's favorites
+   * Flow:
+   * - Check if the scholarship exists
+   * @param scholarshipId - The ID of the scholarship
+   * @param userId - The ID of the user
+   * @returns The updated scholarship
+   */
+  async addToFavorites(
+    scholarshipId: string,
+    userId: string,
+  ): Promise<ScholarshipDocument> {
+    if (!Types.ObjectId.isValid(scholarshipId)) {
+      throw new BadRequestException('Invalid scholarship ID');
+    }
+    const scholarship = await this.scholarshipModel.findById(scholarshipId);
+    if (!scholarship) {
+      throw new NotFoundException(
+        `Scholarship with ID ${scholarshipId} not found`,
+      );
+    }
+    if (!scholarship.favouriteBy) {
+      scholarship.favouriteBy = [];
+    }
+    if (!scholarship.favouriteBy.includes(userId)) {
+      scholarship.favouriteBy.push(userId);
+      await scholarship.save();
+    }
+    return scholarship;
+  }
+
+  async removeFromFavorites(
+    id: string,
+    userId: string,
+  ): Promise<ScholarshipDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid scholarship ID');
+    }
+    const scholarship = await this.scholarshipModel.findById(id);
+    if (!scholarship) {
+      throw new NotFoundException(`Scholarship with ID ${id} not found`);
+    }
+    if (scholarship.favouriteBy && scholarship.favouriteBy.includes(userId)) {
+      scholarship.favouriteBy = scholarship.favouriteBy.filter(
+        (uid) => uid !== userId,
+      );
+      await scholarship.save();
+    }
+    return scholarship;
+  }
+
+  async findFavorites(
+    userId: string,
+    queryDto: QueryScholarshipDto,
+  ): Promise<{ data: ScholarshipDocument[]; meta: any }> {
+    return this.findAll({
+      ...queryDto,
+      favouriteBy: [userId],
+    });
+  }
 } 

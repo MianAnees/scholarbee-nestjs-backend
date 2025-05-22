@@ -1,4 +1,4 @@
-import common_gateway_events from 'src/common/gateway/common-gateway.events';
+import common_gateway_events from 'src/common/gateway/common-gateway.constant';
 
 const notification_gateway_events = {
   ...common_gateway_events,

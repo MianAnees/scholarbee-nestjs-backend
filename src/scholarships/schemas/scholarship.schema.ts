@@ -35,7 +35,7 @@ export class Scholarship {
   @Prop({ type: String })
   application_process?: string;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String, required: false })
   eligibility_criteria: string;
 
   @Prop({ type: [Object], default: [] })
@@ -69,6 +69,9 @@ export class Scholarship {
 
   @Prop({ type: Date, default: Date.now })
   created_at: Date;
+
+  @Prop({ type: [String], default: [] })
+  favouriteBy: string[];
 }
 
 export const ScholarshipSchema = SchemaFactory.createForClass(Scholarship);

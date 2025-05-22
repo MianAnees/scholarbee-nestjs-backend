@@ -4,10 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, UpdateQuery } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import chat_events from './chat-gateway.constant';
 import { ChatSessionService } from './chat-session.service';
+import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
@@ -16,9 +18,7 @@ import {
   ConversationDocument,
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
-import { ChatGateway } from './chat.gateway';
-import { ChatNotificationGateway } from './chat-notification.gateway';
-import chat_events from './chat-gateway.events';
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -29,7 +29,6 @@ export class ChatService {
     @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
     private readonly chatSessionService: ChatSessionService,
     private readonly chatGateway: ChatGateway,
-    private readonly chatNotificationGateway: ChatNotificationGateway,
   ) {}
 
   async createConversation(
@@ -202,6 +201,69 @@ export class ChatService {
     return { message: 'Conversation deleted successfully' };
   }
 
+  private async handleMessageCreation(
+    createMessageDto: CreateMessageDto,
+    userId: string,
+    senderType: 'user' | 'campus',
+    currentConversation: ConversationDocument,
+    curMsgTime: Date,
+    conversationId: Types.ObjectId,
+    senderId: Types.ObjectId,
+  ) {
+    // Delegate all session logic to ChatSessionService
+    const sessionResult = await this.chatSessionService.handleSessionOnMessage({
+      conversation: currentConversation,
+      senderType,
+      curMsgTime,
+      conversationId,
+    });
+
+    // Create message object
+    let messageData: Partial<MessageDocument> = {
+      conversation_id: conversationId,
+      sender_id: senderId,
+      sender_type: senderType,
+      sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
+      content: createMessageDto.content,
+      is_read_by_user: senderType === 'user',
+      is_read_by_campus: senderType === 'campus',
+      attachments: createMessageDto.attachments || [],
+      created_at: curMsgTime,
+      sessionId: sessionResult.sessionId,
+    };
+
+    // If the message is sent by the campus, then keep a track of which user replied on behalf of the campus
+    if (senderType === 'campus') {
+      messageData.replied_by_user_id = new Types.ObjectId(userId);
+    }
+
+    // Create new message
+    const newMessage = new this.messageModel(messageData);
+    const savedMessage = await newMessage.save();
+
+    return {
+      savedMessage,
+      sessionResult,
+    };
+  }
+
+  private async handleMessageNotificationsIfRequired(
+    userId: string,
+    senderId: Types.ObjectId,
+    conversationId: string,
+    message: Message,
+  ) {
+    // Optional: Persist the notification in the database if required
+
+    // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
+    await this.chatGateway.emitMessageNotificationsIfRequired(
+      userId,
+      senderId,
+      conversationId,
+      message,
+    );
+  }
+
   /**
    * * How to "check for session validity" (a session is always started from a student message)
    * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
@@ -260,61 +322,45 @@ export class ChatService {
           `Invalid conversation ID: ${createMessageDto.conversation_id}`,
         );
       }
-      const conversationId = new Types.ObjectId(
-        createMessageDto.conversation_id,
-      );
+
+      // Convert IDs to ObjectId
+      const userObjectId = new Types.ObjectId(userId);
+      const conversationId = createMessageDto.conversation_id;
+      const conversationObjectId = new Types.ObjectId(conversationId);
+
+      // Retrieve the current conversation
       const currentConversation =
-        await this.conversationModel.findById(conversationId);
+        await this.conversationModel.findById(conversationObjectId);
       if (!currentConversation) {
         throw new NotFoundException(
           `Conversation with ID ${createMessageDto.conversation_id} not found`,
         );
       }
 
-      // Get current time
-      const curMsgTime = new Date();
-
       // Determine the correct sender_id based on sender_type
       let senderId: Types.ObjectId;
       if (senderType === 'user') {
-        senderId = new Types.ObjectId(userId);
+        senderId = userObjectId;
       } else {
         senderId = currentConversation.campus_id;
       }
 
-      // Delegate all session logic to ChatSessionService
-      const sessionResult =
-        await this.chatSessionService.handleSessionOnMessage({
-          conversation: currentConversation,
-          senderType,
-          curMsgTime,
-          conversationId,
-        });
+      // Get current time
+      const curMsgTime = new Date();
 
-      // Create message object
-      let messageData: Partial<MessageDocument> = {
-        conversation_id: conversationId,
-        sender_id: senderId,
-        sender_type: senderType,
-        sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
-        content: createMessageDto.content,
-        is_read_by_user: senderType === 'user',
-        is_read_by_campus: senderType === 'campus',
-        attachments: createMessageDto.attachments || [],
-        created_at: curMsgTime,
-        sessionId: sessionResult.sessionId,
-      };
-
-      if (senderType === 'campus') {
-        messageData.replied_by_user_id = new Types.ObjectId(userId);
-      }
-
-      // Create new message
-      const newMessage = new this.messageModel(messageData);
-      const savedMessage = await newMessage.save();
+      // Create the message in db and handle the session logic
+      const { savedMessage, sessionResult } = await this.handleMessageCreation(
+        createMessageDto,
+        userId,
+        senderType,
+        currentConversation,
+        curMsgTime,
+        conversationObjectId,
+        senderId,
+      );
 
       // Update conversation with last message info and session updates
-      await this.conversationModel.findByIdAndUpdate(conversationId, {
+      await this.conversationModel.findByIdAndUpdate(conversationObjectId, {
         last_message: createMessageDto.content,
         last_message_time: curMsgTime,
         last_message_sender: senderType,
@@ -323,63 +369,15 @@ export class ChatService {
         ...sessionResult.conversationDocUpdate,
       });
 
-      // In chat.service.ts
+      // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
+      await this.handleMessageNotificationsIfRequired(
+        userId,
+        senderId,
+        conversationId,
+        savedMessage,
+      );
 
-      const isRecipientConnectedToChat = this.chatGateway.isUserConnected(userId);
-
-      if (!isRecipientConnectedToChat) {
-        // User is not in chat, but may be in notification gateway
-        const isRecipientConnectedToChatNotifications =
-          this.chatNotificationGateway.isUserConnected(userId);
-
-        if (!isRecipientConnectedToChatNotifications) {
-          console.log(
-            'Recipient is inactive in both chat and notification sockets. Cannot send notification.',
-          );
-        } else {
-          // TODO: REVIEW: Should this be sent to the room or to the user?
-          this.chatNotificationGateway.emitToUser(
-            userId,
-            chat_events.new_message_notification,
-            {
-              senderId,
-              chatId: conversationId,
-              messageId: savedMessage._id,
-              messageSnippet: savedMessage.content,
-              timestamp: savedMessage.created_at,
-              isGroupChat: false,
-              message: savedMessage,
-              conversationId: createMessageDto.conversation_id,
-            },
-          );
-        }
-      }
-
-      // Check if either the sender or the receiver is inactive
-      // Send the message-notification in `message-notification-socket` to the participants who are inactive in `chat-socket`
-      /* 
-        const senderChatConnection = await this.chatGateway.getConnection(userId).catch(()=>false)
-        if (!senderChatConnection) {
-
-            const senderMessageNotificationConnection = await this.messageNotificationGateway.getConnection(userId).catch(()=>false)
-            if (!senderMessageNotificationConnection) {
-                console.log('Sender is inactive in chat-socket and message-notification-socket. Cannot send message-notification to the sender.')
-            }
-                
-            this.messageNotificationGateway.emitToUser(userId, 'new_message_notification', {
-                senderId,
-                chatId:conversationId,
-                messageId:savedMessage._id,
-                messageSnippet:savedMessage.content,
-                timestamp:savedMessage.created_at,
-                isGroupChat:false,
-            
-                message: savedMessage,
-                conversationId: createMessageDto.conversation_id,
-            })
-
-        }
-*/
+      // In chat.service.ts (sendMessageNotificationIfChatWindowIsNotOpen)
 
       //   Check if the receiver is active on the chat-socket
       // const receiverSocket = this.chatGateway.getReceiverSocket(createMessageDto.conversation_id);
@@ -391,9 +389,8 @@ export class ChatService {
       // Otherwise, send a message-notification to the receiver.
 
       // Then emit the event with the saved message
-      this.chatGateway.emitToConversation(
+      this.chatGateway.emitMessageToConversation(
         createMessageDto.conversation_id,
-        'newMessage',
         {
           message: savedMessage,
           conversationId: createMessageDto.conversation_id,

@@ -1,4 +1,7 @@
+import common_gateway_events from 'src/common/gateway/common-gateway.constant';
+
 const emit_events = {
+  ...common_gateway_events.emit_events,
   notification_message: 'chat/notification/message',
 
   // Previously: `new_message`

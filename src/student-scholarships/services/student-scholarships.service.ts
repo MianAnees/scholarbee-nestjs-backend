@@ -1,7 +1,16 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery, Types } from 'mongoose';
-import { Scholarship, ScholarshipDocument } from 'src/scholarships/schemas/scholarship.schema';
+import {
+  Scholarship,
+  ScholarshipDocument,
+} from 'src/scholarships/schemas/scholarship.schema';
 import { User, UserDocument } from 'src/users/schemas/user.schema';
 import {
   CreateStudentScholarshipDto,
@@ -24,6 +33,8 @@ import {
 
 @Injectable()
 export class StudentScholarshipsService {
+  private readonly logger = new Logger(StudentScholarshipsService.name);
+
   constructor(
     @InjectModel(StudentScholarship.name)
     private studentScholarshipModel: Model<StudentScholarshipDocument>,
@@ -71,7 +82,7 @@ export class StudentScholarshipsService {
   }
 
   /**
-   * This service should check if the incoming required documents match the document-type of the scholarship against which the application is being made.
+   * This service should check if the incoming required documents (if available) match the document-type of the scholarship against which the application is being made.
    * If the document-type is not found in the scholarship, an error should be thrown.
    * Primary Scenarios:
    * - The received documents should not be more than the specified documents
@@ -83,13 +94,18 @@ export class StudentScholarshipsService {
    */
   async validateRequiredDocuments(
     specifiedRequiredDocuments: Scholarship['required_documents'],
-    receivedDocuments: IStudentScholarship['required_documents'],
-    shouldMatchCount: boolean = false,
+    receivedDocuments: Required<IStudentScholarship['required_documents']>,
+    shouldMatchCount: boolean,
   ) {
-    const specifiedDocumentTypes = specifiedRequiredDocuments
-      .map((doc) => doc.document_name)
-      // ? Remove the personal_statement from the specified documents as the personal_statement is accepted as a text field
-      .filter((doc) => doc !== 'personal_statement');
+    // No documents submitted
+    if (!receivedDocuments) {
+      this.logger.log('No documents submitted; skipping validation');
+      return;
+    }
+
+    const specifiedDocumentTypes = specifiedRequiredDocuments.map(
+      (doc) => doc.document_name,
+    );
 
     const receivedDocumentTypes =
       receivedDocuments?.map((doc) => doc.document_name) || [];
@@ -546,4 +562,4 @@ export class StudentScholarshipsService {
     );
     return await scholarship.save();
   }
-} 
+}

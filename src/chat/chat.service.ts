@@ -205,19 +205,13 @@ export class ChatService {
     createMessageDto: CreateMessageDto,
     userId: string,
     senderType: 'user' | 'campus',
-    currentConversation: ConversationDocument,
     curMsgTime: Date,
     conversationId: Types.ObjectId,
     senderId: Types.ObjectId,
+    sessionResult: Awaited<
+      ReturnType<typeof this.chatSessionService.handleChatSession>
+    >,
   ) {
-    // Delegate all session logic to ChatSessionService
-    const sessionResult = await this.chatSessionService.handleSessionOnMessage({
-      conversation: currentConversation,
-      senderType,
-      curMsgTime,
-      conversationId,
-    });
-
     // Create message object
     let messageData: Partial<MessageDocument> = {
       conversation_id: conversationId,
@@ -331,15 +325,22 @@ export class ChatService {
       // Get current time
       const curMsgTime = new Date();
 
+      const sessionResult = await this.chatSessionService.handleChatSession({
+        conversation: currentConversation,
+        senderType,
+        curMsgTime,
+        conversationId: conversationObjectId,
+      });
+
       // Create the message in db and handle the session logic
-      const { savedMessage, sessionResult } = await this.handleMessageCreation(
+      const { savedMessage } = await this.handleMessageCreation(
         createMessageDto,
         userId,
         senderType,
-        currentConversation,
         curMsgTime,
         conversationObjectId,
         senderId,
+        sessionResult,
       );
 
       // Update conversation with last message info and session updates
@@ -353,14 +354,13 @@ export class ChatService {
       });
 
       // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
-      await this.chatGateway.emitMessageNotificationsIfRequired(
-        userId,
-        senderId,
-        conversationId,
+      this.chatGateway.emitMessageNotificationToOutOfFocusRecipients(
+        createMessageDto.conversation_id,
         savedMessage,
       );
 
       // Then emit the event with the saved message
+      // TODO: Restrict sending the message to the sender
       this.chatGateway.emitMessageToConversation(
         createMessageDto.conversation_id,
         {

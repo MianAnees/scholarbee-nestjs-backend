@@ -82,14 +82,14 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     this.removeUserActiveConversation(authSocket.data.user._id);
   }
 
-  private isMessageInActiveConversation(
+  private isActiveConversationOfUser(
     userId: string,
-    messageConversationId: string,
+    conversationIdOfMessage: string,
   ) {
-    const userActiveConversation = this.getUserActiveConversation(userId);
-    if (!userActiveConversation) return false;
+    const activeConversationIdOfUser = this.getUserActiveConversation(userId);
+    if (!activeConversationIdOfUser) return false;
 
-    return messageConversationId === userActiveConversation;
+    return conversationIdOfMessage === activeConversationIdOfUser;
   }
 
   // ***********************
@@ -124,41 +124,71 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   // ***********************
 
   /**
-   * Emits a message notification to the each participant of the conversation
-   * - if the conversation is not the active conversation of the participant
-   * - AND if the participant is connected to the chat-socket
+   * Emits a message notification ONLY to the
+   * - users which are recipients of the conversation (excludes the sender)
+   * - AND recipients is/are connected to the chat-socket
+   * - AND recipients which do not have the conversation as the active conversation
    */
-  emitNotificationToMessageInActiveParticipants(
+  emitMessageNotificationToOutOfFocusRecipients(
     conversationId: string,
+    // TODO: Accept the exact notification payload or create-and-user a prepareMessageNotificaiton private method
     message: Message,
   ) {
-    // Get the active participants of the conversation
-    let inactiveParticipantIds: string[] = [];
+    // ******************************
+    // Get the recipients of the conversation by checking the users in the conversation room
+    // ******************************
 
-    // TODO: get the sender and the receiver of the conversation
-    const senderId = message.sender_id.toString();
-    const receiverId = message.sender_id.toString();
+    let validRecipientsOfMessageNotification: string[] = [];
 
-    // TODO: check if the sender and the receiver are connected to the chat-socket (check the store)
-    const isSenderConnected = this.isUserConnected(senderId);
-    const isReceiverConnected = this.isUserConnected(receiverId);
+    // Prepare the conversation room constant
+    const conversationRoom =
+      chat_gateway_constants.rooms.conversation(conversationId);
 
-    if (!isSenderConnected) inactiveParticipantIds.push(senderId);
-    if (!isReceiverConnected) inactiveParticipantIds.push(receiverId);
+    // Get the sockets in the conversation room
+    const socketsConnectedToConversationRoom =
+      this.server.sockets.adapter.rooms.get(conversationRoom);
+
+    // Get the users against the sockets using the socket store service
+    // There is a possibility that the room is empty
+    socketsConnectedToConversationRoom.size > 0 &&
+      socketsConnectedToConversationRoom.forEach((socketId) => {
+        // For each socket in the conversation room, get the user
+        const { userId: connUserId } = this.socketStoreService.getConnection({
+          socketId,
+        }); // will throw an error if the socket is not found; but this should not happen as each socket should have an associated user
+
+        // Exclude the sender as he is not a recipient
+        if (message.sender_id.toString() === connUserId) return;
+
+        // Check if the active conversation of current connectedUser is the same as active conversation of the message
+        const messageExistsInActiveConversationOfConnectedUser =
+          this.isActiveConversationOfUser(connUserId, conversationId);
+
+        // No need to send a message-notification to the user if the message is in the active conversation of the user
+        if (messageExistsInActiveConversationOfConnectedUser) return;
+
+        // Append the user to the valid recipients if the message notification
+        validRecipientsOfMessageNotification.push(connUserId);
+      });
+
+    // ******************************
+    // Send the message notification to the valid recipients
+    // ******************************
 
     // Retrieve the event name
     const msgNotificationEvent =
       chat_gateway_constants.emit_events.new_message_notification;
 
-    // Emit to the inactive participants
-    this.server.to(inactiveParticipantIds).emit(msgNotificationEvent, {
-      conversationId,
-      messageId: message._id,
-      senderId,
-      receiverId,
-      messageSnippet: message.content,
-      timestamp: message.created_at,
-    });
+    // Send the message notification to the valid recipients
+    this.server
+      .to(validRecipientsOfMessageNotification)
+      .emit(msgNotificationEvent, {
+        conversationId,
+        messageId: message._id,
+        senderId: message.sender_id,
+        messageSnippet: message.content,
+        timestamp: message.created_at,
+      });
   }
 
   /**
@@ -182,48 +212,5 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
     // Send the message only to the conversation room
     this.server.to(conversationRoom).emit(conversationEvent, data);
-  }
-
-  /**
-   * Emits a message notification if the message belongs to a conversation that is not the active conversation
-   */
-  async emitMessageNotificationsIfRequired(
-    userId: string,
-    senderId: Types.ObjectId,
-    conversationId: string,
-    message: Message,
-  ) {
-    // check if the user is active in socket
-    // check if the message conversation id is different than the active conversation id of the user
-    // if the message conversation id is different than the active conversation id of the user, then send the notification
-    // if the message conversation id is the same as the active conversation id of the user, then do nothing
-
-    const isRecipientConnectedToChat = this.isUserConnected(userId);
-    if (!isRecipientConnectedToChat) return;
-
-    const isMessageInActiveConversation = this.isMessageInActiveConversation(
-      userId,
-      conversationId,
-    );
-
-    if (isMessageInActiveConversation) return;
-
-    // TODO: Notification should be sent to the notification participants
-    this.emitNotificationToMessageInActiveParticipants(conversationId, message);
-
-    // TODO: REVIEW: Should this be sent to the room or to the user?
-    this.emitToUser(
-      userId,
-      chat_gateway_constants.emit_events.new_message_notification,
-      {
-        senderId,
-        conversationId,
-        messageId: message._id,
-        messageSnippet: message.content,
-        timestamp: message.created_at,
-        isGroupChat: false,
-        message,
-      },
-    );
   }
 }

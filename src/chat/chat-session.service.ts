@@ -82,9 +82,11 @@ export class ChatSessionService {
 
   /**
    * Handles all session management logic for message creation.
+   * Creates a new session if the last message was sent more than the session threshold time.
+   * Updates the session if the last message was sent in the same session.
    * Returns sessionId, conversationDocUpdate, and any other session-related data needed by ChatService.
    */
-  async handleSessionOnMessage({
+  async handleChatSession({
     conversation,
     senderType,
     curMsgTime,

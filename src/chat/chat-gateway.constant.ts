@@ -1,6 +1,5 @@
 const emit_events = {
-  new_message: 'new_message',
-  new_message_notification: 'new_message_notification',
+  message_notification: 'message_notification',
   conversation_message: (conversationId: string) =>
     `conversation_message_${conversationId}`, // TODO: this should be used by the client to listen for the conversation events
 } as const;

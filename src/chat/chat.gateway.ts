@@ -177,7 +177,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
     // Retrieve the event name
     const msgNotificationEvent =
-      chat_gateway_constants.emit_events.new_message_notification;
+      chat_gateway_constants.emit_events.message_notification;
 
     // Send the message notification to the valid recipients
     this.server

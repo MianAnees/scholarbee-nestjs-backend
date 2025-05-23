@@ -129,15 +129,12 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     chat_gateway_constants.subscription_events.leave_conversation,
   )
   leaveConversation(authSocket: AuthenticatedSocket) {
-
     // Remove the user's active conversation
     this.removeUserActiveConversation(authSocket.data.user._id);
     this.logger.log(
       `User (${authSocket.data.user._id}) removed as active for conversation`,
     );
-    console.log('🚀 ~ ChatGateway ~ leaveConversation ~ authSocket:', this.getUserActiveConversation(authSocket.data.user._id));
   }
-
 
   // change conversation
   @SubscribeMessage(
@@ -145,22 +142,19 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   )
   changeConversation(authSocket: AuthenticatedSocket, conversationId: string) {
     // TODO: Add validation to check if the requested conversationId is associated with the user
-    
+
     // Remove the user's active conversation
     this.removeUserActiveConversation(authSocket.data.user._id);
     this.logger.log(
       `User (${authSocket.data.user._id}) removed as active for conversation`,
     );
-    
+
     // Set the user's active conversation
     this.setUserActiveConversation(authSocket.data.user._id, conversationId);
     this.logger.log(
       `Conversation (${conversationId}) set as active for user (${authSocket.data.user._id})`,
     );
   }
-  
-  
-  
 
   // ***********************
   // Emit methods
@@ -234,12 +228,14 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
   /**
    * Emits a message to the conversation room (includes all the participants of the conversation)
+   * @param senderUserId - This is different from the sender_id in the message because in case of a message from campus to user, the sender_id is the campus_id and senderUserId is the user_id. However, for socket communication, we need to use the user_id only as there's not socketId for the campus_id
    * @param conversationId
-   * @param data
+   * @param chatMessage
    */
-  emitMessageToConversation<T extends Record<string, any>>(
+  emitChatMessageToConversation(
+    senderUserId: string,
     conversationId: string,
-    data: T,
+    chatMessage: Message,
   ) {
     // this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
     // console.log('Emitting event:', event, 'to conversation:', conversationId);
@@ -251,7 +247,15 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     const conversationEvent =
       chat_gateway_constants.emit_events.conversation_message;
 
+    // Get the socket for the sender
+    const senderConn = this.socketStoreService.getConnection({
+      userId: senderUserId,
+    });
+
     // Send the message only to the conversation room
-    this.server.to(conversationRoom).emit(conversationEvent, data);
+    this.server
+      .to(conversationRoom)
+      .except(senderConn?.socketId) // if sender is connected, then exclude the sender from the message
+      .emit(conversationEvent, chatMessage);
   }
 }

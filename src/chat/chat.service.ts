@@ -409,12 +409,10 @@ export class ChatService {
 
       // Then emit the event with the saved message
       // TODO: Restrict sending the message to the sender
-      this.chatGateway.emitMessageToConversation(
+      this.chatGateway.emitChatMessageToConversation(
+        userId,
         createMessageDto.conversation_id,
-        {
-          message: savedMessage,
-          conversationId: createMessageDto.conversation_id,
-        },
+        savedMessage,
       );
       this.logger.debug('🍎 Message emitted');
 

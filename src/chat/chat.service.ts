@@ -1,12 +1,13 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { User, UserDocument, UserNS } from '../users/schemas/user.schema';
 import chat_events from './chat-gateway.constant';
 import { ChatSessionService } from './chat-session.service';
 import { ChatGateway } from './chat.gateway';
@@ -21,6 +22,8 @@ import { Message, MessageDocument } from './schemas/message.schema';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     @InjectModel(Conversation.name)
     private conversationModel: Model<ConversationDocument>,
@@ -316,10 +319,41 @@ export class ChatService {
 
       // Determine the correct sender_id based on sender_type
       let senderId: Types.ObjectId;
+      let recipientIds: string[];
       if (senderType === 'user') {
         senderId = userObjectId;
+        // ! How and where to send the message-notification when the recipient is a campus?
+        // ! How to known which campus_admin to send the message-notification to?
+        const recipientCampusId = currentConversation.campus_id;
+
+        // Get the campus admins (Get all the users with the campus_id same as the recipientCampusId)
+        const recipientCampusAdmins = await this.userModel
+          .find({
+            campus_id: recipientCampusId,
+            user_type: UserNS.UserType.Campus_Admin,
+          })
+          .select('_id');
+
+        // This should never happen
+        if (recipientCampusAdmins.length === 0) {
+          throw new NotFoundException(
+            `No campus admins found for campus with ID ${recipientCampusId}`,
+          );
+        }
+
+        // Get the user ids of the campus admins
+        recipientIds = recipientCampusAdmins.map((admin) => String(admin._id));
+        console.log(
+          '🚀 ~ ChatService ~ User sending message to Campus Admins:',
+          recipientIds,
+        );
       } else {
         senderId = currentConversation.campus_id;
+        recipientIds = [userObjectId.toString()];
+        console.log(
+          '🚀 ~ ChatService ~ Campus sending message to User:',
+          recipientIds,
+        );
       }
 
       // Get current time
@@ -332,6 +366,7 @@ export class ChatService {
         conversationId: conversationObjectId,
       });
 
+      // TODO: Use a DB Transaction around all db updates and socket messages
       // Create the message in db and handle the session logic
       const { savedMessage } = await this.handleMessageCreation(
         createMessageDto,
@@ -352,12 +387,25 @@ export class ChatService {
         is_read_by_campus: senderType === 'campus',
         ...sessionResult.conversationDocUpdate,
       });
+      this.logger.debug('🍎 Conversation updated');
 
+      // TODO: Get the message recipients
+
+      // If recipient is a campus, then send the message notification to all the admins of the campus
+      // - they should be listening to the `chat/notification/message` event (as expected)
+      // - if no campus admin is found active, then do nothing
+
+      // If recipient is a user, then send the message notification to the user
+      // - they should be listening to the `chat/notification/message` event (as expected)
+      // - if no user is found active, then do nothing
+
+      // TODO: Get the message recipients
       // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
-      this.chatGateway.emitMessageNotificationToOutOfFocusRecipients(
-        createMessageDto.conversation_id,
+      this.chatGateway.emitMessageNotificationToRecipients(
+        recipientIds,
         savedMessage,
       );
+      this.logger.debug('🍎 Message notification emitted');
 
       // Then emit the event with the saved message
       // TODO: Restrict sending the message to the sender
@@ -368,9 +416,11 @@ export class ChatService {
           conversationId: createMessageDto.conversation_id,
         },
       );
+      this.logger.debug('🍎 Message emitted');
 
       return savedMessage;
     } catch (error) {
+      console.log('🚀 ~ ChatService ~ error:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException

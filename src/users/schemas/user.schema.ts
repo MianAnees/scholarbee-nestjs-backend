@@ -9,7 +9,7 @@ export namespace UserNS {
     export enum UserType {
       Student = 'Student',
       Admin = 'Admin',
-      Campus_Admin = 'Campus_Admin',
+      Campus_Admin = 'Admin', // REVIEW: This or the above should be changed to create a distinction between the admin and the campus admin
     }
 }
 

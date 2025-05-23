@@ -5,12 +5,14 @@ const emit_events = {
   notification_message: 'chat/notification/message',
 
   // Previously: `new_message`
-  conversation_message_at_id: (conversationId: string) =>
-    `chat/conversation/${conversationId}/message`, // TODO: this should be used by the client to listen for the conversation events
+  // TODO: Change this to generic `active_conversation_message`
+  conversation_message: `chat/conversation/message`, // TODO: this should be used by the client to listen for the conversation events
 } as const;
 
 const subscription_events = {
   join_conversation: 'join/conversation',
+  leave_conversation: 'leave/conversation',
+  change_conversation: 'change/conversation',
 } as const;
 
 const rooms = {

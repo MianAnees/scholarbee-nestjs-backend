@@ -49,7 +49,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   }
 
   private removeUserActiveConversation(userId: string) {
-    this.activeConversationStore.delete(userId);
+    return this.activeConversationStore.delete(userId);
   }
 
   // ***********************
@@ -105,8 +105,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     chat_gateway_constants.subscription_events.join_conversation,
   )
   joinConversation(authSocket: AuthenticatedSocket, conversationId: string) {
-    // // Get the user from the socket
-    // const user = authSocket.data.user;
+    // TODO: Add validation to check if the requested conversationId is associated with the user
 
     // Emit to the conversation room
     const conversationRoom =
@@ -114,62 +113,100 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
     // Join the conversation room
     authSocket.join(conversationRoom);
+    this.logger.log(
+      `User (${authSocket.data.user._id}) joined conversation room (${conversationRoom})`,
+    );
 
     // Set the user's active conversation
     this.setUserActiveConversation(authSocket.data.user._id, conversationId);
+    this.logger.log(
+      `Conversation (${conversationId}) set as active for user (${authSocket.data.user._id})`,
+    );
   }
+
+  // leave conversation
+  @SubscribeMessage(
+    chat_gateway_constants.subscription_events.leave_conversation,
+  )
+  leaveConversation(authSocket: AuthenticatedSocket) {
+
+    // Remove the user's active conversation
+    this.removeUserActiveConversation(authSocket.data.user._id);
+    this.logger.log(
+      `User (${authSocket.data.user._id}) removed as active for conversation`,
+    );
+    console.log('🚀 ~ ChatGateway ~ leaveConversation ~ authSocket:', this.getUserActiveConversation(authSocket.data.user._id));
+  }
+
+
+  // change conversation
+  @SubscribeMessage(
+    chat_gateway_constants.subscription_events.change_conversation,
+  )
+  changeConversation(authSocket: AuthenticatedSocket, conversationId: string) {
+    // TODO: Add validation to check if the requested conversationId is associated with the user
+    
+    // Remove the user's active conversation
+    this.removeUserActiveConversation(authSocket.data.user._id);
+    this.logger.log(
+      `User (${authSocket.data.user._id}) removed as active for conversation`,
+    );
+    
+    // Set the user's active conversation
+    this.setUserActiveConversation(authSocket.data.user._id, conversationId);
+    this.logger.log(
+      `Conversation (${conversationId}) set as active for user (${authSocket.data.user._id})`,
+    );
+  }
+  
+  
+  
 
   // ***********************
   // Emit methods
   // ***********************
 
   /**
-   * Emits a message notification ONLY to the
-   * - users which are recipients of the conversation (excludes the sender)
-   * - AND recipients is/are connected to the chat-socket
-   * - AND recipients which do not have the conversation as the active conversation
+   * Emits a message notification to the recipients in the following cases:
+   * - recipients are connected to the chat-socket
+   * - recipients do not have the conversation as the active conversation
    */
-  emitMessageNotificationToOutOfFocusRecipients(
-    conversationId: string,
+  emitMessageNotificationToRecipients(
+    recipientIds: string[],
     // TODO: Accept the exact notification payload or create-and-user a prepareMessageNotificaiton private method
     message: Message,
   ) {
     // ******************************
+    // ******************************
     // Get the recipients of the conversation by checking the users in the conversation room
     // ******************************
+    this.logger.debug('🍌 Getting the recipients of the conversation');
 
     let validRecipientsOfMessageNotification: string[] = [];
 
-    // Prepare the conversation room constant
-    const conversationRoom =
-      chat_gateway_constants.rooms.conversation(conversationId);
+    // Get the connection against each recipientId
+    for (const recipientId of recipientIds) {
+      const connection = this.socketStoreService.getConnection({
+        userId: recipientId.toString(),
+      });
 
-    // Get the sockets in the conversation room
-    const socketsConnectedToConversationRoom =
-      this.server.sockets.adapter.rooms.get(conversationRoom);
+      if (!connection) continue;
 
-    // Get the users against the sockets using the socket store service
-    // There is a possibility that the room is empty
-    socketsConnectedToConversationRoom.size > 0 &&
-      socketsConnectedToConversationRoom.forEach((socketId) => {
-        // For each socket in the conversation room, get the user
-        const { userId: connUserId } = this.socketStoreService.getConnection({
-          socketId,
-        }); // will throw an error if the socket is not found; but this should not happen as each socket should have an associated user
+      const { userId: connUserId } = connection;
 
-        // Exclude the sender as he is not a recipient
-        if (message.sender_id.toString() === connUserId) return;
+      // Check if the active conversation of current connectedUser is the same as active conversation of the message
+      const messageExistsInActiveConversationOfConnectedUser =
+        this.isActiveConversationOfUser(
+          connUserId,
+          message.conversation_id.toString(),
+        );
 
-        // Check if the active conversation of current connectedUser is the same as active conversation of the message
-        const messageExistsInActiveConversationOfConnectedUser =
-          this.isActiveConversationOfUser(connUserId, conversationId);
-
-        // No need to send a message-notification to the user if the message is in the active conversation of the user
-        if (messageExistsInActiveConversationOfConnectedUser) return;
-
+      // No need to send a message-notification to the user if the message is in the active conversation of the user
+      if (!messageExistsInActiveConversationOfConnectedUser) {
         // Append the user to the valid recipients if the message notification
         validRecipientsOfMessageNotification.push(connUserId);
-      });
+      }
+    }
 
     // ******************************
     // Send the message notification to the valid recipients
@@ -179,11 +216,15 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     const msgNotificationEvent =
       chat_gateway_constants.emit_events.notification_message;
 
+    this.logger.debug(
+      `🍌 Sending the message notification to the valid recipients`,
+    );
+
     // Send the message notification to the valid recipients
     this.server
       .to(validRecipientsOfMessageNotification)
       .emit(msgNotificationEvent, {
-        conversationId,
+        conversationId: message.conversation_id.toString(),
         messageId: message._id,
         senderId: message.sender_id,
         messageSnippet: message.content,
@@ -208,7 +249,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       chat_gateway_constants.rooms.conversation(conversationId);
 
     const conversationEvent =
-      chat_gateway_constants.emit_events.conversation_message_at_id(conversationId);
+      chat_gateway_constants.emit_events.conversation_message;
 
     // Send the message only to the conversation room
     this.server.to(conversationRoom).emit(conversationEvent, data);

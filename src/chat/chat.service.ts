@@ -247,23 +247,6 @@ export class ChatService {
     };
   }
 
-  private async handleMessageNotificationsIfRequired(
-    userId: string,
-    senderId: Types.ObjectId,
-    conversationId: string,
-    message: Message,
-  ) {
-    // Optional: Persist the notification in the database if required
-
-    // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
-    await this.chatGateway.emitMessageNotificationsIfRequired(
-      userId,
-      senderId,
-      conversationId,
-      message,
-    );
-  }
-
   /**
    * * How to "check for session validity" (a session is always started from a student message)
    * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
@@ -370,23 +353,12 @@ export class ChatService {
       });
 
       // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
-      await this.handleMessageNotificationsIfRequired(
+      await this.chatGateway.emitMessageNotificationsIfRequired(
         userId,
         senderId,
         conversationId,
         savedMessage,
       );
-
-      // In chat.service.ts (sendMessageNotificationIfChatWindowIsNotOpen)
-
-      //   Check if the receiver is active on the chat-socket
-      // const receiverSocket = this.chatGateway.getReceiverSocket(createMessageDto.conversation_id);
-
-      // if (receiverSocket) {
-      // Emit to the user via the gateway
-
-      // TODO: If the receiver is active on the chat-socket, then send a messge on the chat-socket.
-      // Otherwise, send a message-notification to the receiver.
 
       // Then emit the event with the saved message
       this.chatGateway.emitMessageToConversation(

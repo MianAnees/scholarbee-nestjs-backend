@@ -7,9 +7,8 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
-import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
-import notification_gateway_events from './notification-gateway.events';
+import notification_gateway_events from './notification-gateway.constant';
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -35,7 +34,10 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
 
   emitUserGlobalNotification(notification: Record<string, any>) {
     this.logger.log(`Emitting notification to all users`);
-    this.server.emit(notification_gateway_events.USER_GLOBAL, notification);
+    this.server.emit(
+      notification_gateway_events.emit_events.user_global,
+      notification,
+    );
   }
 
   // emitUserSpecificNotification(
@@ -55,7 +57,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   ) {
     this.emitToUsers(
       userIds,
-      notification_gateway_events.USER_SPECIFIC,
+      notification_gateway_events.emit_events.user_specific,
       notification,
     );
   }
@@ -74,7 +76,10 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
         throw new NotFoundException('No users connected');
       }
 
-      this.server.emit(notification_gateway_events.USER_GLOBAL, notification);
+      this.server.emit(
+        notification_gateway_events.emit_events.user_global,
+        notification,
+      );
 
       return {
         success: true,
@@ -105,7 +110,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
    */
   emitCampusGlobalNotification(notification: Record<string, any>) {
     return this.emitToGlobalCampusRoom(
-      notification_gateway_events.CAMPUS_GLOBAL,
+      notification_gateway_events.emit_events.campus_global,
       notification,
     );
   }
@@ -120,7 +125,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
     notification: Record<string, any>,
   ) {
     return this.emitToCampusSpecificRooms(
-      notification_gateway_events.CAMPUS_SPECIFIC,
+      notification_gateway_events.emit_events.campus_specific,
       campusIds,
       notification,
     );

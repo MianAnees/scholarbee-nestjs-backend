@@ -177,7 +177,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
     // Retrieve the event name
     const msgNotificationEvent =
-      chat_gateway_constants.emit_events.message_notification;
+      chat_gateway_constants.emit_events.notification_message;
 
     // Send the message notification to the valid recipients
     this.server
@@ -208,7 +208,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       chat_gateway_constants.rooms.conversation(conversationId);
 
     const conversationEvent =
-      chat_gateway_constants.emit_events.conversation_message(conversationId);
+      chat_gateway_constants.emit_events.conversation_message_at_id(conversationId);
 
     // Send the message only to the conversation room
     this.server.to(conversationRoom).emit(conversationEvent, data);

@@ -120,7 +120,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     // Set the user's active conversation
     this.setUserActiveConversation(authSocket.data.user._id, conversationId);
     this.logger.log(
-      `Conversation (${conversationId}) set as active for user (${authSocket.data.user._id})`,
+      `User (${authSocket.data.user._id}) set active conversation to (${conversationId})`,
     );
   }
 
@@ -129,10 +129,25 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     chat_gateway_constants.subscription_events.leave_conversation,
   )
   leaveConversation(authSocket: AuthenticatedSocket) {
+    // Leave the conversation room
+    const conversationId = this.getUserActiveConversation(
+      authSocket.data.user._id,
+    );
+
+    const conversationRoom =
+      chat_gateway_constants.rooms.conversation(conversationId);
+
+    if (conversationId) {
+      authSocket.leave(conversationRoom);
+      this.logger.log(
+        `User (${authSocket.data.user._id}) left conversation room (${conversationId})`,
+      );
+    }
+
     // Remove the user's active conversation
     this.removeUserActiveConversation(authSocket.data.user._id);
     this.logger.log(
-      `User (${authSocket.data.user._id}) removed as active for conversation`,
+      `User (${authSocket.data.user._id}) reset active conversation to null`,
     );
   }
 
@@ -143,16 +158,36 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   changeConversation(authSocket: AuthenticatedSocket, conversationId: string) {
     // TODO: Add validation to check if the requested conversationId is associated with the user
 
+    // Leave the conversation room
+    const prevConversationRoom = this.getUserActiveConversation(
+      authSocket.data.user._id,
+    );
+    if (prevConversationRoom) {
+      authSocket.leave(prevConversationRoom);
+      this.logger.log(
+        `User (${authSocket.data.user._id}) left conversation room (${prevConversationRoom})`,
+      );
+    }
+
+    // Join the new conversation room
+    const newConversationRoom =
+      chat_gateway_constants.rooms.conversation(conversationId);
+
+    authSocket.join(newConversationRoom);
+    this.logger.log(
+      `User (${authSocket.data.user._id}) joined conversation room (${newConversationRoom})`,
+    );
+
     // Remove the user's active conversation
     this.removeUserActiveConversation(authSocket.data.user._id);
     this.logger.log(
-      `User (${authSocket.data.user._id}) removed as active for conversation`,
+      `User (${authSocket.data.user._id}) reset active conversation to null`,
     );
 
     // Set the user's active conversation
     this.setUserActiveConversation(authSocket.data.user._id, conversationId);
     this.logger.log(
-      `Conversation (${conversationId}) set as active for user (${authSocket.data.user._id})`,
+      `User (${authSocket.data.user._id}) set active conversation to (${conversationId})`,
     );
   }
 

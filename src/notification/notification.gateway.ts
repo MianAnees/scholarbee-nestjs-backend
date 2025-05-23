@@ -1,14 +1,10 @@
-import {
-  HttpException,
-  NotFoundException
-} from '@nestjs/common';
-import {
-  WebSocketGateway
-} from '@nestjs/websockets';
+import { HttpException, NotFoundException } from '@nestjs/common';
+import { WebSocketGateway } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 import notification_gateway_events from './notification-gateway.constant';
+import { NotificationService } from './services/notfication.service';
 
 @WebSocketGateway({
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
@@ -32,7 +28,9 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   // Event methods (simplified using parent class methods)
   // ***********************
 
-  emitUserGlobalNotification(notification: Record<string, any>) {
+  emitUserGlobalNotification(
+    notification: ReturnType<NotificationService['sanitizeNotification']>,
+  ) {
     this.logger.log(`Emitting notification to all users`);
     this.server.emit(
       notification_gateway_events.emit_events.user_global,
@@ -53,7 +51,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
 
   emitMultipleUserSpecificNotifications(
     userIds: string[],
-    notification: Record<string, any>,
+    notification: ReturnType<NotificationService['sanitizeNotification']>,
   ) {
     this.emitToUsers(
       userIds,
@@ -66,7 +64,9 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
   // Event methods
   // ***********************
 
-  emitNotificationToEveryone(notification: any) {
+  emitNotificationToEveryone(
+    notification: ReturnType<NotificationService['sanitizeNotification']>,
+  ) {
     try {
       this.logger.log('Emitting notification to all users');
       // return all users
@@ -108,7 +108,9 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
    * @param campusId - The campus ID
    * @param notification - The notification payload
    */
-  emitCampusGlobalNotification(notification: Record<string, any>) {
+  emitCampusGlobalNotification(
+    notification: ReturnType<NotificationService['sanitizeNotification']>,
+  ) {
     return this.emitToGlobalCampusRoom(
       notification_gateway_events.emit_events.campus_global,
       notification,
@@ -122,7 +124,7 @@ export class NotificationGateway extends AuthenticatedConnectionStoreGateway {
    */
   emitMultipleCampusSpecificNotification(
     campusIds: string[],
-    notification: Record<string, any>,
+    notification: ReturnType<NotificationService['sanitizeNotification']>,
   ) {
     return this.emitToCampusSpecificRooms(
       notification_gateway_events.emit_events.campus_specific,

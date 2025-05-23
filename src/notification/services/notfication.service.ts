@@ -26,6 +26,7 @@ import {
 } from '../schemas/notification.schema';
 import { NotificationReadReceiptDocument } from '../schemas/notification-read-receipt.schema';
 import { NotificationReadReceipt } from '../schemas/notification-read-receipt.schema';
+import { BetterOmit } from 'src/utils/typescript.utils';
 
 @Injectable()
 export class NotificationService {

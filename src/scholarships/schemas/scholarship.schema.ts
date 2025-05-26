@@ -103,8 +103,8 @@ export class Scholarship {
   @Prop({ type: Date, default: Date.now })
   created_at: Date;
 
-  @Prop({ type: [String], default: [] })
-  favouriteBy: string[];
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'User', default: [] })
+  favouriteBy: MongooseSchema.Types.ObjectId[];
 }
 
 export const ScholarshipSchema = SchemaFactory.createForClass(Scholarship);

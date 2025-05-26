@@ -78,6 +78,10 @@ export class QueryScholarshipDto {
 
   @IsOptional()
   @Type(() => Number)
+  rating?: number;
+
+  @IsOptional()
+  @Type(() => Number)
   page?: number = 1;
 
   @IsOptional()

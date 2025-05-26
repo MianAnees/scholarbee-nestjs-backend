@@ -1,13 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
+import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
-
-// export enum DegreeLevelEnum {
-//     BACHELORS = 'Bachelors',
-//     MASTERS = 'Masters',
-//     PHD = 'PhD',
-// }
 
 export class QueryProgramDto extends PaginationDto {
   @IsOptional()
@@ -42,7 +36,7 @@ export class QueryProgramDto extends PaginationDto {
 
   @IsOptional()
   @IsString()
-  degree_level?: LastDegreeLevelEnum;
+  degree_level?: DegreeLevelEnum;
 
   @IsOptional()
   @IsString()

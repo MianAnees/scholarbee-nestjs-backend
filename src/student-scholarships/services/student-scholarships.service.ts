@@ -24,12 +24,12 @@ import {
   UpdateStudentScholarshipDto,
 } from '../dto/update-student-scholarship.dto';
 import {
-  FatherLivingStatusEnum,
   IStudentScholarship,
   ScholarshipApprovalStatusEnum,
   StudentScholarship,
   StudentScholarshipDocument,
 } from '../schemas/student-scholarship.schema';
+import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
 
 @Injectable()
 export class StudentScholarshipsService {

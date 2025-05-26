@@ -223,12 +223,12 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
       if (!connection) continue;
 
-      const { socketId: connSocketId } = connection;
+      const { socketId: connSocketId, userId: connUserId } = connection;
 
       // Check if the active conversation of current connectedUser is the same as active conversation of the message
       const messageExistsInActiveConversationOfConnectedUser =
         this.isActiveConversationOfUser(
-          connSocketId,
+          connUserId,
           message.conversation_id.toString(),
         );
 
@@ -251,6 +251,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       `🍌 Sending the message notification to the valid recipients`,
     );
 
+    if (validRecipientsOfMessageNotification.length > 0) {
     // Send the message notification to the valid recipients
     this.server
       .to(validRecipientsOfMessageNotification)
@@ -261,6 +262,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
         messageSnippet: message.content,
         timestamp: message.created_at,
       });
+    }
   }
 
   /**

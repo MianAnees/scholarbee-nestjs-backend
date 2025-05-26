@@ -1,8 +1,21 @@
+export enum ScholarshipStatusEnum {
+  Open = 'open',
+  Closed = 'closed',
+}
+
+export enum ScholarshipTypeEnum {
+  Merit = 'merit',
+}
+
+export enum ScholarshipLocationEnum {
+  Local = 'local',
+  International = 'international',
+}
+
 export enum FatherLivingStatusEnum {
   Alive = 'alive',
   Deceased = 'deceased',
 }
-
 export enum DegreeLevelEnum {
   Matriculation = 'Matriculation',
   IntermediateFScFA = 'Intermediate',

@@ -1,5 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import {
+  DegreeLevelEnum,
+  ScholarshipLocationEnum,
+  ScholarshipStatusEnum,
+  ScholarshipTypeEnum,
+} from 'src/common/constants/shared.constants';
 
 export type ScholarshipDocument = Scholarship & Document;
 
@@ -19,23 +25,23 @@ export class Scholarship {
 
   @Prop({
     type: String,
-    enum: ['merit', 'need'],
-    default: 'merit',
+    enum: ScholarshipTypeEnum,
+    default: ScholarshipTypeEnum.Merit,
   })
-  scholarship_type: string;
+  scholarship_type: ScholarshipTypeEnum;
 
   @Prop({
     type: String,
-    enum: ['local', 'international'],
-    default: 'local',
+    enum: ScholarshipLocationEnum,
+    default: ScholarshipLocationEnum.Local,
   })
-  location: string;
+  location: ScholarshipLocationEnum;
 
-  // TODO: `application_opening_date` to be added as a specific date
   @Prop({ type: Date, required: true })
   application_opening_date: Date;
 
-  // TODO: Degree_Level to be added
+  @Prop({ type: String, enum: DegreeLevelEnum, required: true })
+  degree_level: DegreeLevelEnum;
 
   @Prop({ type: Number, default: 0 })
   amount: number;
@@ -55,15 +61,20 @@ export class Scholarship {
   @Prop({ type: [Object], default: [], required: false })
   required_documents: RequiredDocument[];
 
-  @Prop({ type: String, enum: ['open', 'closed'], default: 'open' })
-  status: string;
+  @Prop({
+    type: String,
+    enum: ScholarshipStatusEnum,
+    default: ScholarshipStatusEnum.Open,
+  })
+  status: ScholarshipStatusEnum;
 
-  // TODO: Add Campus_ids (multiple) as an optional field
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Campus', default: [] })
+  campus_ids: MongooseSchema.Types.ObjectId[];
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'University',
-    // required: true,
+    required: false,
   })
   university_id: MongooseSchema.Types.ObjectId;
 
@@ -76,7 +87,6 @@ export class Scholarship {
   @Prop({ type: String })
   image_url?: string;
 
-  // @Prop({ type: String, required: true })
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Organization',

@@ -349,7 +349,7 @@ export class ChatService {
         );
       } else {
         senderId = currentConversation.campus_id;
-        recipientIds = [userObjectId.toString()];
+        recipientIds = [currentConversation.user_id.toString()];
         console.log(
           '🚀 ~ ChatService ~ Campus sending message to User:',
           recipientIds,

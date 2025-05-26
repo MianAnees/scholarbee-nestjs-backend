@@ -9,12 +9,12 @@ import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenti
 import { Message } from './schemas/message.schema';
 import chat_gateway_constants from './chat-gateway.constant';
 
-type ActiveConversationStore = {
-  userId: string;
-  conversationId: string;
-};
+// type ActiveConversationStore = {
+//   userId: string;
+//   conversationId: string;
+// };
 
-const activeConversationStore: Map<string, ActiveConversationStore> = new Map();
+// const activeConversationStore: Map<string, ActiveConversationStore> = new Map();
 
 @WebSocketGateway({
   cors: {
@@ -30,6 +30,9 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   // @WebSocketServer()
   // server: Server;
 
+  /**
+   * This is a map of the user's active conversation which keeps of active conversation of the each user
+   */
   protected activeConversationStore: Map<string, string> = new Map();
   // Only inject the services needed for this gateway
   constructor(

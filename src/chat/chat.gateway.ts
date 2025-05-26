@@ -206,7 +206,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     message: Message,
   ) {
     // ******************************
-    // ******************************
     // Get the recipients of the conversation by checking the users in the conversation room
     // ******************************
     this.logger.debug('🍌 Getting the recipients of the conversation');
@@ -221,19 +220,19 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
       if (!connection) continue;
 
-      const { userId: connUserId } = connection;
+      const { socketId: connSocketId } = connection;
 
       // Check if the active conversation of current connectedUser is the same as active conversation of the message
       const messageExistsInActiveConversationOfConnectedUser =
         this.isActiveConversationOfUser(
-          connUserId,
+          connSocketId,
           message.conversation_id.toString(),
         );
 
       // No need to send a message-notification to the user if the message is in the active conversation of the user
       if (!messageExistsInActiveConversationOfConnectedUser) {
         // Append the user to the valid recipients if the message notification
-        validRecipientsOfMessageNotification.push(connUserId);
+        validRecipientsOfMessageNotification.push(connSocketId);
       }
     }
 

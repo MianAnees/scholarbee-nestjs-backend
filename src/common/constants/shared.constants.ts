@@ -5,6 +5,7 @@ export enum ScholarshipStatusEnum {
 
 export enum ScholarshipTypeEnum {
   Merit = 'merit',
+  Need = 'need',
 }
 
 export enum ScholarshipLocationEnum {

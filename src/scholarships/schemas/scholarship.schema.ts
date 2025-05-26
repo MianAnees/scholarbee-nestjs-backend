@@ -78,8 +78,11 @@ export class Scholarship {
   })
   university_id: MongooseSchema.Types.ObjectId;
 
-  // @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Country' })
-  // country?: MongooseSchema.Types.ObjectId;
+  @Prop({ type: Number, default: 0, required: false })
+  rating?: number;
+
+  @Prop({ type: String, required: false })
+  major?: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Region' })
   region?: MongooseSchema.Types.ObjectId;

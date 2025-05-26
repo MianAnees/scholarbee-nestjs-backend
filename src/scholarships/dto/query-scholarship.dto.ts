@@ -1,12 +1,11 @@
-import {
-  IsOptional,
-  IsString,
-  IsEnum,
-  IsDate,
-  IsNumber,
-  IsArray,
-} from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  DegreeLevelEnum,
+  ScholarshipLocationEnum,
+  ScholarshipStatusEnum,
+  ScholarshipTypeEnum,
+} from 'src/common/constants/shared.constants';
 
 export class QueryScholarshipDto {
   @IsOptional()
@@ -18,8 +17,24 @@ export class QueryScholarshipDto {
   scholarship_name?: string;
 
   @IsOptional()
-  @IsEnum(['merit', 'need', 'local', 'international'])
-  scholarship_type?: string;
+  @IsEnum(ScholarshipTypeEnum)
+  scholarship_type?: ScholarshipTypeEnum;
+
+  @IsOptional()
+  @IsEnum(DegreeLevelEnum)
+  degree_level?: DegreeLevelEnum;
+
+  @IsOptional()
+  @IsEnum(ScholarshipLocationEnum)
+  location?: ScholarshipLocationEnum;
+
+  @IsOptional()
+  @IsString()
+  campus_id?: string;
+
+  @IsOptional()
+  @IsString()
+  major?: string;
 
   @IsOptional()
   @IsString()
@@ -34,8 +49,16 @@ export class QueryScholarshipDto {
   region?: string;
 
   @IsOptional()
-  @IsEnum(['open', 'closed'])
-  status?: string;
+  @IsEnum(ScholarshipStatusEnum)
+  status?: ScholarshipStatusEnum;
+
+  @IsOptional()
+  @Type(() => Date)
+  start_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  end_date?: Date;
 
   @IsOptional()
   @Type(() => Date)

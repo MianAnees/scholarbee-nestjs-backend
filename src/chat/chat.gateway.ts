@@ -43,12 +43,18 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   }
 
   private getUserActiveConversation(userId: string) {
-    return this.activeConversationStore.get(userId) ?? null;
+    const activeConversationId = this.activeConversationStore.get(userId) ?? null;
+    this.logger.log(
+      `Retrieved active conversation for user: ${userId} to ${activeConversationId}`,
+    );
+    return activeConversationId;
   }
 
   // TODO: Implement usage of this method
   private setUserActiveConversation(userId: string, conversationId: string) {
-    console.log(`Setting active conversation for user: ${userId} to ${conversationId}`)
+    this.logger.log(
+      `Setting active conversation for user: ${userId} to ${conversationId}`,
+    );
     this.activeConversationStore.set(userId, conversationId);
   }
 
@@ -91,10 +97,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     conversationIdOfMessage: string,
   ) {
     const activeConversationIdOfUser = this.getUserActiveConversation(userId);
-    console.log(
-      `🚀 ~ ChatGateway ~ retrieved activeConversationIdOfUser of ${userId}:`,
-      activeConversationIdOfUser,
-    );
     if (!activeConversationIdOfUser) return false;
 
     return conversationIdOfMessage === activeConversationIdOfUser;
@@ -225,7 +227,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       const connection = this.socketStoreService.getConnection({
         userId: recipientId.toString(),
       });
-      console.log('🚀 ~ ChatGateway ~ connection:', connection);
 
       if (!connection) continue;
 
@@ -237,10 +238,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
           connUserId,
           message.conversation_id.toString(),
         );
-      console.log(
-        '🚀 ~ ChatGateway ~ messageExistsInActiveConversationOfConnectedUser:',
-        messageExistsInActiveConversationOfConnectedUser,
-      );
 
       // No need to send a message-notification to the user if the message is in the active conversation of the user
       if (!messageExistsInActiveConversationOfConnectedUser) {
@@ -261,10 +258,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       `🍌 Sending the message notification to the valid recipients`,
     );
 
-    console.log(
-      '🚀 ~ ChatGateway ~ validRecipientsOfMessageNotification:',
-      validRecipientsOfMessageNotification,
-    );
 
     if (validRecipientsOfMessageNotification.length > 0) {
       // Send the message notification to the valid recipients
@@ -292,7 +285,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     chatMessage: Message,
   ) {
     // this.logger.log(`Emitting ${event} to conversation: ${conversationId}`);
-    // console.log('Emitting event:', event, 'to conversation:', conversationId);
 
     // Emit to the conversation room
     const conversationRoom =

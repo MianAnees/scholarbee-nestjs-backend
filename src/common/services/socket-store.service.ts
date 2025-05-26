@@ -64,7 +64,7 @@ export class SocketStoreService {
 
       return connection;
     } catch (error) {
-      this.logger.error('Error in getConnection', error);
+      // this.logger.error('Error in getConnection', error);
       return null;
     }
   }

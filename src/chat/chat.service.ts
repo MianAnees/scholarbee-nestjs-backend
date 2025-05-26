@@ -23,6 +23,8 @@ import { Message, MessageDocument } from './schemas/message.schema';
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
+  // Add in-memory cache for campus admins
+  private campusAdminsCache: Map<string, string[]> = new Map();
 
   constructor(
     @InjectModel(Conversation.name)
@@ -245,6 +247,36 @@ export class ChatService {
   }
 
   /**
+   * Get campus admin user IDs for a campus, using cache if available.
+   */
+  private async getCampusAdminIdsForCampus(
+    campusId: Types.ObjectId,
+    useCache: boolean = true,
+  ): Promise<string[]> {
+    const campusIdString = campusId.toString();
+
+    if (useCache && this.campusAdminsCache.has(campusIdString)) {
+      return this.campusAdminsCache.get(campusIdString)!;
+    }
+    // Fetch from DB
+    const campusAdmins = await this.userModel
+      .find({ campus_id: campusId, user_type: UserNS.UserType.Campus_Admin })
+      .select('_id');
+    const campusAdminIds = campusAdmins.map((a) => a._id.toString());
+    if (useCache) {
+      this.campusAdminsCache.set(campusIdString, campusAdminIds);
+    }
+    return campusAdminIds;
+  }
+
+  /**
+   * Invalidate the campus admin cache for a campus (call this when admins are added/removed)
+   */
+  public invalidateCampusAdminsCache(campusId: string) {
+    this.campusAdminsCache.delete(campusId);
+  }
+
+  /**
    * * How to "check for session validity" (a session is always started from a student message)
    * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
    *
@@ -292,6 +324,7 @@ export class ChatService {
     userId: string,
     senderType: 'user' | 'campus',
   ): Promise<Message> {
+    console.log('🚀 ~ ChatService ~ userId:', userId);
     try {
       // Validate IDs
       if (!Types.ObjectId.isValid(userId)) {
@@ -322,27 +355,16 @@ export class ChatService {
       let recipientIds: string[];
       if (senderType === 'user') {
         senderId = userObjectId;
-        // ! How and where to send the message-notification when the recipient is a campus?
-        // ! How to known which campus_admin to send the message-notification to?
         const recipientCampusId = currentConversation.campus_id;
-
-        // Get the campus admins (Get all the users with the campus_id same as the recipientCampusId)
-        const recipientCampusAdmins = await this.userModel
-          .find({
-            campus_id: recipientCampusId,
-            user_type: UserNS.UserType.Campus_Admin,
-          })
-          .select('_id');
-
-        // This should never happen
-        if (recipientCampusAdmins.length === 0) {
+        // Use the cache-aware method
+        const recipientCampusAdminIds =
+          await this.getCampusAdminIdsForCampus(recipientCampusId);
+        if (recipientCampusAdminIds.length === 0) {
           throw new NotFoundException(
             `No campus admins found for campus with ID ${recipientCampusId}`,
           );
         }
-
-        // Get the user ids of the campus admins
-        recipientIds = recipientCampusAdmins.map((admin) => String(admin._id));
+        recipientIds = recipientCampusAdminIds;
         console.log(
           '🚀 ~ ChatService ~ User sending message to Campus Admins:',
           recipientIds,
@@ -352,7 +374,7 @@ export class ChatService {
         recipientIds = [currentConversation.user_id.toString()];
         console.log(
           '🚀 ~ ChatService ~ Campus sending message to User:',
-          recipientIds,
+          recipientIds, // !BUG: This should show the student-user's userId
         );
       }
 
@@ -401,6 +423,8 @@ export class ChatService {
 
       // TODO: Get the message recipients
       // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
+      // ! BUG: notificaiton should only be emitted to recipients (excludes the sender)
+      // ! BUG: notification should only be emitted to recipients who are not in the conversation room
       this.chatGateway.emitMessageNotificationToRecipients(
         recipientIds,
         savedMessage,

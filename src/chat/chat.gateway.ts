@@ -48,6 +48,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
 
   // TODO: Implement usage of this method
   private setUserActiveConversation(userId: string, conversationId: string) {
+    console.log(`Setting active conversation for user: ${userId} to ${conversationId}`)
     this.activeConversationStore.set(userId, conversationId);
   }
 
@@ -90,6 +91,10 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     conversationIdOfMessage: string,
   ) {
     const activeConversationIdOfUser = this.getUserActiveConversation(userId);
+    console.log(
+      `🚀 ~ ChatGateway ~ retrieved activeConversationIdOfUser of ${userId}:`,
+      activeConversationIdOfUser,
+    );
     if (!activeConversationIdOfUser) return false;
 
     return conversationIdOfMessage === activeConversationIdOfUser;
@@ -220,6 +225,7 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       const connection = this.socketStoreService.getConnection({
         userId: recipientId.toString(),
       });
+      console.log('🚀 ~ ChatGateway ~ connection:', connection);
 
       if (!connection) continue;
 
@@ -231,6 +237,10 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
           connUserId,
           message.conversation_id.toString(),
         );
+      console.log(
+        '🚀 ~ ChatGateway ~ messageExistsInActiveConversationOfConnectedUser:',
+        messageExistsInActiveConversationOfConnectedUser,
+      );
 
       // No need to send a message-notification to the user if the message is in the active conversation of the user
       if (!messageExistsInActiveConversationOfConnectedUser) {
@@ -251,17 +261,22 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
       `🍌 Sending the message notification to the valid recipients`,
     );
 
+    console.log(
+      '🚀 ~ ChatGateway ~ validRecipientsOfMessageNotification:',
+      validRecipientsOfMessageNotification,
+    );
+
     if (validRecipientsOfMessageNotification.length > 0) {
-    // Send the message notification to the valid recipients
-    this.server
-      .to(validRecipientsOfMessageNotification)
-      .emit(msgNotificationEvent, {
-        conversationId: message.conversation_id.toString(),
-        messageId: message._id,
-        senderId: message.sender_id,
-        messageSnippet: message.content,
-        timestamp: message.created_at,
-      });
+      // Send the message notification to the valid recipients
+      this.server
+        .to(validRecipientsOfMessageNotification)
+        .emit(msgNotificationEvent, {
+          conversationId: message.conversation_id.toString(),
+          messageId: message._id,
+          senderId: message.sender_id,
+          messageSnippet: message.content,
+          timestamp: message.created_at,
+        });
     }
   }
 

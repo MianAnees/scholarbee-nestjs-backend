@@ -1,11 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import {
+  DegreeLevelEnum,
+  ScholarshipLocationEnum,
+  ScholarshipStatusEnum,
+  ScholarshipTypeEnum,
+} from 'src/common/constants/shared.constants';
 
 export type ScholarshipDocument = Scholarship & Document;
 
 interface RequiredDocument {
   id: string;
   document_name: string;
+  // TODO: Add `is_optional` as an optional field to support optional documents
 }
 
 @Schema({ timestamps: true, collection: 'scholarships' })
@@ -18,10 +25,23 @@ export class Scholarship {
 
   @Prop({
     type: String,
-    enum: ['merit', 'need', 'local', 'international'],
-    default: 'merit',
+    enum: ScholarshipTypeEnum,
+    default: ScholarshipTypeEnum.Merit,
   })
-  scholarship_type: string;
+  scholarship_type: ScholarshipTypeEnum;
+
+  @Prop({
+    type: String,
+    enum: ScholarshipLocationEnum,
+    default: ScholarshipLocationEnum.Local,
+  })
+  location: ScholarshipLocationEnum;
+
+  @Prop({ type: Date, required: true })
+  application_opening_date: Date;
+
+  @Prop({ type: String, enum: DegreeLevelEnum, required: true })
+  degree_level: DegreeLevelEnum;
 
   @Prop({ type: Number, default: 0 })
   amount: number;
@@ -38,21 +58,31 @@ export class Scholarship {
   @Prop({ type: String, required: false })
   eligibility_criteria: string;
 
-  @Prop({ type: [Object], default: [] })
+  @Prop({ type: [Object], default: [], required: false })
   required_documents: RequiredDocument[];
 
-  @Prop({ type: String, enum: ['open', 'closed'], default: 'open' })
-  status: string;
+  @Prop({
+    type: String,
+    enum: ScholarshipStatusEnum,
+    default: ScholarshipStatusEnum.Open,
+  })
+  status: ScholarshipStatusEnum;
+
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Campus', default: [] })
+  campus_ids: MongooseSchema.Types.ObjectId[];
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'University',
-    required: true,
+    required: false,
   })
   university_id: MongooseSchema.Types.ObjectId;
 
-  // @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Country' })
-  // country?: MongooseSchema.Types.ObjectId;
+  @Prop({ type: Number, default: 0, required: false })
+  rating?: number;
+
+  @Prop({ type: String, required: false })
+  major?: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Region' })
   region?: MongooseSchema.Types.ObjectId;
@@ -60,8 +90,11 @@ export class Scholarship {
   @Prop({ type: String })
   image_url?: string;
 
-  // @Prop({ type: String, required: true })
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Organization' })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+  })
   organization_id: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: String, required: true })
@@ -70,8 +103,8 @@ export class Scholarship {
   @Prop({ type: Date, default: Date.now })
   created_at: Date;
 
-  @Prop({ type: [String], default: [] })
-  favouriteBy: string[];
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'User', default: [] })
+  favouriteBy: MongooseSchema.Types.ObjectId[];
 }
 
 export const ScholarshipSchema = SchemaFactory.createForClass(Scholarship);

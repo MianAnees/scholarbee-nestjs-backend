@@ -1,18 +1,22 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
 import { ParseObjectId } from 'nestjs-object-id';
-import { FatherLivingStatusEnum, LastDegreeLevelEnum, RequiredDocumentTitleEnum, StudentScholarship } from '../schemas/student-scholarship.schema';
-
+import { StudentScholarship } from '../schemas/student-scholarship.schema';
+import {
+  DegreeLevelEnum,
+  FatherLivingStatusEnum,
+  RequiredDocumentTitleEnum,
+} from 'src/common/constants/shared.constants';
 
 // last_degree DTO
 export class LastDegreeDto {
-    @IsString()
-    @IsEnum(LastDegreeLevelEnum)
-    level: LastDegreeLevelEnum;
+  @IsString()
+  @IsEnum(DegreeLevelEnum)
+  level: DegreeLevelEnum;
 
-    @IsNumber()
-    @Type(() => Number)
-    percentage: number;
+  @IsNumber()
+  @Type(() => Number)
+  percentage: number;
 }
 
 // student_snapshot DTO

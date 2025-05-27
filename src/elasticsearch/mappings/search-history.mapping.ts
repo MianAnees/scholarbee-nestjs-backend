@@ -1,9 +1,8 @@
 import { EsEntity, EsField } from "es-mapping-ts";
-import { BaseMappingEntity } from "src/elasticsearch/mappings/base.mapping";
-import { ES_INDICES } from "src/elasticsearch/types/es-indices.enum";
-import { LastDegreeLevelEnum } from "src/student-scholarships/schemas/student-scholarship.schema";
-import { UserNS } from "src/users/schemas/user.schema";
-
+import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
+import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
+import { ES_INDICES } from 'src/elasticsearch/types/es-indices.enum';
+import { UserNS } from 'src/users/schemas/user.schema';
 
 // TODO: Should be mapped to the schema model names
 export enum SearchResourceEnum {
@@ -23,7 +22,7 @@ interface ISearchHistoryData {
   program_id?: string;
   program_name?: string;
 
-  degree_level?: string | LastDegreeLevelEnum; // TODO: Create a main "degree level" enum and use it here
+  degree_level?: string | DegreeLevelEnum; // TODO: Create a main "degree level" enum and use it here
   major?: string; // TODO: Create a main "major" enum, restrict the data entry to only the values in the enum and then use it here
   mode_of_study?: string;
 }

@@ -1,7 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Scholarship, ScholarshipDocument } from '../schemas/scholarship.schema';
+import {
+  Model,
+  RootFilterQuery,
+  Types,
+  Schema as MongooseSchema,
+} from 'mongoose';
+import {
+  Scholarship,
+  ScholarshipDocument,
+} from '../schemas/scholarship.schema';
 import { CreateScholarshipDto } from '../dto/create-scholarship.dto';
 import { QueryScholarshipDto } from '../dto/query-scholarship.dto';
 
@@ -51,9 +59,16 @@ export class ScholarshipsService {
       sortBy = 'created_at',
       sortOrder = 'desc',
       populate = true,
+      degree_level,
+      location,
+      campus_id,
+      major,
+      start_date,
+      end_date,
+      rating,
     } = queryDto;
 
-    const filter: any = {};
+    const filter: RootFilterQuery<ScholarshipDocument> = {};
 
     if (search) {
       filter.$or = [
@@ -106,8 +121,41 @@ export class ScholarshipsService {
       }
     }
 
+    // `is_favourite` flag can be used to get the favorites of the requesting user. However, the endpoint is public and the requesting user might not be authenticated
     if (favouriteBy && favouriteBy.length > 0) {
-      filter.favouriteBy = { $in: favouriteBy };
+      filter.favouriteBy = {
+        $in: favouriteBy.map((id) => new Types.ObjectId(id)),
+      };
+    }
+
+    if (degree_level) {
+      filter.degree_level = degree_level;
+    }
+
+    if (location) {
+      filter.location = location;
+    }
+
+    if (campus_id) {
+      filter.campus_ids = { $in: [new Types.ObjectId(campus_id)] };
+    }
+
+    if (major) {
+      filter.major = { $regex: major, $options: 'i' };
+    }
+
+    if (rating) {
+      filter.rating = { $gte: rating };
+    }
+
+    if (start_date || end_date) {
+      filter.application_opening_date = {};
+      if (start_date) {
+        filter.application_opening_date.$gte = start_date;
+      }
+      if (end_date) {
+        filter.application_opening_date.$lte = end_date;
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -212,6 +260,7 @@ export class ScholarshipsService {
     if (!Types.ObjectId.isValid(scholarshipId)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
+    const userIdObject = new MongooseSchema.Types.ObjectId(userId);
     const scholarship = await this.scholarshipModel.findById(scholarshipId);
     if (!scholarship) {
       throw new NotFoundException(
@@ -221,8 +270,8 @@ export class ScholarshipsService {
     if (!scholarship.favouriteBy) {
       scholarship.favouriteBy = [];
     }
-    if (!scholarship.favouriteBy.includes(userId)) {
-      scholarship.favouriteBy.push(userId);
+    if (!scholarship.favouriteBy.includes(userIdObject)) {
+      scholarship.favouriteBy.push(userIdObject);
       await scholarship.save();
     }
     return scholarship;
@@ -235,13 +284,18 @@ export class ScholarshipsService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
+    const userIdObject = new MongooseSchema.Types.ObjectId(userId);
+
     const scholarship = await this.scholarshipModel.findById(id);
     if (!scholarship) {
       throw new NotFoundException(`Scholarship with ID ${id} not found`);
     }
-    if (scholarship.favouriteBy && scholarship.favouriteBy.includes(userId)) {
+    if (
+      scholarship.favouriteBy &&
+      scholarship.favouriteBy.includes(userIdObject)
+    ) {
       scholarship.favouriteBy = scholarship.favouriteBy.filter(
-        (uid) => uid !== userId,
+        (uid) => uid !== userIdObject,
       );
       await scholarship.save();
     }

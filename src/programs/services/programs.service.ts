@@ -4,15 +4,15 @@ import { Model, RootFilterQuery, SortOrder, Types } from 'mongoose';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import {
   ISearchHistoryIndexDoc,
-  SearchResourceEnum
+  SearchResourceEnum,
 } from 'src/elasticsearch/mappings/search-history.mapping';
-import { LastDegreeLevelEnum } from 'src/student-scholarships/schemas/student-scholarship.schema';
 import { UserNS } from 'src/users/schemas/user.schema';
 import { CompareProgramsDto } from '../dto/compare-programs.dto';
 import { CreateProgramDto } from '../dto/create-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { Program, ProgramDocument } from '../schemas/program.schema';
+import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
 
 @Injectable()
 export class ProgramsService {
@@ -23,9 +23,14 @@ export class ProgramsService {
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
   async indexProgramSearchHistory(user_id: string, queryDto: QueryProgramDto) {
-    const { degree_level, major, mode_of_study, name: program_name, campus_id, university_id } = queryDto;
-
-
+    const {
+      degree_level,
+      major,
+      mode_of_study,
+      name: program_name,
+      campus_id,
+      university_id,
+    } = queryDto;
 
     const programSearchHistory: ISearchHistoryIndexDoc = {
       user_id,
@@ -36,13 +41,14 @@ export class ProgramsService {
         program_name,
         university_id,
         campus_id,
-        degree_level: degree_level as LastDegreeLevelEnum,
+        degree_level: degree_level as DegreeLevelEnum,
         mode_of_study,
       },
-    }
+    };
 
-    return await this.searchHistoryAnalyticsService.indexSearchHistory(programSearchHistory);
-
+    return await this.searchHistoryAnalyticsService.indexSearchHistory(
+      programSearchHistory,
+    );
   }
 
   // method to translate the university_id filter to campus_id filter

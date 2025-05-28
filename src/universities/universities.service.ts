@@ -24,7 +24,7 @@ export class UniversitiesService {
         private admissionModel: Model<AdmissionDocument>,
     ) { }
 
-    private buildAdmissionStatusAggStages(admission_program_status: AdmissionStatusEnum) {
+    private buildAdmissionStatusAggStages(admission_program_status: AdmissionStatusEnum): PipelineStage[] {
         const associatedAdmissionsLookupStage = {
             $lookup: {
                 from: 'admissions', // The name of the admissions collection
@@ -66,7 +66,7 @@ export class UniversitiesService {
         return []; // Should not happen if called correctly, or handle default
     }
     
-    private getAddressPopulationStages(): any[] {
+    private getAddressPopulationAggStages(): PipelineStage[] {
         return [
             {
                 $lookup: {
@@ -132,7 +132,7 @@ export class UniversitiesService {
         }
 
         // Always add address population stages
-        filterPipeline.push(...this.getAddressPopulationStages());
+        filterPipeline.push(...this.getAddressPopulationAggStages());
 
         // Remove temp fields
         filterPipeline.push({ $project: { __associated_admissions: 0 } });

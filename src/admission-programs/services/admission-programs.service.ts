@@ -23,11 +23,11 @@ export class AdmissionProgramsService {
   ) {}
 
   async findAllDegreeLevels(queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto): Promise<string[]> {
-    const { university_id } = queryAdmissionProgramDegreeLevelsDto;
+    const { university_id, campus_id } = queryAdmissionProgramDegreeLevelsDto;
     const pipeline: PipelineStage[] = [];
 
-    // Stage 1: Optional: Filter by university_id if provided
-    if (university_id) {
+    // Stage 1: Optional: Filter by university_id and/or campus_id if provided
+    if (university_id || campus_id) {
       // Lookup to admissions collection
       pipeline.push({
         $lookup: {
@@ -38,8 +38,9 @@ export class AdmissionProgramsService {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$_id', { $toObjectId: '$$admissionIdStr' }] }, // Convert string to ObjectId for match
-                    { $eq: ['$university_id', String(university_id)] } // Compare with provided universityId
+                    { $eq: ['$_id', { $toObjectId: '$$admissionIdStr' }] },
+                    ...(university_id ? [{ $eq: ['$university_id', String(university_id)] }] : []),
+                    ...(campus_id ? [{ $eq: ['$campus_id', String(campus_id)] }] : [])
                   ]
                 }
               }
@@ -48,7 +49,7 @@ export class AdmissionProgramsService {
           as: 'admissionDetails'
         }
       });
-      // Filter out AdmissionPrograms that don't have matching admissionDetails (i.e., not for the given university)
+      // Filter out AdmissionPrograms that don't have matching admissionDetails (i.e., not for the given university/campus)
       pipeline.push({
         $match: {
           admissionDetails: { $ne: [] } // or $size: { $gt: 0 }

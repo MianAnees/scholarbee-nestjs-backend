@@ -8,7 +8,7 @@ import { Program, ProgramDocument } from '../programs/schemas/program.schema';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
 import { RootFilterQuery } from 'mongoose';
 import { QueryUniversityDto } from './dto/query-university.dto';
-import { Admission, AdmissionDocument } from '../admissions/schemas/admission.schema';
+import { Admission, AdmissionDocument, AdmissionStatusEnum } from '../admissions/schemas/admission.schema';
 
 @Injectable()
 export class UniversitiesService {
@@ -25,20 +25,51 @@ export class UniversitiesService {
 
 
     // TODO: Instead of searching through the programs, get a list of unique university ids in the `admission` collection
-    private async extractUniversityIdsWithAvailablePrograms(): Promise<string[]> {
+    private async extractUniversityIdsWithAvailablePrograms(admission_program_status: AdmissionStatusEnum): Promise<string[]> {
         
-        const universityIdsWithOpenAdmissions = await this.admissionModel.aggregate([
-            {
-                $group: {
-                    _id: '$university_id'
-                }
-            }
-        ]).exec();
+        let universityIds: string[] = [];
 
-        // Extract the university IDs
-        const uniqueUniversityIds = universityIdsWithOpenAdmissions.map(item => item._id.toString());
+        if (admission_program_status === AdmissionStatusEnum.UNAVAILABLE) {
+            // Find universities that do NOT have any corresponding documents in the admissions collection.
+            const universitiesWithoutAdmissions = await this.universityModel.aggregate([
+                {
+                    $lookup: {
+                        from: 'admissions', // The name of the admissions collection
+                        localField: '_id', // Field from the universities collection
+                        foreignField: 'university_id', // Field from the admissions collection
+                        as: 'admissions' // Output array field
+                    }
+                },
+                {
+                    $match: {
+                        admissions: { $size: 0 } // Filter out universities that have no admissions
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1 // Only return the university ID
+                    }
+                }
+            ]).exec();
+            universityIds = universitiesWithoutAdmissions.map(u => u._id.toString());
+
+        } else if (admission_program_status === AdmissionStatusEnum.AVAILABLE) {
+            // For AdmissionStatusEnum.AVAILABLE, get all university IDs that have any admission document.
+            const universitiesWithMatchingAdmissions = await this.admissionModel.aggregate([
+                {
+                    $group: {
+                        _id: '$university_id'
+                    }
+                }
+            ]).exec();
+            universityIds = universitiesWithMatchingAdmissions.map(item => item._id.toString());
+        }
+        // If admission_program_status is not AVAILABLE or UNAVAILABLE, it will return an empty array,
+        // effectively not filtering by admission status if other statuses like OPEN/CLOSED are passed.
+        // Or, we could choose to make AVAILABLE the default if no specific status we handle is passed.
+        // For now, let's stick to explicit handling.
         
-        return uniqueUniversityIds;
+        return universityIds;
     }
     
     async create(createUniversityDto: CreateUniversityDto, userId: string) {
@@ -56,7 +87,7 @@ export class UniversitiesService {
         queryDto: QueryUniversityDto,
         overrideFilter: RootFilterQuery<UniversityDocument> = {}
     ) {
-        const { page, limit, sortOrder, sortBy, name: nameSearch } = queryDto;
+        const { page, limit, sortOrder, sortBy, name: nameSearch,admission_program_status } = queryDto;
         const skip = (page - 1) * limit;
         const sort = { [sortBy]: sortOrder };
 
@@ -66,6 +97,19 @@ export class UniversitiesService {
                name: { $regex: nameSearch, $options: 'i' } 
             }
         }
+
+        // if `admission_program_status` is provided, add a filter to the overrideFilter
+        if (admission_program_status){
+
+            // get the university ids with available programs
+            const universityIdsWithAvailablePrograms = await this.extractUniversityIdsWithAvailablePrograms(admission_program_status);
+            
+            overrideFilter = {
+                ...overrideFilter,
+                _id: { $in: universityIdsWithAvailablePrograms }
+            }
+        }
+        
 
         const [data, total] = await Promise.all([
             this.universityModel.find(overrideFilter)
@@ -87,7 +131,6 @@ export class UniversitiesService {
             },
         };
     }
-
     async findAllWithAvailablePrograms(queryDto: QueryUniversityDto) {
         const uniqueUniversityIds = await this.extractUniversityIdsWithAvailablePrograms();
 
@@ -98,8 +141,6 @@ export class UniversitiesService {
 
         return result;
     }
-    
-
     async findOne(id: string) {
         return await this.universityModel.findById(id)
             .populate('address_id');

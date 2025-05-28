@@ -10,5 +10,5 @@ export class QueryUniversityDto extends PaginationDto {
   // an enum query parameter to get the universities according to the status of the programs i.e. "available" or "unavailable" or "open" (available and not past admission deadline) or "closed" (available but past admission deadline)
   @IsOptional()
   @IsEnum(AdmissionStatusEnum)
-  admission_status?: AdmissionStatusEnum ;
+  admission_program_status?: AdmissionStatusEnum ;
 }

@@ -8,6 +8,7 @@ import { Program, ProgramDocument } from '../programs/schemas/program.schema';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
 import { RootFilterQuery } from 'mongoose';
 import { QueryUniversityDto } from './dto/query-university.dto';
+import { Admission, AdmissionDocument } from '../admissions/schemas/admission.schema';
 
 @Injectable()
 export class UniversitiesService {
@@ -18,30 +19,15 @@ export class UniversitiesService {
         private programModel: Model<ProgramDocument>,
         @InjectModel(Campus.name)
         private campusModel: Model<CampusDocument>,
+        @InjectModel(Admission.name)
+        private admissionModel: Model<AdmissionDocument>,
     ) { }
 
 
-    private async extractUniversityIdsWithOpenPrograms(): Promise<string[]> {
+    // TODO: Instead of searching through the programs, get a list of unique university ids in the `admission` collection
+    private async extractUniversityIdsWithAvailablePrograms(): Promise<string[]> {
         
-        // First, get unique campus IDs that have programs
-        const campusIdsWithPrograms = await this.programModel.aggregate([
-            {
-                $group: {
-                    _id: '$campus_id'
-                }
-            }
-        ]).exec();
-
-        // Extract the unique campus IDs
-        const uniqueCampusIds = campusIdsWithPrograms.map(item => new Types.ObjectId(item._id));
-
-        // Then, get unique university IDs from those campuses
-        const universityIdsWithPrograms = await this.campusModel.aggregate([
-            {
-                $match: {
-                    _id: { $in: uniqueCampusIds }
-                }
-            },
+        const universityIdsWithOpenAdmissions = await this.admissionModel.aggregate([
             {
                 $group: {
                     _id: '$university_id'
@@ -50,7 +36,7 @@ export class UniversitiesService {
         ]).exec();
 
         // Extract the university IDs
-        const uniqueUniversityIds = universityIdsWithPrograms.map(item => item._id);
+        const uniqueUniversityIds = universityIdsWithOpenAdmissions.map(item => item._id.toString());
         
         return uniqueUniversityIds;
     }
@@ -102,8 +88,8 @@ export class UniversitiesService {
         };
     }
 
-    async findAllWithOpenPrograms(queryDto: QueryUniversityDto) {
-        const uniqueUniversityIds = await this.extractUniversityIdsWithOpenPrograms();
+    async findAllWithAvailablePrograms(queryDto: QueryUniversityDto) {
+        const uniqueUniversityIds = await this.extractUniversityIdsWithAvailablePrograms();
 
         // Finally, get the universities with pagination
         const result = await this.findAll(queryDto, {

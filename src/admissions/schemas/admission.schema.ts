@@ -9,8 +9,9 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 export enum AdmissionStatusEnum {
     AVAILABLE = 'available', // if the admission (admission_program) is available
     UNAVAILABLE = 'unavailable', // if the admission (admission_program) is unavailable
-    OPEN = 'open', // available and not past admission deadline
-    CLOSED = 'closed', // available but past admission deadline
+    // ! Temporarily commented out because the admission_program_status is not supported in the findAll method of the universities controller
+    // OPEN = 'open', // available and not past admission deadline
+    // CLOSED = 'closed', // available but past admission deadline
 }
 
 

@@ -1,6 +1,6 @@
 import { PipelineStage, Types} from "mongoose";
 
-export const toObjectId = (id: string) => {
+export const stringToObjectId = (id: string) => {
     return new /* Schema. */Types.ObjectId(id);
 }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, SortOrder, Types } from 'mongoose';
+import { Model, PipelineStage, SortOrder, Types } from 'mongoose';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
 import { ISearchHistoryIndexDoc, SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
 import { UserNS } from 'src/users/schemas/user.schema';
@@ -10,6 +10,8 @@ import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
 import { AdmissionProgram, AdmissionProgramDocument } from '../schemas/admission-program.schema';
+import { QueryAdmissionProgramDegreeLevelsDto } from 'src/admission-programs/dto/query-admission-program-degree-levels.dto';
+import { stringToObjectId } from 'src/utils/db.utils';
 
 @Injectable()
 export class AdmissionProgramsService {
@@ -19,6 +21,92 @@ export class AdmissionProgramsService {
     private readonly admissionProgramsGateway: AdmissionProgramsGateway,
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
+
+  async findAllDegreeLevels(queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto): Promise<string[]> {
+    const { university_id } = queryAdmissionProgramDegreeLevelsDto;
+    const pipeline: PipelineStage[] = [];
+
+    // Stage 1: Optional: Filter by university_id if provided
+    if (university_id) {
+      // Lookup to admissions collection
+      pipeline.push({
+        $lookup: {
+          from: 'admissions',
+          let: { admissionIdStr: '$admission' }, // admission is a string ID in AdmissionProgram
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$_id', { $toObjectId: '$$admissionIdStr' }] }, // Convert string to ObjectId for match
+                    { $eq: ['$university_id', String(university_id)] } // Compare with provided universityId
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'admissionDetails'
+        }
+      });
+      // Filter out AdmissionPrograms that don't have matching admissionDetails (i.e., not for the given university)
+      pipeline.push({
+        $match: {
+          admissionDetails: { $ne: [] } // or $size: { $gt: 0 }
+        }
+      });
+    }
+
+    // Stage 2: Lookup to programs collection
+    // The 'program' field in AdmissionProgram is a string ID
+    pipeline.push({
+      $lookup: {
+        from: 'programs',
+        let: { programIdStr: '$program' },
+        pipeline: [
+          {
+            // match the program_id in the admission_program with the program_id in the program collection
+            // also match the docs where degree_level is not null or empty and also exists (not undefined)
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$_id', { $toObjectId: '$$programIdStr' }] },
+                  { $ne: [ { $ifNull: ['$degree_level', null] }, null ] },
+                  { $ne: [ { $ifNull: ['$degree_level', ''] }, '' ] }
+                ]
+              }
+            }
+          },
+          {
+            $project: { degree_level: 1 } // Only need degree_level from program (_id is also automatically added to the pipeline)
+          }
+        ],
+        as: 'programDetails'
+      }
+    });
+
+    // Stage 3: Unwind the programDetails array (should usually be one program per admission program)
+    pipeline.push({
+      $unwind: '$programDetails'
+    });
+
+    // Stage 4: Group by degree_level to get unique values
+    pipeline.push({
+      $group: {
+        _id: '$programDetails.degree_level'
+      }
+    });
+
+    // Stage 5: Project to reshape the output
+    pipeline.push({
+      $project: {
+        _id: 0,
+        degree_level: '$_id'
+      }
+    });
+
+    const result = await this.admissionProgramModel.aggregate(pipeline).exec();
+    return result.map(item => item.degree_level);
+  }
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
   async indexAdmissionProgramSearchHistory(

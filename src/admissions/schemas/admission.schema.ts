@@ -1,6 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
+/**
+ * This enum is used to define the status of the `admission_program` which is 1-1 mapped with the `admission` document.
+ * Even though this is a property of the `admission_program` document, it is defined in the `admission` schema because it is dependent on the fields of the `admission` document i.e. `admission_deadline`.
+ * ? This can be used to query the `universities` or `campuses` according to the status of the `admission_program` associated with them.
+ */
+export enum AdmissionStatusEnum {
+    AVAILABLE = 'available', // if the admission (admission_program) is available
+    UNAVAILABLE = 'unavailable', // if the admission (admission_program) is unavailable
+    OPEN = 'open', // available and not past admission deadline
+    CLOSED = 'closed', // available but past admission deadline
+}
+
+
 export type AdmissionDocument = Admission & Document;
 
 @Schema({ timestamps: true })

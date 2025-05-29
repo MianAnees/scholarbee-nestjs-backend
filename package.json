@@ -31,7 +31,9 @@
     "es:stop": "sh elastic-start-local/stop.sh",
     "es:uninstall": "sh elastic-start-local/uninstall.sh",
     "db:backup": "bash scripts/backup-db.sh",
-    "db:get-programs": "ts-node scripts/get-programs.ts"
+    "db:get-distinct-program-degree-levels": "ts-node scripts/get-distinct-program-degree-levels.ts",
+    "db:map-gen": "ts-node scripts/map-gen.ts",
+    "db:replace-degree-level": "ts-node scripts/replace-degree-level.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.804.0",

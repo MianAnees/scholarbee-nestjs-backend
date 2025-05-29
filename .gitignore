@@ -3,6 +3,10 @@
 /node_modules
 /build
 /collections
+
+# Database backups and exports
+scripts/*
+
 # Logs
 logs
 *.log

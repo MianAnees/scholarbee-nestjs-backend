@@ -1,10 +1,11 @@
 import { MongoClient } from 'mongodb';
 import * as dotenv from 'dotenv';
+import { ProgramDocument } from 'src/programs/schemas/program.schema';
 
 // Load environment variables
 dotenv.config();
 
-async function getAllPrograms() {
+async function getAllProgramDegreeLevels() {
   const mongoUri = process.env.MONGODB_URI;
 
   if (!mongoUri) {
@@ -19,20 +20,18 @@ async function getAllPrograms() {
     await client.connect();
 
     const db = client.db();
-    const collection = db.collection('programs');
+    const collection = db.collection<ProgramDocument>('programs');
 
-    console.log('📥 Retrieving all programs...');
-    const programs = await collection.find({}).toArray();
+    console.log('📥 Retrieving all degree levels...');
+    const degreeLevels = await collection.distinct('degree_level');
 
-    console.log(`✅ Found ${programs.length} programs in the collection`);
-    console.log('\n📋 Programs:');
-
-    programs.forEach((program, index) => {
-      console.log(`\n--- Program ${index + 1} ---`);
-      console.log(JSON.stringify(program, null, 2));
-    });
+    console.log(
+      `✅ Found ${degreeLevels.length} degree levels in the collection`,
+    );
+    console.log('\n📋 Count of Degree Levels:', degreeLevels.length);
+    console.log('\n📋 Degree Levels:', degreeLevels);
   } catch (error) {
-    console.error('❌ Error retrieving programs:', error.message);
+    console.error('❌ Error retrieving degree levels:', error.message);
     process.exit(1);
   } finally {
     await client.close();
@@ -41,4 +40,4 @@ async function getAllPrograms() {
 }
 
 // Run the script
-getAllPrograms();
+getAllProgramDegreeLevels();

@@ -13,6 +13,7 @@ import {
 import { CampusesService } from './campuses.service';
 import { CreateCampusDto } from './dto/create-campus.dto';
 import { UpdateCampusDto } from './dto/update-campus.dto';
+import { QueryCampusDto } from './dto/query-campus.dto';
 import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guard';
 import { Request } from 'express';
 
@@ -28,13 +29,10 @@ export class CampusesController {
   }
 
   @Get()
-  findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('sortBy') sortBy: string = 'createdAt',
-    @Query('order') order: string = 'desc',
-  ) {
-    return this.campusesService.findAll(page, limit, sortBy, order as any);
+  async findAll(@Query() queryDto: QueryCampusDto) {
+    const result = await this.campusesService.findAll(queryDto);
+
+    return result;
   }
 
   @Get(':id')

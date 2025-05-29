@@ -20,6 +20,7 @@ export enum FatherLivingStatusEnum {
 export enum DegreeLevelEnum {
   Matriculation = 'Matriculation',
   IntermediateFScFA = 'Intermediate',
+  Associate = 'Associate',
   Bachelors = 'Bachelors',
   Masters = 'Masters',
   PhD = 'PhD',

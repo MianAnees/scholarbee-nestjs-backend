@@ -21,16 +21,12 @@ export class LastDegreeDto {
 
 // student_snapshot DTO
 export class StudentSnapshotDto {
-    @IsString()
-    @IsEnum(FatherLivingStatusEnum)
-    father_status: FatherLivingStatusEnum;
+  @IsString()
+  monthly_household_income: string;
 
-    @IsString()
-    monthly_household_income: string;
-
-    @ValidateNested()
-    @Type(() => LastDegreeDto)
-    last_degree: LastDegreeDto;
+  @ValidateNested()
+  @Type(() => LastDegreeDto)
+  last_degree: LastDegreeDto;
 }
 
 export class RequiredDocumentDto {

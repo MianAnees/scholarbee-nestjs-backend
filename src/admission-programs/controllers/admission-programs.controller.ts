@@ -17,6 +17,8 @@ import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsService } from '../services/admission-programs.service';
+import { QueryAdmissionProgramDegreeLevelsDto } from '../dto/query-admission-program-degree-levels.dto';
+import { QueryAdmissionProgramMajorsDto } from '../dto/query-admission-program-majors.dto';
 
 @Controller('admission-programs')
 export class AdmissionProgramsController {
@@ -35,6 +37,19 @@ export class AdmissionProgramsController {
       req.user.sub,
     );
   }
+
+  // /degree-levels
+  @Get('degree-levels')
+  findAllDegreeLevels(@Query() queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto) {
+    return this.admissionProgramsService.findAllDegreeLevels(queryAdmissionProgramDegreeLevelsDto);
+  }
+
+  // /majors
+  @Get('majors')
+  findAllMajors(@Query() queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto) {
+    return this.admissionProgramsService.findAllMajors(queryAdmissionProgramMajorsDto);
+  }
+  
 
   @Get()
   findAll(@Query() queryDto: QueryAdmissionProgramDto) {

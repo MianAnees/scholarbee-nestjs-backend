@@ -59,7 +59,8 @@ interface IStudentSnapshot {
   name: string;
   father_name: string;
   father_status: FatherLivingStatusEnum;
-  domicile: string;
+  districtOfDomicile: string;
+  provinceOfDomicile: string;
   monthly_household_income: string;
   last_degree: IStudentSnapshotLastDegree;
 }
@@ -111,7 +112,10 @@ class StudentSnapshotDto implements IStudentSnapshot {
   father_status: IStudentSnapshot['father_status'];
 
   @Prop({ type: String, required: true })
-  domicile: IStudentSnapshot['domicile'];
+  districtOfDomicile: IStudentSnapshot['districtOfDomicile'];
+
+  @Prop({ type: String, required: true })
+  provinceOfDomicile: IStudentSnapshot['provinceOfDomicile'];
 
   @Prop({ type: String, required: true })
   monthly_household_income: IStudentSnapshot['monthly_household_income'];

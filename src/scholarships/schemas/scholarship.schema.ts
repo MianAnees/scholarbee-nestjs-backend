@@ -68,7 +68,7 @@ export class Scholarship {
   })
   status: ScholarshipStatusEnum;
 
-  @Prop({ type: [Types.ObjectId], ref: 'Campus', default: [] })
+  @Prop({ type: [Types.ObjectId], ref: 'Campus', default: [], required: false })
   campus_ids: Types.ObjectId[];
 
   @Prop({

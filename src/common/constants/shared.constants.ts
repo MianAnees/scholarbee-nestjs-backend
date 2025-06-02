@@ -11,6 +11,7 @@ export enum ScholarshipTypeEnum {
 export enum ScholarshipLocationEnum {
   Local = 'local',
   International = 'international',
+  Sports = 'sports',
 }
 
 export enum FatherLivingStatusEnum {

@@ -12,6 +12,7 @@ import {
 } from '../schemas/scholarship.schema';
 import { CreateScholarshipDto } from '../dto/create-scholarship.dto';
 import { QueryScholarshipDto } from '../dto/query-scholarship.dto';
+import { stringToObjectId, verifyStringObjectId } from 'src/utils/db.utils';
 
 @Injectable()
 export class ScholarshipsService {
@@ -257,48 +258,68 @@ export class ScholarshipsService {
     scholarshipId: string,
     userId: string,
   ): Promise<ScholarshipDocument> {
-    if (!Types.ObjectId.isValid(scholarshipId)) {
+    if (!verifyStringObjectId(scholarshipId)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
-    const userIdObject = new MongooseSchema.Types.ObjectId(userId);
-    const scholarship = await this.scholarshipModel.findById(scholarshipId);
-    if (!scholarship) {
+
+    if (!verifyStringObjectId(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const userIdObject = stringToObjectId(userId);
+
+    // Additional safety: Check if scholarship exists first
+    const existingScholarship =
+      await this.scholarshipModel.findById(scholarshipId);
+    if (!existingScholarship) {
       throw new NotFoundException(
         `Scholarship with ID ${scholarshipId} not found`,
       );
     }
-    if (!scholarship.favouriteBy) {
-      scholarship.favouriteBy = [];
-    }
-    if (!scholarship.favouriteBy.includes(userIdObject)) {
-      scholarship.favouriteBy.push(userIdObject);
-      await scholarship.save();
-    }
-    return scholarship;
+
+    // Safe to use runValidators: false because:
+    // 1. favouriteBy has no custom validators
+    // 2. We're only updating this field with $addToSet
+    // 3. ObjectId validation is done above
+    // 4. MongoDB ensures type safety
+    const scholarship = await this.scholarshipModel.findByIdAndUpdate(
+      scholarshipId,
+      { $addToSet: { favouriteBy: userIdObject } },
+      { new: true, runValidators: false },
+    );
+
+    return scholarship!; // We know it exists from check above
   }
 
   async removeFromFavorites(
     id: string,
     userId: string,
   ): Promise<ScholarshipDocument> {
-    if (!Types.ObjectId.isValid(id)) {
+    if (!verifyStringObjectId(id)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
-    const userIdObject = new MongooseSchema.Types.ObjectId(userId);
 
-    const scholarship = await this.scholarshipModel.findById(id);
+    if (!verifyStringObjectId(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const userIdObject = stringToObjectId(userId);
+
+    // Safe to use runValidators: false because:
+    // 1. favouriteBy has no custom validators
+    // 2. We're only updating this field with $pull
+    // 3. ObjectId validation is done above
+    // 4. MongoDB ensures type safety
+    const scholarship = await this.scholarshipModel.findByIdAndUpdate(
+      id,
+      { $pull: { favouriteBy: userIdObject } },
+      { new: true, runValidators: false },
+    );
+
     if (!scholarship) {
       throw new NotFoundException(`Scholarship with ID ${id} not found`);
     }
-    if (
-      scholarship.favouriteBy &&
-      scholarship.favouriteBy.includes(userIdObject)
-    ) {
-      scholarship.favouriteBy = scholarship.favouriteBy.filter(
-        (uid) => uid !== userIdObject,
-      );
-      await scholarship.save();
-    }
+
     return scholarship;
   }
 

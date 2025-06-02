@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import {
   DegreeLevelEnum,
   ScholarshipLocationEnum,
@@ -68,15 +68,15 @@ export class Scholarship {
   })
   status: ScholarshipStatusEnum;
 
-  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Campus', default: [] })
-  campus_ids: MongooseSchema.Types.ObjectId[];
+  @Prop({ type: [Types.ObjectId], ref: 'Campus', default: [] })
+  campus_ids: Types.ObjectId[];
 
   @Prop({
-    type: MongooseSchema.Types.ObjectId,
+    type: Types.ObjectId,
     ref: 'University',
     required: false,
   })
-  university_id: MongooseSchema.Types.ObjectId;
+  university_id: Types.ObjectId;
 
   @Prop({ type: Number, default: 0, required: false })
   rating?: number;
@@ -84,18 +84,18 @@ export class Scholarship {
   @Prop({ type: String, required: false })
   major?: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Region' })
-  region?: MongooseSchema.Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Region' })
+  region?: Types.ObjectId;
 
   @Prop({ type: String })
   image_url?: string;
 
   @Prop({
-    type: MongooseSchema.Types.ObjectId,
+    type: Types.ObjectId,
     ref: 'Organization',
     required: true,
   })
-  organization_id: MongooseSchema.Types.ObjectId;
+  organization_id: Types.ObjectId;
 
   @Prop({ type: String, required: true })
   createdBy: string;
@@ -103,8 +103,8 @@ export class Scholarship {
   @Prop({ type: Date, default: Date.now })
   created_at: Date;
 
-  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'User', default: [] })
-  favouriteBy: MongooseSchema.Types.ObjectId[];
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  favouriteBy: Types.ObjectId[];
 }
 
 export const ScholarshipSchema = SchemaFactory.createForClass(Scholarship);

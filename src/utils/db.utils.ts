@@ -4,6 +4,10 @@ export const stringToObjectId = (id: string) => {
     return new /* Schema. */Types.ObjectId(id);
 }
 
+export const verifyStringObjectId = (id: string) => {
+  return Types.ObjectId.isValid(id);
+};
+
 
 export const getSortOrder = (sortOrder: 'asc' | 'desc') => {
     return sortOrder == 'asc' ? 1 : -1;

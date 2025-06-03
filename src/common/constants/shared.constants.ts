@@ -6,12 +6,12 @@ export enum ScholarshipStatusEnum {
 export enum ScholarshipTypeEnum {
   Merit = 'merit',
   Need = 'need',
+  Sports = 'sports',
 }
 
 export enum ScholarshipLocationEnum {
   Local = 'local',
   International = 'international',
-  Sports = 'sports',
 }
 
 export enum FatherLivingStatusEnum {

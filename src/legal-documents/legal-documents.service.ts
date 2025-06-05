@@ -5,6 +5,7 @@ import {
   LegalDocument,
   LegalDocumentDocument,
 } from './schemas/legal-document.schema';
+import { QueryLegalDocumentsDto } from './dto/query-legal-documents.dto';
 
 @Injectable()
 export class LegalDocumentsService {
@@ -13,7 +14,17 @@ export class LegalDocumentsService {
     private legalDocumentModel: Model<LegalDocumentDocument>,
   ) {}
 
-  async findAll(): Promise<LegalDocument[]> {
-    return this.legalDocumentModel.find().exec();
+  async findAll(queryDto: QueryLegalDocumentsDto): Promise<LegalDocument[]> {
+    const query = this.legalDocumentModel.find();
+
+    if (queryDto.document_type) {
+      query.where({ document_type: queryDto.document_type });
+    }
+
+    return query.exec();
+  }
+
+  async findById(id: string): Promise<LegalDocument | null> {
+    return this.legalDocumentModel.findById(id).exec();
   }
 }

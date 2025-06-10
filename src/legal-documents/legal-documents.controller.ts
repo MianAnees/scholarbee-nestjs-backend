@@ -3,7 +3,7 @@ import { LegalDocumentsService } from './legal-documents.service';
 import { LegalDocument } from './schemas/legal-document.schema';
 import { QueryLegalDocumentsDto } from './dto/query-legal-documents.dto';
 
-@Controller('legal-documents')
+@Controller(LegalDocument.name)
 export class LegalDocumentsController {
   constructor(private readonly legalDocumentsService: LegalDocumentsService) {}
 

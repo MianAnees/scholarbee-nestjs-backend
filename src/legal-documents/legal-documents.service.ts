@@ -4,6 +4,7 @@ import { Model, RootFilterQuery } from 'mongoose';
 import {
   LegalDocument,
   LegalDocumentDocument,
+  LegalDocumentStatus,
 } from './schemas/legal-document.schema';
 import { QueryLegalDocumentsDto } from './dto/query-legal-documents.dto';
 
@@ -17,16 +18,14 @@ export class LegalDocumentsService {
   async findAll(queryDto: QueryLegalDocumentsDto): Promise<LegalDocument[]> {
     const filter: RootFilterQuery<LegalDocument> = {};
 
+    // Filter by document type if provided
     if (queryDto.document_type) {
       filter.document_type = queryDto.document_type;
     }
 
-    // Default to 'active' status if no status is provided
-    const status = queryDto.status;
-
-    // Only apply status filter if it's not 'all' (All means regardles of status)
-    if (status !== 'all') {
-      filter.status = status;
+    // If status is provided, apply status filter; otherwise, return all documents regardless of status
+    if (queryDto.status) {
+      filter.status = queryDto.status;
     }
 
     return this.legalDocumentModel.find(filter).select('-content').exec();

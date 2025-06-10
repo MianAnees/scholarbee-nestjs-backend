@@ -1,6 +1,34 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+export enum LegalDocumentType {
+  GENERAL_TERMS_AND_CONDITIONS = 'general_terms_and_conditions',
+  APPLICATION_TERMS_AND_CONDITIONS = 'application_terms_and_conditions',
+  SCHOLARSHIP_TERMS_AND_CONDITIONS = 'scholarship_terms_and_conditions',
+  PRIVACY_POLICY = 'privacy_policy',
+  CONTRACT = 'contract',
+  NDA = 'nda',
+  DISCLAIMER = 'disclaimer',
+  REFUND_POLICY = 'refund_policy',
+  COOKIE_POLICY = 'cookie_policy',
+  ACCEPTABLE_USE_POLICY = 'acceptable_use_policy',
+  COPYRIGHT_POLICY = 'copyright_policy',
+  EULA = 'eula',
+  SLA = 'sla',
+  PARTNERSHIP_AGREEMENT = 'partnership_agreement',
+  VENDOR_AGREEMENT = 'vendor_agreement',
+  DATA_PROCESSING_ADDENDUM = 'data_processing_addendum',
+  USER_AGREEMENT = 'user_agreement',
+  SUBSCRIPTION_AGREEMENT = 'subscription_agreement',
+  OTHER = 'other',
+}
+
+export enum LegalDocumentStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  ARCHIVED = 'archived',
+}
+
 export type LegalDocumentDocument = LegalDocument & Document;
 
 @Schema({ timestamps: true })
@@ -10,29 +38,9 @@ export class LegalDocument {
 
   @Prop({
     required: true,
-    enum: [
-      'general_terms_and_conditions',
-      'application_terms_and_conditions',
-      'scholarship_terms_and_conditions',
-      'privacy_policy',
-      'contract',
-      'nda',
-      'disclaimer',
-      'refund_policy',
-      'cookie_policy',
-      'acceptable_use_policy',
-      'copyright_policy',
-      'eula',
-      'sla',
-      'partnership_agreement',
-      'vendor_agreement',
-      'data_processing_addendum',
-      'user_agreement',
-      'subscription_agreement',
-      'other',
-    ],
+    enum: LegalDocumentType,
   })
-  document_type: string;
+  document_type: LegalDocumentType;
 
   @Prop({ type: Object, required: true })
   content: any[]; // This will store the richText content as a flexible object
@@ -45,17 +53,13 @@ export class LegalDocument {
 
   @Prop({
     required: true,
-    enum: ['draft', 'active', 'archived'],
-    default: 'draft',
+    enum: LegalDocumentStatus,
+    default: LegalDocumentStatus.DRAFT,
   })
-  status: 'draft' | 'active' | 'archived';
+  status: LegalDocumentStatus;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' }) // Assuming 'User' is the name of your User model
+  @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy: Types.ObjectId;
-
-  // Timestamps are handled by the @Schema({ timestamps: true }) decorator
-  // createdAt: string;
-  // updatedAt: string;
 }
 
 export const LegalDocumentSchema = SchemaFactory.createForClass(LegalDocument);

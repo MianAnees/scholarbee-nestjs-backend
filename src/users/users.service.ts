@@ -263,6 +263,15 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    if (
+      !payload.marks_gpa.total_marks_gpa ||
+      !payload.marks_gpa.obtained_marks_gpa
+    ) {
+      throw new BadRequestException(
+        'total_marks_gpa and obtained_marks_gpa are required in marks_gpa',
+      );
+    }
+
     if (!user.educational_backgrounds) {
       user.educational_backgrounds = [];
     }
@@ -313,6 +322,23 @@ export class UsersService {
       throw new NotFoundException(
         `Educational background with ID ${backgroundId} not found`,
       );
+    }
+
+    // Validate marks_gpa if being updated
+    if (payload.marks_gpa) {
+      const updatedMarksGpa = {
+        ...user.educational_backgrounds[index].marks_gpa,
+        ...payload.marks_gpa,
+      };
+
+      if (
+        !updatedMarksGpa.total_marks_gpa ||
+        !updatedMarksGpa.obtained_marks_gpa
+      ) {
+        throw new BadRequestException(
+          'total_marks_gpa and obtained_marks_gpa are required in marks_gpa',
+        );
+      }
     }
 
     user.educational_backgrounds[index] = {

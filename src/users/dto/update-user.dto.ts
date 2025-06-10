@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType, OmitType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
 import {
   IsBoolean,
@@ -10,7 +10,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
+// Omit email from CreateUserDto to prevent email updates
+export class UpdateUserDto extends PartialType(
+  OmitType(CreateUserDto, ['email']),
+) {
   @IsOptional()
   @Type(() => Date)
   @IsDate()

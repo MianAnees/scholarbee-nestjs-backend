@@ -15,5 +15,6 @@ import {
   ],
   controllers: [LegalDocumentsController],
   providers: [LegalDocumentsService],
+  exports: [LegalDocumentsService],
 })
 export class LegalDocumentsModule {}

@@ -7,6 +7,9 @@ import {
   LegalDocumentStatus,
 } from './schemas/legal-document.schema';
 import { QueryLegalDocumentsDto } from './dto/query-legal-documents.dto';
+import { LegalDocumentRequirementsService } from '../legal-document-requirements/legal-document-requirements.service';
+import { LegalActionType } from '../legal-document-requirements/schemas/legal-document-requirement.schema';
+import { stringToObjectId } from 'src/utils/db.utils';
 
 @Injectable()
 export class LegalDocumentsService {
@@ -26,6 +29,11 @@ export class LegalDocumentsService {
     // If status is provided, apply status filter; otherwise, return all documents regardless of status
     if (queryDto.status) {
       filter.status = queryDto.status;
+    }
+
+    // If document_ids is provided, apply document_ids filter
+    if (queryDto.document_ids) {
+      filter._id = { $in: queryDto.document_ids };
     }
 
     return this.legalDocumentModel.find(filter).select('-content').exec();

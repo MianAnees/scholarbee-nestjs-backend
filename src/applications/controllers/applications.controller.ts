@@ -1,15 +1,15 @@
 import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    Query,
-    UseGuards,
-    Req,
-    BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApplicationsService } from '../services/applications.service';
 import { CreateApplicationDto } from '../dto/create-application.dto';
@@ -54,6 +54,11 @@ export class ApplicationsController {
   @Get('statistics')
   getStatistics() {
     return this.applicationsService.getApplicationStatistics();
+  }
+
+  @Get('legal-documents')
+  async getApplicationLegalRequirements() {
+    return this.applicationsService.getApplicationLegalDocuments();
   }
 
   @UseGuards(ResourceProtectionGuard)
@@ -117,4 +122,4 @@ export class ApplicationsController {
       application: updatedApplication,
     };
   }
-} 
+}

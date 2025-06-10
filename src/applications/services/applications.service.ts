@@ -1,24 +1,42 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, SortOrder } from 'mongoose';
-import { Application, ApplicationDocument } from '../schemas/application.schema';
+import {
+  Application,
+  ApplicationDocument,
+} from '../schemas/application.schema';
 import { CreateApplicationDto } from '../dto/create-application.dto';
 import { UpdateApplicationDto } from '../dto/update-application.dto';
 import { QueryApplicationDto } from '../dto/query-application.dto';
 import { ApplicationsGateway } from '../gateways/applications.gateway';
 import { User, UserDocument } from '../../users/schemas/user.schema';
+import { LegalDocumentRequirementsService } from '../../legal-document-requirements/legal-document-requirements.service';
+import { LegalDocumentsService } from '../../legal-documents/legal-documents.service';
+import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
 
 @Injectable()
 export class ApplicationsService {
     constructor(
-        @InjectModel(Application.name) private applicationModel: Model<ApplicationDocument>,
-        @InjectModel(User.name) private userModel: Model<UserDocument>,
-        private readonly applicationsGateway: ApplicationsGateway
-    ) { }
+    @InjectModel(Application.name)
+    private applicationModel: Model<ApplicationDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
+    private readonly applicationsGateway: ApplicationsGateway,
+    private readonly legalDocumentRequirementsService: LegalDocumentRequirementsService,
+    private readonly legalDocumentsService: LegalDocumentsService,
+  ) {}
 
-    async create(createApplicationDto: CreateApplicationDto): Promise<ApplicationDocument> {
+  async create(
+    createApplicationDto: CreateApplicationDto,
+  ): Promise<ApplicationDocument> {
         try {
-            const createdApplication = new this.applicationModel(createApplicationDto);
+      const createdApplication = new this.applicationModel(
+        createApplicationDto,
+      );
             const savedApplication = await createdApplication.save();
 
             // Emit the update via WebSocket
@@ -249,16 +267,25 @@ export class ApplicationsService {
         return result;
     }
 
-    async createWithUserSnapshot(createApplicationDto: CreateApplicationDto, userId: string): Promise<ApplicationDocument> {
+  async createWithUserSnapshot(
+    createApplicationDto: CreateApplicationDto,
+    userId: string,
+  ): Promise<ApplicationDocument> {
         try {
+      // TODO: Check the payload for the associated legal documents required for application
+
             // Check if user has already applied for this admission program
-            const existingApplication = await this.applicationModel.findOne({
+      const existingApplication = await this.applicationModel
+        .findOne({
                 applicant: userId,
-                admission_program_id: createApplicationDto.admission_program_id
-            }).exec();
+          admission_program_id: createApplicationDto.admission_program_id,
+        })
+        .exec();
 
             if (existingApplication) {
-                throw new BadRequestException('Already applied for this admission program.');
+        throw new BadRequestException(
+          'Already applied for this admission program.',
+        );
             }
 
             // Fetch the complete user data to create the snapshot
@@ -340,4 +367,36 @@ export class ApplicationsService {
             throw new BadRequestException(error.message || 'Error processing application');
         }
     }
-} 
+
+  /**
+   * Get application associated legal documents
+   * This method checks the legal document requirements for application action
+   * and returns the actual legal documents required for the application
+   */
+  async getApplicationLegalDocuments() {
+    // Get the requirements for student program application action type
+    const requirements = await this.legalDocumentRequirementsService.findAll({
+      applicable_on: LegalActionType.STUDENT_PROGRAM_APPLICATION,
+    });
+
+    if (!requirements.length) {
+      return [];
+    }
+
+    // Extract all required document IDs from the requirements
+    const associatedLogalDocumentIds = requirements.flatMap(
+      (req) => req.required_documents,
+    );
+
+    if (!associatedLogalDocumentIds.length) {
+      return [];
+    }
+
+    // Fetch the actual legal documents using the extracted document IDs
+    const associatedLegalDocuments = await this.legalDocumentsService.findAll({
+      document_ids: associatedLogalDocumentIds,
+    });
+
+    return associatedLegalDocuments;
+  }
+}

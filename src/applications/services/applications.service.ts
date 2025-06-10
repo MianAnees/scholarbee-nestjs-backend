@@ -186,39 +186,9 @@ export class ApplicationsService {
     }
 
     if (updateApplicationDto.status === ApplicationStatus.PENDING) {
-      // Check if the applicant has accepted the legal documents
-      const requiredLegalDocumentIds =
-        await this.getLegalDocumentIdsForApplication();
-
-      const stringifiedAcceptedLegalDocumentIds =
-        updateApplicationDto.accepted_legal_documents.map((id) =>
-          id.toString(),
-        );
-
-      // check is same length
-      if (
-        updateApplicationDto.accepted_legal_documents.length !==
-        requiredLegalDocumentIds.length
-      ) {
-        throw new BadRequestException('Legal documents are required');
-      }
-
-      // check if all the required legal documents are accepted
-      for (const requiredLegalDocumentId of requiredLegalDocumentIds) {
-        const stringifiedRequiredLegalDocumentId =
-          requiredLegalDocumentId.toString();
-
-        // check if each of the required legal document is available in the accepted legal documents
-        if (
-          !stringifiedAcceptedLegalDocumentIds.includes(
-            stringifiedRequiredLegalDocumentId,
-          )
-        ) {
-          throw new BadRequestException(
-            `Legal document ${stringifiedRequiredLegalDocumentId} is required`,
-          );
-        }
-      }
+      await this.validateLegalDocumentAcceptance(
+        updateApplicationDto.accepted_legal_documents,
+      );
     }
 
     const updatedApplication = await this.applicationModel
@@ -452,5 +422,44 @@ export class ApplicationsService {
     });
 
     return associatedLegalDocuments;
+  }
+
+  /**
+   * Validate that all required legal documents have been accepted
+   * @param acceptedLegalDocuments Array of accepted legal document IDs
+   * @throws BadRequestException if validation fails
+   */
+  private async validateLegalDocumentAcceptance(
+    acceptedLegalDocuments: any[],
+  ): Promise<void> {
+    // Check if the applicant has accepted the legal documents
+    const requiredLegalDocumentIds =
+      await this.getLegalDocumentIdsForApplication();
+
+    const stringifiedAcceptedLegalDocumentIds = acceptedLegalDocuments.map(
+      (id) => id.toString(),
+    );
+
+    // Check if same length
+    if (acceptedLegalDocuments.length !== requiredLegalDocumentIds.length) {
+      throw new BadRequestException('Legal documents are required');
+    }
+
+    // Check if all the required legal documents are accepted
+    for (const requiredLegalDocumentId of requiredLegalDocumentIds) {
+      const stringifiedRequiredLegalDocumentId =
+        requiredLegalDocumentId.toString();
+
+      // Check if each of the required legal document is available in the accepted legal documents
+      if (
+        !stringifiedAcceptedLegalDocumentIds.includes(
+          stringifiedRequiredLegalDocumentId,
+        )
+      ) {
+        throw new BadRequestException(
+          `Legal document ${stringifiedRequiredLegalDocumentId} is required`,
+        );
+      }
+    }
   }
 }

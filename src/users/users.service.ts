@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -39,10 +39,16 @@ export class UsersService {
           // TODO: shouldn't we use the generateVerificationToken function here?
           const newVerifyToken = crypto.randomBytes(20).toString('hex');
 
-          await this.updateUser(existingUser._id.toString(), {
-            verifyToken: newVerifyToken,
-            _verified: false,
-          });
+          await this.userModel
+            .findByIdAndUpdate(
+              existingUser._id.toString(),
+              {
+                verifyToken: newVerifyToken,
+                _verified: false,
+              },
+              { new: true },
+            )
+            .select('-password -salt');
 
           const verificationUrl = `${process.env.FRONTEND_URL}/verification/${newVerifyToken}`;
 
@@ -174,9 +180,9 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updated_user_doc: UpdateQuery<User>): Promise<User> {
     const updatedUser = await this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .findByIdAndUpdate(id, updated_user_doc, { new: true })
       .select('-password -salt');
 
     if (!updatedUser) {
@@ -363,13 +369,6 @@ export class UsersService {
 
   async findById(id: string): Promise<UserDocument> {
     return this.userModel.findById(id).exec();
-  }
-
-  async updateUser(id: string, updateData: any): Promise<UserDocument> {
-    return this.userModel
-      .findByIdAndUpdate(id, updateData, { new: true })
-      .select('-password -salt')
-      .exec();
   }
 
   async findByResetToken(token: string, date: Date): Promise<UserDocument> {

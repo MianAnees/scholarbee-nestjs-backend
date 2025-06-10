@@ -70,8 +70,7 @@ export class ApplicationsController {
     return this.applicationsService.findOne(id, populate);
   }
 
-  @UseGuards(ResourceProtectionGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
+  @UseGuards(ResourceProtectionGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,

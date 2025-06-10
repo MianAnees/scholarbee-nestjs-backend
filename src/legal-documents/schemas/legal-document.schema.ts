@@ -31,7 +31,7 @@ export enum LegalDocumentStatus {
 
 export type LegalDocumentDocument = LegalDocument & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'legal_documents' })
 export class LegalDocument {
   @Prop({ required: true })
   title: string;

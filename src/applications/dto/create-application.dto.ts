@@ -1,17 +1,18 @@
+import { Type } from 'class-transformer';
 import {
-  IsString,
+  IsArray,
   IsDate,
   IsEnum,
-  IsNumber,
-  IsObject,
-  IsArray,
-  ValidateNested,
-  IsOptional,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApplicationStatus } from '../schemas/application.schema';
+import { Types } from 'mongoose';
+import { IsObjectId } from 'src/common/validators/object-id.validator';
 
 class MarksGpaDto {
   @IsString()
@@ -198,6 +199,12 @@ export class CreateApplicationDto {
   @ValidateNested()
   @Type(() => ApplicantSnapshotDto)
   applicant_snapshot?: ApplicantSnapshotDto;
+
+  @IsOptional()
+  @IsArray()
+  @IsObjectId({ each: true })
+  // @Type(() => Types.ObjectId)
+  accepted_legal_documents?: Types.ObjectId[];
 
   @IsArray()
   @ValidateNested({ each: true })

@@ -185,6 +185,42 @@ export class ApplicationsService {
       throw new BadRequestException('Invalid application ID');
     }
 
+    if (updateApplicationDto.status === ApplicationStatus.PENDING) {
+      // Check if the applicant has accepted the legal documents
+      const requiredLegalDocumentIds =
+        await this.getLegalDocumentIdsForApplication();
+
+      const stringifiedAcceptedLegalDocumentIds =
+        updateApplicationDto.accepted_legal_documents.map((id) =>
+          id.toString(),
+        );
+
+      // check is same length
+      if (
+        updateApplicationDto.accepted_legal_documents.length !==
+        requiredLegalDocumentIds.length
+      ) {
+        throw new BadRequestException('Legal documents are required');
+      }
+
+      // check if all the required legal documents are accepted
+      for (const requiredLegalDocumentId of requiredLegalDocumentIds) {
+        const stringifiedRequiredLegalDocumentId =
+          requiredLegalDocumentId.toString();
+
+        // check if each of the required legal document is available in the accepted legal documents
+        if (
+          !stringifiedAcceptedLegalDocumentIds.includes(
+            stringifiedRequiredLegalDocumentId,
+          )
+        ) {
+          throw new BadRequestException(
+            `Legal document ${stringifiedRequiredLegalDocumentId} is required`,
+          );
+        }
+      }
+    }
+
     const updatedApplication = await this.applicationModel
       .findByIdAndUpdate(id, updateApplicationDto, {
         new: true,

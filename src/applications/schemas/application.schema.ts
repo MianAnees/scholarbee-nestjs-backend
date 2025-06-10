@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 import { EsEntity, EsField } from 'es-mapping-ts';
 import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
 
@@ -65,7 +65,14 @@ interface Department {
 }
 
 export enum ApplicationStatus {
+  /**
+   * Draft status is used to indicate that the application is in draft mode and is (created but) not submitted by the user
+   */
   DRAFT = 'Draft',
+
+  /**
+   * Pending status is used to indicate that the application is submitted by the user and is pending for approval
+   */
   PENDING = 'Pending',
   APPROVED = 'Approved',
   REJECTED = 'Rejected',
@@ -117,6 +124,16 @@ export class Application {
 
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
   applicant_snapshot: ApplicantSnapshot;
+
+  //   An array of legal document ids that the applicant has accepted
+  //   Ref: LegalDocument
+  @Prop({
+    type: [Types.ObjectId],
+    default: [],
+    required: false,
+    ref: 'LegalDocument',
+  })
+  accepted_legal_documents?: Types.ObjectId[];
 
   @Prop({
     type: [

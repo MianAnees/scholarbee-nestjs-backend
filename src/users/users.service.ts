@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
@@ -118,9 +123,7 @@ export class UsersService {
     }
   }
 
-  async findAll(
-    query: any = {},
-  ): Promise<{
+  async findAll(query: any = {}): Promise<{
     docs: User[];
     totalDocs: number;
     page: number;
@@ -365,6 +368,7 @@ export class UsersService {
   async updateUser(id: string, updateData: any): Promise<UserDocument> {
     return this.userModel
       .findByIdAndUpdate(id, updateData, { new: true })
+      .select('-password -salt')
       .exec();
   }
 
@@ -380,4 +384,4 @@ export class UsersService {
   async findByVerifyToken(token: string): Promise<UserDocument> {
     return this.userModel.findOne({ verifyToken: token }).exec();
   }
-} 
+}

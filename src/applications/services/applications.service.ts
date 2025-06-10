@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, SortOrder } from 'mongoose';
+import { Model, Types, SortOrder, UpdateQuery } from 'mongoose';
 import {
   Application,
   ApplicationDocument,
@@ -181,18 +181,22 @@ export class ApplicationsService {
     id: string,
     updateApplicationDto: UpdateApplicationDto,
   ): Promise<ApplicationDocument> {
+    let updatedDocument: UpdateQuery<ApplicationDocument> =
+      updateApplicationDto;
+
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');
     }
 
-    if (updateApplicationDto.status === ApplicationStatus.PENDING) {
+    if (updateApplicationDto.is_submitted) {
       await this.validateLegalDocumentAcceptance(
         updateApplicationDto.accepted_legal_documents,
       );
+      updatedDocument.status = ApplicationStatus.PENDING;
     }
 
     const updatedApplication = await this.applicationModel
-      .findByIdAndUpdate(id, updateApplicationDto, {
+      .findByIdAndUpdate(id, updatedDocument, {
         new: true,
         runValidators: true,
       })
@@ -430,18 +434,21 @@ export class ApplicationsService {
    * @throws BadRequestException if validation fails
    */
   private async validateLegalDocumentAcceptance(
-    acceptedLegalDocuments: any[],
-  ): Promise<void> {
+    acceptedLegalDocuments?: Types.ObjectId[],
+  ) {
     // Check if the applicant has accepted the legal documents
     const requiredLegalDocumentIds =
       await this.getLegalDocumentIdsForApplication();
 
-    const stringifiedAcceptedLegalDocumentIds = acceptedLegalDocuments.map(
+    const stringifiedAcceptedLegalDocumentIds = acceptedLegalDocuments?.map(
       (id) => id.toString(),
     );
 
     // Check if same length
-    if (acceptedLegalDocuments.length !== requiredLegalDocumentIds.length) {
+    if (
+      !acceptedLegalDocuments ||
+      acceptedLegalDocuments.length !== requiredLegalDocumentIds.length
+    ) {
       throw new BadRequestException('Legal documents are required');
     }
 

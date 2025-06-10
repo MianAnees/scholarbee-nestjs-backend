@@ -6,12 +6,12 @@ export type LegalDocumentRequirementDocument = LegalDocumentRequirement &
   Document;
 
 export enum LegalActionType {
-  STUDENT_PROGRAM_APPLICATION = 'Student_Program_Application',
-  ADMIN_CREATE_SCHOLARSHIP = 'Admin_Create_Scholarship',
-  USER_REGISTRATION = 'User_Registration',
-  CAMPUS_REGISTRATION = 'Campus_Registration',
-  UNIVERSITY_REGISTRATION = 'University_Registration',
-  OTHER = 'Other',
+  STUDENT_PROGRAM_APPLICATION = 'student_program_application',
+  ADMIN_CREATE_SCHOLARSHIP = 'admin_create_scholarship',
+  USER_REGISTRATION = 'user_registration',
+  CAMPUS_REGISTRATION = 'campus_registration',
+  UNIVERSITY_REGISTRATION = 'university_registration',
+  OTHER = 'other',
 }
 
 interface ILegalDocumentRequirement {
@@ -23,7 +23,7 @@ interface ILegalDocumentRequirement {
   description?: string;
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'legal_document_requirements' })
 export class LegalDocumentRequirement implements ILegalDocumentRequirement {
   @Prop({ required: true, enum: LegalActionType, unique: true })
   applicable_on: LegalActionType;

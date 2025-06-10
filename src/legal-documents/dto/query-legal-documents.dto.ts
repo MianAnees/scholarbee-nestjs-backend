@@ -24,4 +24,8 @@ export class QueryLegalDocumentsDto {
     'other',
   ])
   document_type?: string;
+
+  @IsOptional()
+  @IsEnum(['draft', 'active', 'archived', 'all'])
+  status?: 'draft' | 'active' | 'archived' | 'all' = 'active';
 }

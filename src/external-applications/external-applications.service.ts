@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { stringToObjectId } from 'src/utils/db.utils';
 import { CreateExternalApplicationDto } from './dto/create-external-application.dto';
@@ -29,6 +31,8 @@ export class ExternalApplicationsService {
     private externalApplicationModel: Model<ExternalApplicationDocument>,
     @InjectModel(AdmissionProgram.name)
     private admissionProgramModel: Model<AdmissionProgramDocument>,
+    @InjectConnection()
+    private connection: Connection,
   ) {}
   /**
    * TODO: Check if this method can be integrated with the user service/ user model to make it reusable
@@ -132,22 +136,44 @@ export class ExternalApplicationsService {
       campus,
     };
 
-    // Create the external application
-    const externalApplication = new this.externalApplicationModel(
-      applicationData,
-    );
-    const savedApplication = await externalApplication.save();
+    // Start a transaction session
+    const session = await this.connection.startSession();
 
-    // Add the student to the admission program's redirect_students array
-    await this.admissionProgramModel.findByIdAndUpdate(
-      admission_program,
-      {
-        $addToSet: { redirect_students: stringToObjectId(user._id) },
-      },
-      { new: true },
-    );
+    try {
+      // Start the transaction
+      await session.withTransaction(async () => {
+        // Create the external application within the transaction
+        const externalApplication = new this.externalApplicationModel(
+          applicationData,
+        );
+        const savedApplication = await externalApplication.save({ session });
 
-    return savedApplication;
+        // Add the student to the admission program's redirect_students array
+        await this.admissionProgramModel.findByIdAndUpdate(
+          admission_program,
+          {
+            $addToSet: { redirect_students: stringToObjectId(user._id) },
+          },
+          { new: true, session },
+        );
+
+        return savedApplication;
+      });
+
+      // If we reach here, the transaction was successful
+      // Fetch the saved application to return it
+      const savedApplication = await this.externalApplicationModel
+        .findOne({ applicant: stringToObjectId(user._id) })
+        .sort({ createdAt: -1 });
+
+      return savedApplication;
+    } catch (error) {
+      // Transaction will be automatically rolled back
+      throw error;
+    } finally {
+      // End the session
+      await session.endSession();
+    }
   }
 
   async findAll(

@@ -17,7 +17,35 @@ export class IsValidObjectId implements ValidatorConstraintInterface {
   }
 }
 
-// create a custom validator for object id
+/**
+ * Custom validator for MongoDB ObjectId
+ * @param validationOptions - Validation options
+ * @returns Decorator function
+ *
+ * @example
+ * @IsOptional()
+ * @IsArray()
+ * @IsObjectId({ each: true, message: 'Each ID must be a valid MongoDB ObjectId' })
+ * optional_object_id_array: string[]
+ *
+ * @example
+ * @IsArray()
+ * @ArrayNotEmpty()
+ * @IsObjectId({ each: true, message: 'Each ID must be a valid MongoDB ObjectId' })
+ * required_object_id_array: string[]
+ *
+ * @example
+ * @IsString()
+ * @IsNotEmpty()
+ * @IsObjectId({ message: 'ID must be a valid MongoDB ObjectId' })
+ * required_object_id: string
+ *
+ * @example
+ * @IsOptional()
+ * @IsString()
+ * @IsObjectId({ message: 'ID must be a valid MongoDB ObjectId' })
+ * optional_object_id: string
+ */
 export function IsObjectId(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({

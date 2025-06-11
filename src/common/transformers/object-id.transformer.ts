@@ -2,6 +2,21 @@ import { BadRequestException } from '@nestjs/common';
 import { Transform, TransformFnParams } from 'class-transformer';
 import { Types } from 'mongoose';
 
+/**
+ * Transforms a string to a MongoDB ObjectId
+ * @returns Decorator function
+ * @example an example to use it for an array of object ids
+ * ```ts
+ * @IsOptional()
+ * @IsArray()
+ * @IsObjectId({
+ *   each: true,
+ *   message: 'Each document ID must be a valid MongoDB ObjectId',
+ * })
+ * @ToObjectId()
+ * document_ids?: Types.ObjectId[];
+ * ```
+ */
 export function ToObjectId() {
   return function (target: any, key: string) {
     Transform(({ value }: TransformFnParams) => {

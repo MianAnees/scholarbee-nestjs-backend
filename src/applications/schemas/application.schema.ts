@@ -25,7 +25,7 @@ interface NationalIdCard {
   back_side: string;
 }
 
-interface ApplicantSnapshot {
+export interface ApplicantSnapshot {
   first_name: string;
   last_name?: string;
   email: string;

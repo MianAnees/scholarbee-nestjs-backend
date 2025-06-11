@@ -19,6 +19,8 @@ import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.g
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
 @UseGuards(ResourceProtectionGuard)
 @Controller('applications')
@@ -26,14 +28,14 @@ export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
   @Post()
-  async create(@Body() createApplicationDto: CreateApplicationDto, @Req() req) {
-    // Get the user ID from the JWT token
-    const userId = req.user.sub;
-
+  async create(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createApplicationDto: CreateApplicationDto,
+  ) {
     // Pass the user ID to the service to fetch user data and create application
     return this.applicationsService.createWithUserSnapshot(
+      authReq.user.sub,
       createApplicationDto,
-      userId,
     );
   }
 

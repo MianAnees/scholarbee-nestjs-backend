@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { Document } from 'mongoose';
 import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
 // typescript namespace with all the user type enums

@@ -162,15 +162,15 @@ export class Application {
   @Prop({ type: String, ref: 'User', required: true })
   student_id: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Program', required: true })
-  program_id: MongooseSchema.Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Program', required: true })
+  program_id: Types.ObjectId;
 
   @Prop({
-    type: MongooseSchema.Types.ObjectId,
+    type: Types.ObjectId,
     ref: 'Admission',
     required: true,
   })
-  admission_id: MongooseSchema.Types.ObjectId;
+  admission_id: Types.ObjectId;
 
   @Prop({ type: String, ref: 'User', required: true })
   applicant: string;

@@ -3,6 +3,66 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
 
+// Educational background interfaces
+export interface IMarksGPA {
+  total_marks_gpa: string;
+  obtained_marks_gpa: string;
+}
+
+@Schema({
+  timestamps: false,
+  _id: false,
+})
+export class MarksGPA implements IMarksGPA {
+  @Prop({ required: true })
+  total_marks_gpa: string;
+
+  @Prop({ required: true })
+  obtained_marks_gpa: string;
+}
+
+export interface IEducationalBackground {
+  id?: string;
+  education_level: string; // Required
+  marks_gpa: IMarksGPA; // Required
+  school_college_university?: string; // Optional
+  field_of_study?: string; // Optional
+  year_of_passing?: string; // Optional
+  board?: string; // Optional
+  transcript?: string; // Optional
+}
+
+// Schema Class for educational background
+@Schema({
+  timestamps: false,
+  _id: false,
+})
+export class EducationalBackground implements IEducationalBackground {
+  @Prop({ required: false })
+  id?: string;
+
+  @Prop({ required: true })
+  education_level: string;
+
+  @Prop({ required: false })
+  school_college_university?: string;
+
+  @Prop({ type: MarksGPA, required: true })
+  marks_gpa: IMarksGPA;
+
+  @Prop({ required: false })
+  field_of_study?: string;
+
+  @Prop({ required: false })
+  year_of_passing?: string;
+
+  @Prop({ required: false })
+  board?: string;
+
+  @Prop({ required: false })
+  transcript?: string;
+}
+
 // typescript namespace with all the user type enums
 export namespace UserNS {
   export enum UserType {
@@ -70,7 +130,7 @@ export class User {
   @Prop()
   nationality?: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true, unique: true, immutable: true })
   email: string;
 
   @Prop()
@@ -130,8 +190,8 @@ export class User {
   @Prop()
   profile_image_url?: string;
 
-  @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
-  educational_backgrounds: any[];
+  @Prop({ type: [EducationalBackground], default: [] })
+  educational_backgrounds: IEducationalBackground[];
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   national_id_card: any;

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -135,8 +140,7 @@ export class AuthService {
     // hash and save refresh token
     // const refreshTokenHash = await argon2.hash(refreshToken);
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    await this.usersService.updateUser(user._id, { refreshTokenHash });
-    console.log(` refreshToken & Hash:`, { refreshToken, refreshTokenHash });
+    await this.usersService.update(user._id, { refreshTokenHash });
 
     return {
       token: accessToken, // for backward compatibility
@@ -149,7 +153,7 @@ export class AuthService {
 
   async logout(user: AuthenticatedRequest['user']) {
     // Revoke the refresh token
-    await this.usersService.updateUser(user._id, { refreshTokenHash: null });
+    await this.usersService.update(user._id, { refreshTokenHash: null });
     return { message: 'Successfully signed out' };
   }
 
@@ -162,7 +166,9 @@ export class AuthService {
     // BUG: Using bcrypt was giving unexpected results
     // const refreshTokenHash = await argon2.hash(refreshToken);
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-    await this.usersService.updateUser(sanitizedUser._id, { refreshTokenHash });
+    await this.usersService.update(sanitizedUser._id, {
+      refreshTokenHash,
+    });
 
     return {
       token: accessToken,
@@ -190,7 +196,7 @@ export class AuthService {
     const resetPasswordExpiration = new Date(Date.now() + 10 * 60 * 1000);
 
     // Update user with reset token and expiration
-    await this.usersService.updateUser(user._id.toString(), {
+    await this.usersService.update(user._id.toString(), {
       resetPasswordToken,
       resetPasswordExpiration,
     });
@@ -222,7 +228,7 @@ export class AuthService {
       return { success: true, message: 'Password reset email sent' };
     } catch (error) {
       // If email fails, remove reset token from user
-      await this.usersService.updateUser(user._id.toString(), {
+      await this.usersService.update(user._id.toString(), {
         resetPasswordToken: undefined,
         resetPasswordExpiration: undefined,
       });
@@ -253,7 +259,7 @@ export class AuthService {
     const hash = await bcrypt.hash(newPassword, salt);
 
     // Update user with new password and clear reset token
-    await this.usersService.updateUser(user._id.toString(), {
+    await this.usersService.update(user._id.toString(), {
       hash,
       salt: null, // PayloadCMS style
       resetPasswordToken: undefined,
@@ -271,7 +277,7 @@ export class AuthService {
     }
 
     // Update user as verified
-    await this.usersService.updateUser(user._id.toString(), {
+    await this.usersService.update(user._id.toString(), {
       _verified: true,
       verifyToken: '',
     });
@@ -302,7 +308,7 @@ export class AuthService {
     const hash = await bcrypt.hash(newPassword, salt);
 
     // Update user with new password
-    await this.usersService.updateUser(user._id.toString(), {
+    await this.usersService.update(user._id.toString(), {
       hash,
       salt: null, // PayloadCMS style
     });

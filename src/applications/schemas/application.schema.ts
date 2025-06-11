@@ -94,9 +94,6 @@ export class Application {
   })
   admission_id: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: String, ref: 'User' })
-  applicant_id: string;
-
   @Prop({ type: String, ref: 'User', required: true })
   applicant: string;
 

@@ -6,11 +6,16 @@ import {
   ExternalApplication,
   ExternalApplicationSchema,
 } from './schemas/external-application.schema';
+import {
+  AdmissionProgram,
+  AdmissionProgramSchema,
+} from '../admission-programs/schemas/admission-program.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: ExternalApplication.name, schema: ExternalApplicationSchema },
+      { name: AdmissionProgram.name, schema: AdmissionProgramSchema },
     ]),
   ],
   controllers: [ExternalApplicationsController],

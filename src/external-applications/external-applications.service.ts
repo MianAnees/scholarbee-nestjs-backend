@@ -9,6 +9,10 @@ import {
   ExternalApplication,
   ExternalApplicationDocument,
 } from './schemas/external-application.schema';
+import {
+  AdmissionProgram,
+  AdmissionProgramDocument,
+} from '../admission-programs/schemas/admission-program.schema';
 
 interface FindAllOptions {
   page: number;
@@ -23,6 +27,8 @@ export class ExternalApplicationsService {
   constructor(
     @InjectModel(ExternalApplication.name)
     private externalApplicationModel: Model<ExternalApplicationDocument>,
+    @InjectModel(AdmissionProgram.name)
+    private admissionProgramModel: Model<AdmissionProgramDocument>,
   ) {}
   /**
    * TODO: Check if this method can be integrated with the user service/ user model to make it reusable
@@ -126,10 +132,22 @@ export class ExternalApplicationsService {
       campus,
     };
 
+    // Create the external application
     const externalApplication = new this.externalApplicationModel(
       applicationData,
     );
-    return externalApplication.save();
+    const savedApplication = await externalApplication.save();
+
+    // Add the student to the admission program's redirect_students array
+    await this.admissionProgramModel.findByIdAndUpdate(
+      admission_program,
+      {
+        $addToSet: { redirect_students: stringToObjectId(user._id) },
+      },
+      { new: true },
+    );
+
+    return savedApplication;
   }
 
   async findAll(

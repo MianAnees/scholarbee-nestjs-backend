@@ -1,31 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema, Types } from 'mongoose';
-import { EsEntity, EsField } from 'es-mapping-ts';
-import { BaseMappingEntity } from 'src/elasticsearch/mappings/base.mapping';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
+import {
+  EducationalBackground,
+  NationalIdCard,
+  UserNS,
+} from '../../users/schemas/user.schema';
 
 export type ApplicationDocument = Application & Document;
 
-// Define nested interfaces for complex types
-interface EducationalBackground {
-  id: string;
-  education_level: string;
-  field_of_study: string;
-  school_college_university: string;
-  board: string;
-  year_of_passing: string;
-  marks_gpa: {
-    obtained_marks_gpa: string;
-    total_marks_gpa: string;
-  };
-  transcript: string;
-}
-
-interface NationalIdCard {
-  front_side: string;
-  back_side: string;
-}
-
-export interface ApplicantSnapshot {
+interface IApplicantSnapshot {
   first_name: string;
   last_name?: string;
   email: string;
@@ -50,6 +34,100 @@ export interface ApplicantSnapshot {
   educational_backgrounds: EducationalBackground[];
   national_id_card: NationalIdCard;
   user_type: string;
+}
+
+@Schema({
+  timestamps: false,
+  _id: false,
+})
+export class ApplicantSnapshot implements IApplicantSnapshot {
+  @Prop({ required: true })
+  first_name: string;
+
+  @Prop({ required: false })
+  last_name?: string;
+
+  @Prop({ required: true })
+  email: string;
+
+  @Prop({ required: true })
+  phone_number: string;
+
+  @Prop({ required: true })
+  date_of_birth: Date;
+
+  @Prop({ required: true })
+  father_name: string;
+
+  @Prop({ required: false })
+  father_profession?: string;
+
+  @Prop({
+    type: String,
+    enum: LivingStatusEnum,
+    required: false,
+  })
+  father_status?: LivingStatusEnum;
+
+  @Prop({ required: false })
+  father_income?: string;
+
+  @Prop({ required: false })
+  mother_name?: string;
+
+  @Prop({ required: false })
+  mother_profession?: string;
+
+  @Prop({ enum: ['alive', 'deceased'], required: false })
+  mother_status?: string;
+
+  @Prop({ required: false })
+  mother_income?: string;
+
+  @Prop({ required: false })
+  religion?: string;
+
+  @Prop({ enum: ['yes', 'no'], required: false })
+  special_person?: string;
+
+  @Prop({ enum: ['Male', 'Female', 'Other'], required: false })
+  gender?: string;
+
+  @Prop({ required: true })
+  nationality: string;
+
+  @Prop({
+    enum: ['khyber_pakhtunkhwa', 'punjab', 'sindh', 'balochistan'],
+    required: true,
+  })
+  provinceOfDomicile: string;
+
+  @Prop({ required: true })
+  districtOfDomicile: string;
+
+  @Prop({ required: true })
+  stateOrProvince: string;
+
+  @Prop({ required: true })
+  city: string;
+
+  @Prop({ required: true })
+  postalCode: string;
+
+  @Prop({ required: true })
+  streetAddress: string;
+
+  @Prop({ required: true })
+  profile_image_url: string;
+
+  @Prop({ required: true, enum: UserNS.UserType })
+  user_type: UserNS.UserType;
+
+  @Prop({ type: [EducationalBackground], default: [] })
+  educational_backgrounds: EducationalBackground[];
+
+  @Prop({ type: NationalIdCard, required: true })
+  national_id_card: NationalIdCard;
 }
 
 interface Preference {
@@ -119,7 +197,7 @@ export class Application {
   @Prop({ type: Number, required: true })
   total_processing_fee: number;
 
-  @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+  @Prop({ type: ApplicantSnapshot, required: true })
   applicant_snapshot: ApplicantSnapshot;
 
   //   An array of legal document ids that the applicant has accepted

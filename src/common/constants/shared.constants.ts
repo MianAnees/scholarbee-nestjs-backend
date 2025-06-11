@@ -14,7 +14,7 @@ export enum ScholarshipLocationEnum {
   International = 'international',
 }
 
-export enum FatherLivingStatusEnum {
+export enum LivingStatusEnum {
   Alive = 'alive',
   Deceased = 'deceased',
 }

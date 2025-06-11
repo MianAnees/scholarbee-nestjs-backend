@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
-import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 import { RequiredDocumentTitleEnum } from 'src/common/constants/shared.constants';
 
 /* 
@@ -58,7 +58,7 @@ interface IStudentSnapshotLastDegree {
 interface IStudentSnapshot {
   name: string;
   father_name: string;
-  father_status: FatherLivingStatusEnum;
+  father_status: LivingStatusEnum;
   districtOfDomicile: string;
   provinceOfDomicile: string;
   monthly_household_income: string;
@@ -108,7 +108,7 @@ class StudentSnapshotDto implements IStudentSnapshot {
   @Prop({ type: String, required: true })
   father_name: IStudentSnapshot['father_name'];
 
-  @Prop({ type: String, enum: FatherLivingStatusEnum, required: true })
+  @Prop({ type: String, enum: LivingStatusEnum, required: true })
   father_status: IStudentSnapshot['father_status'];
 
   @Prop({ type: String, required: true })
@@ -181,5 +181,6 @@ export class StudentScholarship implements IStudentScholarship {
   createdBy: IStudentScholarship['createdBy'];
 }
 
-export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
-export const StudentScholarshipSchema = SchemaFactory.createForClass(StudentScholarship);
+export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>;
+export const StudentScholarshipSchema =
+  SchemaFactory.createForClass(StudentScholarship);

@@ -1,35 +1,48 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
-// Educational background interfaces
-export interface IMarksGPA {
-  total_marks_gpa: string;
-  obtained_marks_gpa: string;
+// typescript namespace with all the user type enums
+export namespace UserNS {
+  export enum UserType {
+    Student = 'Student',
+    Admin = 'Admin',
+    Campus_Admin = 'Campus_Admin',
+  }
+  // Educational background interfaces
+  export interface IMarksGPA {
+    total_marks_gpa: string;
+    obtained_marks_gpa: string;
+  }
+
+  export interface IEducationalBackground {
+    id?: string;
+    board?: string; // Optional
+    education_level: string; // Required
+    field_of_study?: string; // Optional
+    marks_gpa: IMarksGPA; // Required
+    school_college_university?: string; // Optional
+    transcript?: string; // Optional
+    year_of_passing?: string; // Optional
+  }
+
+  export interface INationalIdCard {
+    front_side?: string;
+    back_side?: string;
+  }
 }
 
 @Schema({
   timestamps: false,
   _id: false,
 })
-export class MarksGPA implements IMarksGPA {
+export class MarksGPA implements UserNS.IMarksGPA {
   @Prop({ required: true })
   total_marks_gpa: string;
 
   @Prop({ required: true })
   obtained_marks_gpa: string;
-}
-
-export interface IEducationalBackground {
-  id?: string;
-  education_level: string; // Required
-  marks_gpa: IMarksGPA; // Required
-  school_college_university?: string; // Optional
-  field_of_study?: string; // Optional
-  year_of_passing?: string; // Optional
-  board?: string; // Optional
-  transcript?: string; // Optional
 }
 
 // Schema Class for educational background
@@ -37,7 +50,7 @@ export interface IEducationalBackground {
   timestamps: false,
   _id: false,
 })
-export class EducationalBackground implements IEducationalBackground {
+export class EducationalBackground implements UserNS.IEducationalBackground {
   @Prop({ required: false })
   id?: string;
 
@@ -48,7 +61,7 @@ export class EducationalBackground implements IEducationalBackground {
   school_college_university?: string;
 
   @Prop({ type: MarksGPA, required: true })
-  marks_gpa: IMarksGPA;
+  marks_gpa: MarksGPA;
 
   @Prop({ required: false })
   field_of_study?: string;
@@ -63,13 +76,17 @@ export class EducationalBackground implements IEducationalBackground {
   transcript?: string;
 }
 
-// typescript namespace with all the user type enums
-export namespace UserNS {
-  export enum UserType {
-    Student = 'Student',
-    Admin = 'Admin',
-    Campus_Admin = 'Campus_Admin',
-  }
+// Schema Class for national id card
+@Schema({
+  timestamps: false,
+  _id: false,
+})
+export class NationalIdCard implements UserNS.INationalIdCard {
+  @Prop({ required: false })
+  front_side?: string;
+
+  @Prop({ required: false })
+  back_side?: string;
 }
 
 // Add the comparePassword method to the interface
@@ -99,9 +116,9 @@ export class User {
 
   @Prop({
     type: String,
-    enum: FatherLivingStatusEnum,
+    enum: LivingStatusEnum,
   })
-  father_status?: FatherLivingStatusEnum;
+  father_status?: LivingStatusEnum;
 
   @Prop()
   father_income?: string;
@@ -112,8 +129,11 @@ export class User {
   @Prop()
   mother_profession?: string;
 
-  @Prop({ enum: ['alive', 'deceased'] })
-  mother_status?: string;
+  @Prop({
+    type: String,
+    enum: LivingStatusEnum,
+  })
+  mother_status?: LivingStatusEnum;
 
   @Prop()
   mother_income?: string;
@@ -191,10 +211,10 @@ export class User {
   profile_image_url?: string;
 
   @Prop({ type: [EducationalBackground], default: [] })
-  educational_backgrounds: IEducationalBackground[];
+  educational_backgrounds: EducationalBackground[];
 
-  @Prop({ type: MongooseSchema.Types.Mixed })
-  national_id_card: any;
+  @Prop({ type: NationalIdCard, required: true })
+  national_id_card: NationalIdCard;
 
   @Prop({ default: () => new Date() })
   created_at: Date;

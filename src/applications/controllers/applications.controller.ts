@@ -34,7 +34,7 @@ export class ApplicationsController {
   ) {
     // Pass the user ID to the service to fetch user data and create application
     return this.applicationsService.createWithUserSnapshot(
-      authReq.user.sub,
+      authReq.user,
       createApplicationDto,
     );
   }

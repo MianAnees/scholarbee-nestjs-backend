@@ -62,7 +62,7 @@ export class AdmissionProgram {
   redirect_deeplink: string;
 
   @Prop({ type: [Types.ObjectId], default: [], ref: 'User' })
-  redirect_students: Types.ObjectId[];
+  redirected_students: Types.ObjectId[];
 }
 
 export const AdmissionProgramSchema =

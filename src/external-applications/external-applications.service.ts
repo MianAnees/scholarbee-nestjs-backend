@@ -148,11 +148,11 @@ export class ExternalApplicationsService {
         );
         const savedApplication = await externalApplication.save({ session });
 
-        // Add the student to the admission program's redirect_students array
+        // Add the student to the admission program's redirected_students array
         await this.admissionProgramModel.findByIdAndUpdate(
           admission_program,
           {
-            $addToSet: { redirect_students: stringToObjectId(user._id) },
+            $addToSet: { redirected_students: stringToObjectId(user._id) },
           },
           { new: true, session },
         );

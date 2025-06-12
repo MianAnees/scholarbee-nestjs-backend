@@ -13,7 +13,10 @@ import {
 } from '@nestjs/common';
 import { ApplicationsService } from '../services/applications.service';
 import { CreateApplicationDto } from '../dto/create-application.dto';
-import { UpdateApplicationDto } from '../dto/update-application.dto';
+import {
+  UpdateApplicationDto,
+  UpdateApplicationStatusDto,
+} from '../dto/update-application.dto';
 import { QueryApplicationDto } from '../dto/query-application.dto';
 import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -73,15 +76,26 @@ export class ApplicationsController {
   update(
     @Param('id') id: string,
     @Body() updateApplicationDto: UpdateApplicationDto,
+    @AuthReq() authReq: AuthenticatedRequest,
   ) {
-    return this.applicationsService.update(id, updateApplicationDto);
+    return this.applicationsService.update(
+      id,
+      updateApplicationDto,
+      authReq.user,
+    );
   }
 
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.applicationsService.updateStatus(id, status);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateApplicationStatusDto: UpdateApplicationStatusDto,
+  ) {
+    return this.applicationsService.updateStatus(
+      id,
+      updateApplicationStatusDto.status,
+    );
   }
 
   @UseGuards(RolesGuard)
@@ -89,34 +103,5 @@ export class ApplicationsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.applicationsService.remove(id);
-  }
-
-  @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
-  @Post('update-application-status')
-  async updateApplicationStatus(
-    @Body() updateData: { applicationId: string; status: string },
-  ) {
-    const { applicationId, status } = updateData;
-
-    if (!applicationId || !status) {
-      throw new BadRequestException(
-        'Missing applicationId or status in request body',
-      );
-    }
-
-    if (!['Pending', 'Approved', 'Rejected', 'Under Review'].includes(status)) {
-      throw new BadRequestException('Invalid status value');
-    }
-
-    const updatedApplication = await this.applicationsService.updateStatus(
-      applicationId,
-      status,
-    );
-
-    return {
-      message: 'Application status updated successfully',
-      application: updatedApplication,
-    };
   }
 }

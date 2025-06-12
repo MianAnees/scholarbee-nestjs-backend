@@ -8,6 +8,7 @@ import { Application, ApplicationSchema } from './schemas/application.schema';
 import { ApplicationsService } from './services/applications.service';
 import { LegalDocumentRequirementsModule } from '../legal-document-requirements/legal-document-requirements.module';
 import { LegalDocumentsModule } from '../legal-documents/legal-documents.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LegalDocumentsModule } from '../legal-documents/legal-documents.module'
     AuthModule,
     LegalDocumentRequirementsModule,
     LegalDocumentsModule,
+    NotificationModule,
   ],
   controllers: [ApplicationsController],
   providers: [ApplicationsService, ApplicationsGateway],

@@ -19,6 +19,7 @@ import { LegalDocumentRequirementsService } from '../../legal-document-requireme
 import { LegalDocumentsService } from '../../legal-documents/legal-documents.service';
 import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { NotificationService } from 'src/notification/services/notfication.service';
 
 @Injectable()
 export class ApplicationsService {
@@ -30,6 +31,7 @@ export class ApplicationsService {
     private readonly applicationsGateway: ApplicationsGateway,
     private readonly legalDocumentRequirementsService: LegalDocumentRequirementsService,
     private readonly legalDocumentsService: LegalDocumentsService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -186,6 +188,7 @@ export class ApplicationsService {
   async update(
     id: string,
     updateApplicationDto: UpdateApplicationDto,
+    user: AuthenticatedRequest['user'],
   ): Promise<ApplicationDocument> {
     let updatedDocument: UpdateQuery<ApplicationDocument> =
       updateApplicationDto;
@@ -194,11 +197,29 @@ export class ApplicationsService {
       throw new BadRequestException('Invalid application ID');
     }
 
+    // Check if application is already submitted (Pending status means submitted)
+    const existingApplication = await this.applicationModel.findById(id).exec();
+    if (!existingApplication) {
+      throw new NotFoundException(`Application with ID ${id} not found`);
+    }
+
+    // Prevent updates to submitted applications (status other than DRAFT)
+    if (existingApplication.status !== ApplicationStatus.DRAFT) {
+      throw new BadRequestException(
+        `Cannot update application with status "${existingApplication.status}". Application modifications are only allowed for draft applications. Use status update endpoint for status changes.`,
+      );
+    }
+
     if (updateApplicationDto.is_submitted) {
       await this.validateLegalDocumentAcceptance(
         updateApplicationDto.accepted_legal_documents,
       );
-      updatedDocument.status = ApplicationStatus.PENDING;
+
+      // Create applicant snapshot on submission using authenticated user ID
+      const applicant_snapshot = await this.createApplicantSnapshot(user._id);
+
+      updatedDocument.status = ApplicationStatus.PENDING; // "Pending" status is set when application is submitted
+      updatedDocument.applicant_snapshot = applicant_snapshot;
     }
 
     const updatedApplication = await this.applicationModel
@@ -212,19 +233,32 @@ export class ApplicationsService {
       throw new NotFoundException(`Application with ID ${id} not found`);
     }
 
+    // Trigger notification for application submission
+    if (updateApplicationDto.is_submitted) {
+      try {
+        await this.notificationService.createSpecificCampusesNotification({
+          title: 'New Application Submitted',
+          message: `A new application has been submitted for ${updatedApplication.program}. Please review and take necessary action.`,
+          campusIds: [updatedApplication.campus_id],
+        });
+      } catch (error) {
+        console.error('Error sending submission notification:', error);
+        // Don't fail the application update if notification fails
+      }
+    }
+
     // Emit the update via WebSocket
     this.applicationsGateway.emitApplicationUpdate(updatedApplication);
 
     return updatedApplication;
   }
 
-  async updateStatus(id: string, status: string): Promise<ApplicationDocument> {
+  async updateStatus(
+    id: string,
+    status: ApplicationStatus,
+  ): Promise<ApplicationDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');
-    }
-
-    if (!['Pending', 'Approved', 'Rejected', 'Under Review'].includes(status)) {
-      throw new BadRequestException('Invalid status value');
     }
 
     const updatedApplication = await this.applicationModel
@@ -233,6 +267,48 @@ export class ApplicationsService {
 
     if (!updatedApplication) {
       throw new NotFoundException(`Application with ID ${id} not found`);
+    }
+
+    // Trigger notification for application approval
+    if (status === ApplicationStatus.APPROVED) {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Approved!',
+          message: `Congratulations! Your application for ${updatedApplication.program} has been approved. Check your application status for next steps.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending approval notification:', error);
+        // Don't fail the status update if notification fails
+      }
+    }
+
+    // Trigger notification for application rejection
+    if (status === ApplicationStatus.REJECTED) {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Status Update',
+          message: `Your application for ${updatedApplication.program} has been reviewed. Please check your application status for more details.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending rejection notification:', error);
+        // Don't fail the status update if notification fails
+      }
+    }
+
+    // Trigger notification for application under review
+    if (status === ApplicationStatus.UNDER_REVIEW) {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Under Review',
+          message: `Your application for ${updatedApplication.program} is now under review. We'll notify you once the review is complete.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending under review notification:', error);
+        // Don't fail the status update if notification fails
+      }
     }
 
     // Emit the update via WebSocket
@@ -315,17 +391,13 @@ export class ApplicationsService {
         throw new NotFoundException('User not found');
       }
 
-      // Create applicant snapshot from user data
-      const applicant_snapshot = this.createApplicantSnapshot(user);
-
-      // Create the application with the snapshot and map fields correctly
+      // Create the application without snapshot (snapshot will be created on submission)
       const application = new this.applicationModel({
         ...createApplicationDto,
         applicant: user._id,
         student_id: user._id, // Map applicant to student_id
         program_id: createApplicationDto.program, // Map program to program_id
         admission_id: createApplicationDto.admission, // Map admission to admission_id
-        applicant_snapshot,
         submission_date: new Date(),
         status: ApplicationStatus.DRAFT,
       });
@@ -351,11 +423,16 @@ export class ApplicationsService {
   }
 
   /**
-   * Creates an applicant snapshot from user data
-   * @param user The user document to create snapshot from
+   * Creates an applicant snapshot by fetching user from database
+   * @param applicantId The applicant user ID
    * @returns The applicant snapshot object
    */
-  private createApplicantSnapshot(user: AuthenticatedRequest['user']) {
+  private async createApplicantSnapshot(applicantId: string) {
+    // Fetch the user data from database
+    const user = await this.userModel.findById(applicantId).exec();
+    if (!user) {
+      throw new NotFoundException('Applicant user not found');
+    }
     const {
       first_name,
       last_name,

@@ -197,8 +197,8 @@ export class Application {
   @Prop({ type: Number, required: true })
   total_processing_fee: number;
 
-  @Prop({ type: ApplicantSnapshot, required: true })
-  applicant_snapshot: ApplicantSnapshot;
+  @Prop({ type: ApplicantSnapshot, required: false })
+  applicant_snapshot?: ApplicantSnapshot;
 
   //   An array of legal document ids that the applicant has accepted
   //   Ref: LegalDocument

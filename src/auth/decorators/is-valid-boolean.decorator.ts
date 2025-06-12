@@ -2,7 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsBoolean } from 'class-validator';
 
 /**
- * Decorator that transforms and validates a value as a boolean.
+ * Decorator that **transforms** and **validates** a value as a boolean.
  * Only accepts 'true', 'false', '1', '0', true, false, 1, 0 as valid inputs.
  * Other values will cause validation to fail.
  *

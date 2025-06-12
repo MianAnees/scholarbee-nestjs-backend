@@ -18,6 +18,7 @@ import { User, UserDocument } from '../../users/schemas/user.schema';
 import { LegalDocumentRequirementsService } from '../../legal-document-requirements/legal-document-requirements.service';
 import { LegalDocumentsService } from '../../legal-documents/legal-documents.service';
 import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
 @Injectable()
 export class ApplicationsService {
@@ -31,6 +32,11 @@ export class ApplicationsService {
     private readonly legalDocumentsService: LegalDocumentsService,
   ) {}
 
+  /**
+   * @deprecated Use createWithUserSnapshot instead
+   * @param createApplicationDto - The application data to create
+   * @returns The created application
+   */
   async create(
     createApplicationDto: CreateApplicationDto,
   ): Promise<ApplicationDocument> {
@@ -287,16 +293,14 @@ export class ApplicationsService {
   }
 
   async createWithUserSnapshot(
+    user: AuthenticatedRequest['user'],
     createApplicationDto: CreateApplicationDto,
-    userId: string,
   ): Promise<ApplicationDocument> {
     try {
-      // TODO: Check the payload for the associated legal documents required for application
-
       // Check if user has already applied for this admission program
       const existingApplication = await this.applicationModel
         .findOne({
-          applicant: userId,
+          applicant: user.sub,
           admission_program_id: createApplicationDto.admission_program_id,
         })
         .exec();
@@ -307,65 +311,18 @@ export class ApplicationsService {
         );
       }
 
-      // Fetch the complete user data to create the snapshot
-      const user = await this.userModel.findById(userId).exec();
-
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
       // Create applicant snapshot from user data
-      const applicant_snapshot = {
-        first_name: user.first_name || null,
-        last_name: user.last_name || null,
-        email: user.email || null,
-        phone_number: user.phone_number || null,
-        date_of_birth: user.date_of_birth || null,
-        father_name: user.father_name || null,
-        father_profession: user.father_profession || null,
-        father_status: user.father_status || null,
-        father_income: user.father_income || null,
-        mother_name: user.mother_name || null,
-        mother_profession: user.mother_profession || null,
-        mother_status: user.mother_status || null,
-        mother_income: user.mother_income || null,
-        religion: user.religion || null,
-        special_person: user.special_person || null,
-        gender: user.gender || null,
-        nationality: user.nationality || null,
-        provinceOfDomicile: user.provinceOfDomicile || null,
-        districtOfDomicile: user.districtOfDomicile || null,
-        stateOrProvince: user.stateOrProvince || null,
-        city: user.city || null,
-        postalCode: user.postalCode || null,
-        streetAddress: user.streetAddress || null,
-        profile_image_url: user.profile_image_url || null,
-        user_type: user.user_type || null,
-        educational_backgrounds:
-          user.educational_backgrounds?.map((edu) => ({
-            id: edu.id,
-            education_level: edu.education_level || null,
-            field_of_study: edu.field_of_study || null,
-            school_college_university: edu.school_college_university || null,
-            marks_gpa: {
-              total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
-              obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
-            },
-            year_of_passing: edu.year_of_passing || null,
-            board: edu.board || null,
-            transcript: edu.transcript || null,
-          })) || [],
-        national_id_card: {
-          front_side: user.national_id_card?.front_side || null,
-          back_side: user.national_id_card?.back_side || null,
-        },
-      };
+      const applicant_snapshot = this.createApplicantSnapshot(user);
 
       // Create the application with the snapshot and map fields correctly
       const application = new this.applicationModel({
         ...createApplicationDto,
-        applicant: userId,
-        student_id: userId, // Map applicant to student_id
+        applicant: user._id,
+        student_id: user._id, // Map applicant to student_id
         program_id: createApplicationDto.program, // Map program to program_id
         admission_id: createApplicationDto.admission, // Map admission to admission_id
         applicant_snapshot,
@@ -391,6 +348,89 @@ export class ApplicationsService {
         error.message || 'Error processing application',
       );
     }
+  }
+
+  /**
+   * Creates an applicant snapshot from user data
+   * @param user The user document to create snapshot from
+   * @returns The applicant snapshot object
+   */
+  private createApplicantSnapshot(user: AuthenticatedRequest['user']) {
+    const {
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      date_of_birth,
+      father_name,
+      father_profession,
+      father_status,
+      father_income,
+      mother_name,
+      mother_profession,
+      mother_status,
+      mother_income,
+      religion,
+      special_person,
+      gender,
+      nationality,
+      provinceOfDomicile,
+      districtOfDomicile,
+      stateOrProvince,
+      city,
+      postalCode,
+      streetAddress,
+      profile_image_url,
+      user_type,
+      educational_backgrounds,
+      national_id_card,
+    } = user;
+
+    return {
+      first_name: first_name || null,
+      last_name: last_name || null,
+      email: email || null,
+      phone_number: phone_number || null,
+      date_of_birth: date_of_birth || null,
+      father_name: father_name || null,
+      father_profession: father_profession || null,
+      father_status: father_status || null,
+      father_income: father_income || null,
+      mother_name: mother_name || null,
+      mother_profession: mother_profession || null,
+      mother_status: mother_status || null,
+      mother_income: mother_income || null,
+      religion: religion || null,
+      special_person: special_person || null,
+      gender: gender || null,
+      nationality: nationality || null,
+      provinceOfDomicile: provinceOfDomicile || null,
+      districtOfDomicile: districtOfDomicile || null,
+      stateOrProvince: stateOrProvince || null,
+      city: city || null,
+      postalCode: postalCode || null,
+      streetAddress: streetAddress || null,
+      profile_image_url: profile_image_url || null,
+      user_type: user_type || null,
+      educational_backgrounds:
+        educational_backgrounds?.map((edu) => ({
+          id: edu.id,
+          education_level: edu.education_level || null,
+          field_of_study: edu.field_of_study || null,
+          school_college_university: edu.school_college_university || null,
+          marks_gpa: {
+            total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
+            obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
+          },
+          year_of_passing: edu.year_of_passing || null,
+          board: edu.board || null,
+          transcript: edu.transcript || null,
+        })) || [],
+      national_id_card: {
+        front_side: national_id_card?.front_side || null,
+        back_side: national_id_card?.back_side || null,
+      },
+    };
   }
 
   private async getLegalDocumentIdsForApplication() {

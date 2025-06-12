@@ -19,38 +19,38 @@ import { ResourceProtectionGuard } from '../../auth/guards/resource-protection.g
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '../../auth/enums/role.enum';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
+@UseGuards(ResourceProtectionGuard)
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
-  @UseGuards(ResourceProtectionGuard)
   @Post()
-  async create(@Body() createApplicationDto: CreateApplicationDto, @Req() req) {
-    // Get the user ID from the JWT token
-    const userId = req.user.sub;
-
+  async create(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Body() createApplicationDto: CreateApplicationDto,
+  ) {
     // Pass the user ID to the service to fetch user data and create application
     return this.applicationsService.createWithUserSnapshot(
+      authReq.user,
       createApplicationDto,
-      userId,
     );
   }
 
-  @UseGuards(ResourceProtectionGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   // @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Get()
   findAll(@Query() queryDto: QueryApplicationDto) {
     return this.applicationsService.findAll(queryDto);
   }
 
-  @UseGuards(ResourceProtectionGuard)
   @Get('my-applications')
   findMyApplications(@Req() req, @Query() queryDto: QueryApplicationDto) {
     return this.applicationsService.findByApplicant(req.user.sub, queryDto);
   }
 
-  @UseGuards(ResourceProtectionGuard)
   @Get('statistics')
   getStatistics() {
     return this.applicationsService.getApplicationStatistics();
@@ -61,7 +61,6 @@ export class ApplicationsController {
     return this.applicationsService.getApplicationLegalDocuments();
   }
 
-  @UseGuards(ResourceProtectionGuard)
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -70,7 +69,6 @@ export class ApplicationsController {
     return this.applicationsService.findOne(id, populate);
   }
 
-  @UseGuards(ResourceProtectionGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -79,21 +77,21 @@ export class ApplicationsController {
     return this.applicationsService.update(id, updateApplicationDto);
   }
 
-  @UseGuards(ResourceProtectionGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.applicationsService.updateStatus(id, status);
   }
 
-  @UseGuards(ResourceProtectionGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.applicationsService.remove(id);
   }
 
-  @UseGuards(ResourceProtectionGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Post('update-application-status')
   async updateApplicationStatus(

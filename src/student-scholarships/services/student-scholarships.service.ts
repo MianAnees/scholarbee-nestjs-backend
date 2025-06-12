@@ -29,7 +29,7 @@ import {
   StudentScholarship,
   StudentScholarshipDocument,
 } from '../schemas/student-scholarship.schema';
-import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
 @Injectable()
 export class StudentScholarshipsService {

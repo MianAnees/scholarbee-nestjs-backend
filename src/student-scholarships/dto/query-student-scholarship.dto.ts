@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ParseObjectId } from 'nestjs-object-id';
 import { ScholarshipApprovalStatusEnum } from '../schemas/student-scholarship.schema';
-import { FatherLivingStatusEnum } from 'src/common/constants/shared.constants';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
 export class QueryStudentScholarshipDto {
   @IsOptional()
@@ -18,8 +18,8 @@ export class QueryStudentScholarshipDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(FatherLivingStatusEnum)
-  father_status?: FatherLivingStatusEnum;
+  @IsEnum(LivingStatusEnum)
+  father_status?: LivingStatusEnum;
 
   @IsOptional()
   @IsEnum(ScholarshipApprovalStatusEnum)

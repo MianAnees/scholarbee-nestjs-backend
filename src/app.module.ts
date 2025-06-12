@@ -34,6 +34,7 @@ import { IConfiguration } from 'src/config/configuration';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationModule } from './notification/notification.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
+import { ExternalApplicationsModule } from './external-applications/external-applications.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
     AdmissionsModule,
     AdmissionProgramsModule,
     ApplicationsModule,
+    ExternalApplicationsModule,
     ContactUsModule,
     FeesModule,
     ProgramTemplatesModule,

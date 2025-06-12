@@ -19,6 +19,7 @@ import { LegalDocumentRequirementsService } from '../../legal-document-requireme
 import { LegalDocumentsService } from '../../legal-documents/legal-documents.service';
 import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { NotificationService } from 'src/notification/services/notfication.service';
 
 @Injectable()
 export class ApplicationsService {
@@ -30,6 +31,7 @@ export class ApplicationsService {
     private readonly applicationsGateway: ApplicationsGateway,
     private readonly legalDocumentRequirementsService: LegalDocumentRequirementsService,
     private readonly legalDocumentsService: LegalDocumentsService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -212,19 +214,32 @@ export class ApplicationsService {
       throw new NotFoundException(`Application with ID ${id} not found`);
     }
 
+    // Trigger notification for application submission
+    if (updateApplicationDto.is_submitted) {
+      try {
+        await this.notificationService.createSpecificCampusesNotification({
+          title: 'New Application Submitted',
+          message: `A new application has been submitted for ${updatedApplication.program}. Please review and take necessary action.`,
+          campusIds: [updatedApplication.campus_id],
+        });
+      } catch (error) {
+        console.error('Error sending submission notification:', error);
+        // Don't fail the application update if notification fails
+      }
+    }
+
     // Emit the update via WebSocket
     this.applicationsGateway.emitApplicationUpdate(updatedApplication);
 
     return updatedApplication;
   }
 
-  async updateStatus(id: string, status: string): Promise<ApplicationDocument> {
+  async updateStatus(
+    id: string,
+    status: ApplicationStatus,
+  ): Promise<ApplicationDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');
-    }
-
-    if (!['Pending', 'Approved', 'Rejected', 'Under Review'].includes(status)) {
-      throw new BadRequestException('Invalid status value');
     }
 
     const updatedApplication = await this.applicationModel
@@ -233,6 +248,48 @@ export class ApplicationsService {
 
     if (!updatedApplication) {
       throw new NotFoundException(`Application with ID ${id} not found`);
+    }
+
+    // Trigger notification for application approval
+    if (status === 'Approved') {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Approved!',
+          message: `Congratulations! Your application for ${updatedApplication.program} has been approved. Check your application status for next steps.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending approval notification:', error);
+        // Don't fail the status update if notification fails
+      }
+    }
+
+    // Trigger notification for application rejection
+    if (status === 'Rejected') {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Status Update',
+          message: `Your application for ${updatedApplication.program} has been reviewed. Please check your application status for more details.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending rejection notification:', error);
+        // Don't fail the status update if notification fails
+      }
+    }
+
+    // Trigger notification for application under review
+    if (status === 'Under Review') {
+      try {
+        await this.notificationService.createSpecificUsersNotification({
+          title: 'Application Under Review',
+          message: `Your application for ${updatedApplication.program} is now under review. We'll notify you once the review is complete.`,
+          userIds: [updatedApplication.applicant],
+        });
+      } catch (error) {
+        console.error('Error sending under review notification:', error);
+        // Don't fail the status update if notification fails
+      }
     }
 
     // Emit the update via WebSocket

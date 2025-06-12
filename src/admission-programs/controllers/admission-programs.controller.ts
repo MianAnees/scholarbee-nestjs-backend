@@ -68,6 +68,26 @@ export class AdmissionProgramsController {
   }
 
   @UseGuards(ResourceProtectionGuard)
+  @Get('user/favorites')
+  findFavorites(@Req() req, @Query() queryDto: QueryAdmissionProgramDto) {
+    return this.admissionProgramsService.findFavorites(req.user.sub, queryDto);
+  }
+
+  @Get('with-filters')
+  async findWithFilters(
+    @Query() filterDto: FilterAdmissionProgramDto,
+    @Req() req: Request,
+  ) {
+    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
+      req.user?.['sub'],
+      filterDto,
+    );
+    const result =
+      await this.admissionProgramsService.findWithFilters(filterDto);
+    return result;
+  }
+
+  @UseGuards(ResourceProtectionGuard)
   @Get(':admission_program_id')
   findOne(
     @AuthReq() authReq: AuthenticatedRequest,
@@ -106,25 +126,5 @@ export class AdmissionProgramsController {
   @Delete(':id/favorites')
   removeFromFavorites(@Param('id') id: string, @Req() req) {
     return this.admissionProgramsService.removeFromFavorites(id, req.user.sub);
-  }
-
-  @UseGuards(ResourceProtectionGuard)
-  @Get('user/favorites')
-  findFavorites(@Req() req, @Query() queryDto: QueryAdmissionProgramDto) {
-    return this.admissionProgramsService.findFavorites(req.user.sub, queryDto);
-  }
-
-  @Get('with-filters')
-  async findWithFilters(
-    @Query() filterDto: FilterAdmissionProgramDto,
-    @Req() req: Request,
-  ) {
-    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
-      req.user?.['sub'],
-      filterDto,
-    );
-    const result =
-      await this.admissionProgramsService.findWithFilters(filterDto);
-    return result;
   }
 }

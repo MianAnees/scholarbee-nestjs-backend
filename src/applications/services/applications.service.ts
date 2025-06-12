@@ -197,6 +197,19 @@ export class ApplicationsService {
       throw new BadRequestException('Invalid application ID');
     }
 
+    // Check if application is already submitted (Pending status means submitted)
+    const existingApplication = await this.applicationModel.findById(id).exec();
+    if (!existingApplication) {
+      throw new NotFoundException(`Application with ID ${id} not found`);
+    }
+
+    // Prevent updates to submitted applications (status other than DRAFT)
+    if (existingApplication.status !== ApplicationStatus.DRAFT) {
+      throw new BadRequestException(
+        `Cannot update application with status "${existingApplication.status}". Application modifications are only allowed for draft applications. Use status update endpoint for status changes.`,
+      );
+    }
+
     if (updateApplicationDto.is_submitted) {
       await this.validateLegalDocumentAcceptance(
         updateApplicationDto.accepted_legal_documents,

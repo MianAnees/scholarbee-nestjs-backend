@@ -18,6 +18,7 @@ import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.gua
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { ResponseInterceptor } from '../../common/interceptors/response.interceptor';
+import { ExternalApplicationsService } from 'src/external-applications/external-applications.service';
 
 // Authenticated with Guard
 @UseGuards(ResourceProtectionGuard)
@@ -28,6 +29,7 @@ export class AnalyticsController {
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
     private readonly applicationMetricsAnalyticsService: ApplicationMetricsAnalyticsService,
     private readonly chatAnalyticsService: ChatAnalyticsService,
+    private readonly externalApplicationsService: ExternalApplicationsService,
   ) {}
 
   @Get('search-trends/most-searched-degree-levels')
@@ -70,7 +72,9 @@ export class AnalyticsController {
 
   @Get('application-metrics/daily-breakdown')
   async getDailyApplicationMetrics(@Query() query: QueryAnalyticsCommonDto) {
-    return this.applicationMetricsAnalyticsService.getDailyApplicationMetrics(query);
+    return this.applicationMetricsAnalyticsService.getDailyApplicationMetrics(
+      query,
+    );
   }
 
   @Post('application-metrics/register-event')
@@ -126,5 +130,10 @@ export class AnalyticsController {
     return this.chatAnalyticsService.getResponseAnalyticsForAllCampuses(
       !isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10,
     );
+  }
+
+  @Get('external-applications')
+  async getExternalApplicationsAnalytics() {
+    return this.externalApplicationsService.getAnalytics();
   }
 }

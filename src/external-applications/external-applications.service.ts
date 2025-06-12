@@ -218,4 +218,58 @@ export class ExternalApplicationsService {
 
     return application;
   }
+
+  async getAnalytics() {
+    // Get total count of external applications
+    const totalCount = await this.externalApplicationModel.countDocuments();
+
+    // Get per university count using aggregation pipeline
+    // Now using direct university reference from the schema
+    const universityStats = await this.externalApplicationModel.aggregate([
+      {
+        $lookup: {
+          from: 'universities', // Direct lookup to universities collection
+          localField: 'university',
+          foreignField: '_id',
+          as: 'universityInfo',
+        },
+      },
+      // the previous lookup makes the universityInfo field an array (assuming there are multiple universities), so we need to unwind it so that each `universityInfo` is an single object
+      {
+        $unwind: {
+          path: '$universityInfo',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: '$university',
+          universityName: { $first: '$universityInfo.name' },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+      {
+        $project: {
+          _id: 1,
+          universityName: 1,
+          count: 1,
+        },
+      },
+    ]);
+
+    return {
+      perUniversityStats: universityStats,
+      summary: {
+        totalExternalApplications: totalCount,
+        totalUniqueUniversities: universityStats.length,
+        averageApplicationsPerUniversity:
+          universityStats.length > 0
+            ? Math.round((totalCount / universityStats.length) * 100) / 100
+            : 0,
+      },
+    };
+  }
 }

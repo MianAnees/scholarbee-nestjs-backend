@@ -76,8 +76,13 @@ export class ApplicationsController {
   update(
     @Param('id') id: string,
     @Body() updateApplicationDto: UpdateApplicationDto,
+    @AuthReq() authReq: AuthenticatedRequest,
   ) {
-    return this.applicationsService.update(id, updateApplicationDto);
+    return this.applicationsService.update(
+      id,
+      updateApplicationDto,
+      authReq.user,
+    );
   }
 
   @UseGuards(RolesGuard)

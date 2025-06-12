@@ -188,6 +188,7 @@ export class ApplicationsService {
   async update(
     id: string,
     updateApplicationDto: UpdateApplicationDto,
+    user: AuthenticatedRequest['user'],
   ): Promise<ApplicationDocument> {
     let updatedDocument: UpdateQuery<ApplicationDocument> =
       updateApplicationDto;
@@ -200,7 +201,12 @@ export class ApplicationsService {
       await this.validateLegalDocumentAcceptance(
         updateApplicationDto.accepted_legal_documents,
       );
-      updatedDocument.status = ApplicationStatus.PENDING;
+
+      // Create applicant snapshot on submission using authenticated user ID
+      const applicant_snapshot = await this.createApplicantSnapshot(user._id);
+
+      updatedDocument.status = ApplicationStatus.PENDING; // "Pending" status is set when application is submitted
+      updatedDocument.applicant_snapshot = applicant_snapshot;
     }
 
     const updatedApplication = await this.applicationModel
@@ -372,17 +378,13 @@ export class ApplicationsService {
         throw new NotFoundException('User not found');
       }
 
-      // Create applicant snapshot from user data
-      const applicant_snapshot = this.createApplicantSnapshot(user);
-
-      // Create the application with the snapshot and map fields correctly
+      // Create the application without snapshot (snapshot will be created on submission)
       const application = new this.applicationModel({
         ...createApplicationDto,
         applicant: user._id,
         student_id: user._id, // Map applicant to student_id
         program_id: createApplicationDto.program, // Map program to program_id
         admission_id: createApplicationDto.admission, // Map admission to admission_id
-        applicant_snapshot,
         submission_date: new Date(),
         status: ApplicationStatus.DRAFT,
       });
@@ -408,11 +410,16 @@ export class ApplicationsService {
   }
 
   /**
-   * Creates an applicant snapshot from user data
-   * @param user The user document to create snapshot from
+   * Creates an applicant snapshot by fetching user from database
+   * @param applicantId The applicant user ID
    * @returns The applicant snapshot object
    */
-  private createApplicantSnapshot(user: AuthenticatedRequest['user']) {
+  private async createApplicantSnapshot(applicantId: string) {
+    // Fetch the user data from database
+    const user = await this.userModel.findById(applicantId).exec();
+    if (!user) {
+      throw new NotFoundException('Applicant user not found');
+    }
     const {
       first_name,
       last_name,

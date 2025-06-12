@@ -122,7 +122,7 @@ export class ExternalApplicationsService {
     user: AuthenticatedRequest['user'],
     createExternalApplicationDto: CreateExternalApplicationDto,
   ) {
-    const { program, admission, admission_program, campus } =
+    const { program, admission, admission_program, campus, university } =
       createExternalApplicationDto;
 
     const applicant_snapshot = this.createApplicantSnapshot(user);
@@ -134,6 +134,7 @@ export class ExternalApplicationsService {
       admission,
       admission_program,
       campus,
+      university,
     };
 
     // Start a transaction session

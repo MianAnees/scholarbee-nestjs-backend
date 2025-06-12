@@ -12,6 +12,11 @@ export class CreateExternalApplicationDto {
   @IsNotEmpty() // required
   @IsObjectId()
   @ToObjectId()
+  university: Types.ObjectId;
+
+  @IsNotEmpty() // required
+  @IsObjectId()
+  @ToObjectId()
   campus: Types.ObjectId;
 
   @IsNotEmpty() // required

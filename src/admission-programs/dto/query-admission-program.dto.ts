@@ -1,54 +1,64 @@
-import { IsOptional, IsString, IsMongoId, IsNumber, IsBoolean, IsArray } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsMongoId,
+  IsNumber,
+  IsBoolean,
+  IsArray,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+import { PopulateDto } from 'src/common/dto/populate.dto';
 
 export class QueryAdmissionProgramDto {
-    @IsOptional()
-    @IsString()
-    search?: string;
+  @IsOptional()
+  @IsString()
+  search?: string;
 
-    @IsOptional()
-    @IsMongoId()
-    admission?: string;
+  @IsOptional()
+  @IsMongoId()
+  admission?: string;
 
-    @IsOptional()
-    @IsMongoId()
-    program?: string;
+  @IsOptional()
+  @IsMongoId()
+  program?: string;
 
-    @IsOptional()
-    @IsArray()
-    @IsMongoId({ each: true })
-    favouriteBy?: string[];
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  favouriteBy?: string[];
 
-    @IsOptional()
-    @IsNumber()
-    @Type(() => Number)
-    minAvailableSeats?: number;
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  minAvailableSeats?: number;
 
-    @IsOptional()
-    @IsNumber()
-    @Type(() => Number)
-    maxAvailableSeats?: number;
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  maxAvailableSeats?: number;
 
-    @IsOptional()
-    @IsNumber()
-    @Type(() => Number)
-    page?: number = 1;
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  page?: number = 1;
 
-    @IsOptional()
-    @IsNumber()
-    @Type(() => Number)
-    limit?: number = 10;
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number = 10;
 
-    @IsOptional()
-    @IsString()
-    sortBy?: string = 'createdAt';
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'createdAt';
 
-    @IsOptional()
-    @IsString()
-    sortOrder?: 'asc' | 'desc' = 'desc';
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc' = 'desc';
 
-    @IsOptional()
-    @IsBoolean()
-    @Type(() => Boolean)
-    populate?: boolean = true;
-} 
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  populate?: boolean = true;
+}
+
+export class QueryAdmissionProgramByIdDto extends PopulateDto {}

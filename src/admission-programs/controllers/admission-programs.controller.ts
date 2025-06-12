@@ -19,6 +19,9 @@ import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsService } from '../services/admission-programs.service';
 import { QueryAdmissionProgramDegreeLevelsDto } from '../dto/query-admission-program-degree-levels.dto';
 import { QueryAdmissionProgramMajorsDto } from '../dto/query-admission-program-majors.dto';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { QueryAdmissionProgramByIdDto } from '../dto/query-admission-program.dto';
 
 @Controller('admission-programs')
 export class AdmissionProgramsController {
@@ -40,28 +43,42 @@ export class AdmissionProgramsController {
 
   // /degree-levels
   @Get('degree-levels')
-  findAllDegreeLevels(@Query() queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto) {
-    return this.admissionProgramsService.findAllDegreeLevels(queryAdmissionProgramDegreeLevelsDto);
+  findAllDegreeLevels(
+    @Query()
+    queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto,
+  ) {
+    return this.admissionProgramsService.findAllDegreeLevels(
+      queryAdmissionProgramDegreeLevelsDto,
+    );
   }
 
   // /majors
   @Get('majors')
-  findAllMajors(@Query() queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto) {
-    return this.admissionProgramsService.findAllMajors(queryAdmissionProgramMajorsDto);
+  findAllMajors(
+    @Query() queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto,
+  ) {
+    return this.admissionProgramsService.findAllMajors(
+      queryAdmissionProgramMajorsDto,
+    );
   }
-  
 
   @Get()
   findAll(@Query() queryDto: QueryAdmissionProgramDto) {
     return this.admissionProgramsService.findAll(queryDto);
   }
 
-  @Get('by-id/:id')
+  @UseGuards(ResourceProtectionGuard)
+  @Get(':admission_program_id')
   findOne(
-    @Param('id') id: string,
-    @Query('populate') populate: boolean = true,
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Param('admission_program_id') admission_program_id: string,
+    @Query() queryDto: QueryAdmissionProgramByIdDto,
   ) {
-    return this.admissionProgramsService.findOne(id, populate);
+    return this.admissionProgramsService.findOne(
+      admission_program_id,
+      authReq.user,
+      queryDto,
+    );
   }
 
   @UseGuards(ResourceProtectionGuard)

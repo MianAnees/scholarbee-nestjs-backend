@@ -1,17 +1,29 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, SortOrder, Types } from 'mongoose';
 import { QueryAdmissionProgramDegreeLevelsDto } from 'src/admission-programs/dto/query-admission-program-degree-levels.dto';
 import { QueryAdmissionProgramMajorsDto } from 'src/admission-programs/dto/query-admission-program-majors.dto';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
-import { ISearchHistoryIndexDoc, SearchResourceEnum } from 'src/elasticsearch/mappings/search-history.mapping';
+import {
+  ISearchHistoryIndexDoc,
+  SearchResourceEnum,
+} from 'src/elasticsearch/mappings/search-history.mapping';
 import { UserNS } from 'src/users/schemas/user.schema';
 import { CreateAdmissionProgramDto } from '../dto/create-admission-program.dto';
 import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsGateway } from '../gateways/admission-programs.gateway';
-import { AdmissionProgram, AdmissionProgramDocument } from '../schemas/admission-program.schema';
+import {
+  AdmissionProgram,
+  AdmissionProgramDocument,
+} from '../schemas/admission-program.schema';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { QueryAdmissionProgramByIdDto } from '../dto/query-admission-program.dto';
 
 @Injectable()
 export class AdmissionProgramsService {
@@ -22,7 +34,9 @@ export class AdmissionProgramsService {
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
   ) {}
 
-  async findAllDegreeLevels(queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto): Promise<string[]> {
+  async findAllDegreeLevels(
+    queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto,
+  ): Promise<string[]> {
     const { university_id, campus_id } = queryAdmissionProgramDegreeLevelsDto;
     const pipeline: PipelineStage[] = [];
 
@@ -39,21 +53,25 @@ export class AdmissionProgramsService {
                 $expr: {
                   $and: [
                     { $eq: ['$_id', { $toObjectId: '$$admissionIdStr' }] },
-                    ...(university_id ? [{ $eq: ['$university_id', String(university_id)] }] : []),
-                    ...(campus_id ? [{ $eq: ['$campus_id', String(campus_id)] }] : [])
-                  ]
-                }
-              }
-            }
+                    ...(university_id
+                      ? [{ $eq: ['$university_id', String(university_id)] }]
+                      : []),
+                    ...(campus_id
+                      ? [{ $eq: ['$campus_id', String(campus_id)] }]
+                      : []),
+                  ],
+                },
+              },
+            },
           ],
-          as: 'admissionDetails'
-        }
+          as: 'admissionDetails',
+        },
       });
       // Filter out AdmissionPrograms that don't have matching admissionDetails (i.e., not for the given university/campus)
       pipeline.push({
         $match: {
-          admissionDetails: { $ne: [] } // or $size: { $gt: 0 }
-        }
+          admissionDetails: { $ne: [] }, // or $size: { $gt: 0 }
+        },
       });
     }
 
@@ -71,45 +89,47 @@ export class AdmissionProgramsService {
               $expr: {
                 $and: [
                   { $eq: ['$_id', { $toObjectId: '$$programIdStr' }] },
-                  { $ne: [ { $ifNull: ['$degree_level', null] }, null ] },
-                  { $ne: [ { $ifNull: ['$degree_level', ''] }, '' ] }
-                ]
-              }
-            }
+                  { $ne: [{ $ifNull: ['$degree_level', null] }, null] },
+                  { $ne: [{ $ifNull: ['$degree_level', ''] }, ''] },
+                ],
+              },
+            },
           },
           {
-            $project: { degree_level: 1 } // Only need degree_level from program (_id is also automatically added to the pipeline)
-          }
+            $project: { degree_level: 1 }, // Only need degree_level from program (_id is also automatically added to the pipeline)
+          },
         ],
-        as: 'programDetails'
-      }
+        as: 'programDetails',
+      },
     });
 
     // Stage 3: Unwind the programDetails array (should usually be one program per admission program)
     pipeline.push({
-      $unwind: '$programDetails'
+      $unwind: '$programDetails',
     });
 
     // Stage 4: Group by degree_level to get unique values
     pipeline.push({
       $group: {
-        _id: '$programDetails.degree_level'
-      }
+        _id: '$programDetails.degree_level',
+      },
     });
 
     // Stage 5: Project to reshape the output
     pipeline.push({
       $project: {
         _id: 0,
-        degree_level: '$_id'
-      }
+        degree_level: '$_id',
+      },
     });
 
     const result = await this.admissionProgramModel.aggregate(pipeline).exec();
-    return result.map(item => item.degree_level);
+    return result.map((item) => item.degree_level);
   }
 
-  async findAllMajors(queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto): Promise<string[]> {
+  async findAllMajors(
+    queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto,
+  ): Promise<string[]> {
     const { university_id, campus_id } = queryAdmissionProgramMajorsDto;
     const pipeline: PipelineStage[] = [];
 
@@ -126,21 +146,25 @@ export class AdmissionProgramsService {
                 $expr: {
                   $and: [
                     { $eq: ['$_id', { $toObjectId: '$$admissionIdStr' }] },
-                    ...(university_id ? [{ $eq: ['$university_id', String(university_id)] }] : []),
-                    ...(campus_id ? [{ $eq: ['$campus_id', String(campus_id)] }] : [])
-                  ]
-                }
-              }
-            }
+                    ...(university_id
+                      ? [{ $eq: ['$university_id', String(university_id)] }]
+                      : []),
+                    ...(campus_id
+                      ? [{ $eq: ['$campus_id', String(campus_id)] }]
+                      : []),
+                  ],
+                },
+              },
+            },
           ],
-          as: 'admissionDetails'
-        }
+          as: 'admissionDetails',
+        },
       });
       // Filter out AdmissionPrograms that don't have matching admissionDetails (i.e., not for the given university/campus)
       pipeline.push({
         $match: {
-          admissionDetails: { $ne: [] } // or $size: { $gt: 0 }
-        }
+          admissionDetails: { $ne: [] }, // or $size: { $gt: 0 }
+        },
       });
     }
 
@@ -158,42 +182,42 @@ export class AdmissionProgramsService {
               $expr: {
                 $and: [
                   { $eq: ['$_id', { $toObjectId: '$$programIdStr' }] },
-                  { $ne: [ { $ifNull: ['$major', null] }, null ] },
-                  { $ne: [ { $ifNull: ['$major', ''] }, '' ] }
-                ]
-              }
-            }
+                  { $ne: [{ $ifNull: ['$major', null] }, null] },
+                  { $ne: [{ $ifNull: ['$major', ''] }, ''] },
+                ],
+              },
+            },
           },
           {
-            $project: { major: 1 } // Only need major from program (_id is also automatically added to the pipeline)
-          }
+            $project: { major: 1 }, // Only need major from program (_id is also automatically added to the pipeline)
+          },
         ],
-        as: 'programDetails'
-      }
+        as: 'programDetails',
+      },
     });
 
     // Stage 3: Unwind the programDetails array (should usually be one program per admission program)
     pipeline.push({
-      $unwind: '$programDetails'
+      $unwind: '$programDetails',
     });
 
     // Stage 4: Group by major to get unique values
     pipeline.push({
       $group: {
-        _id: '$programDetails.major'
-      }
+        _id: '$programDetails.major',
+      },
     });
 
     // Stage 5: Project to reshape the output
     pipeline.push({
       $project: {
         _id: 0,
-        major: '$_id'
-      }
+        major: '$_id',
+      },
     });
 
     const result = await this.admissionProgramModel.aggregate(pipeline).exec();
-    return result.map(item => item.major);
+    return result.map((item) => item.major);
   }
 
   // REVIEW: Would it be better to put this in the `programService` directly or as a method of `searchHistoryAnalyticsService` itself?
@@ -228,10 +252,12 @@ export class AdmissionProgramsService {
         // program_id: programId,
         // university_name: universityName,
       },
-    }
+    };
 
     // Track search event
-    await this.searchHistoryAnalyticsService.indexSearchHistory(admissionProgramSearchHistory);
+    await this.searchHistoryAnalyticsService.indexSearchHistory(
+      admissionProgramSearchHistory,
+    );
   }
 
   async create(
@@ -350,26 +376,57 @@ export class AdmissionProgramsService {
   }
 
   async findOne(
-    id: string,
-    populate: boolean = true,
-  ): Promise<AdmissionProgramDocument> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid admission program ID');
+    admission_program_id: string,
+    user: AuthenticatedRequest['user'],
+    queryDto: QueryAdmissionProgramByIdDto,
+  ): Promise<AdmissionProgramDocument & { was_redirected?: boolean }> {
+    // Validate the admission program ID, convert to ObjectId if valid
+    const admission_program_id_object_id = Types.ObjectId.isValid(
+      admission_program_id,
+    )
+      ? new Types.ObjectId(admission_program_id)
+      : null;
+
+    if (!admission_program_id_object_id) {
+      throw new BadRequestException(
+        `Invalid admission program ID; ${admission_program_id} is not a valid ObjectId`,
+      );
     }
 
-    let query = this.admissionProgramModel.findById(id);
+    // Build the query
+    let query = this.admissionProgramModel
+      .findById<AdmissionProgramDocument>(admission_program_id_object_id)
+      .lean();
 
-    if (populate) {
+    // Apply population if requested
+    if (queryDto.populate) {
       query = query.populate('admission').populate('program');
     }
 
+    // Execute the query
     const admissionProgram = await query.exec();
 
+    // Check if the admission program was found
     if (!admissionProgram) {
-      throw new NotFoundException(`Admission program with ID ${id} not found`);
+      throw new NotFoundException(
+        `Admission program with ID ${admission_program_id} not found`,
+      );
     }
 
-    return admissionProgram;
+    // Check if the user was redirected
+    let was_redirected = false;
+
+    if (user._id && admissionProgram.redirected_students) {
+      const userObjectId = new Types.ObjectId(user._id);
+      was_redirected = admissionProgram.redirected_students.some((studentId) =>
+        studentId.equals(userObjectId),
+      );
+    }
+
+    return {
+      ...admissionProgram,
+      was_redirected,
+    };
   }
 
   async update(
@@ -841,4 +898,4 @@ export class AdmissionProgramsService {
 
     return { docs, pagination };
   }
-} 
+}

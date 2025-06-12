@@ -509,4 +509,43 @@ export class ApplicationsService {
       }
     }
   }
+
+  async getApplicationsAnalytics() {
+    // Get total count of applications
+    const totalApplications = await this.applicationModel.countDocuments();
+
+    // Get breakdown by status using aggregation
+    const statusBreakdown = await this.applicationModel.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // Create breakdown object with all possible statuses
+    const breakdown = {
+      [ApplicationStatus.DRAFT]: 0,
+      [ApplicationStatus.PENDING]: 0,
+      [ApplicationStatus.APPROVED]: 0,
+      [ApplicationStatus.REJECTED]: 0,
+      [ApplicationStatus.UNDER_REVIEW]: 0,
+    };
+
+    // Fill in the actual counts
+    statusBreakdown.forEach((item) => {
+      if (item._id && breakdown.hasOwnProperty(item._id)) {
+        breakdown[item._id] = item.count;
+      }
+    });
+
+    return {
+      totalApplications,
+      breakdown,
+    };
+  }
 }

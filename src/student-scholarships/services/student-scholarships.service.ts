@@ -571,4 +571,43 @@ export class StudentScholarshipsService {
     );
     return await scholarship.save();
   }
+
+  async getScholarshipApplicationsAnalytics() {
+    // Get total count of scholarship applications
+    const totalScholarshipApplications =
+      await this.studentScholarshipModel.countDocuments();
+
+    // Get breakdown by approval_status using aggregation
+    const approvalStatusBreakdown =
+      await this.studentScholarshipModel.aggregate([
+        {
+          $group: {
+            _id: '$approval_status',
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ]);
+
+    // Create breakdown object with all possible approval statuses
+    const breakdown = {
+      [ScholarshipApprovalStatusEnum.Applied]: 0,
+      [ScholarshipApprovalStatusEnum.Approved]: 0,
+      [ScholarshipApprovalStatusEnum.Rejected]: 0,
+    };
+
+    // Fill in the actual counts
+    approvalStatusBreakdown.forEach((item) => {
+      if (item._id && breakdown.hasOwnProperty(item._id)) {
+        breakdown[item._id] = item.count;
+      }
+    });
+
+    return {
+      totalScholarshipApplications,
+      breakdown,
+    };
+  }
 }

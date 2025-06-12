@@ -25,6 +25,9 @@ export class ExternalApplication {
   @Prop({ type: Types.ObjectId, ref: 'Campus', required: true })
   campus: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'University', required: true })
+  university: Types.ObjectId;
+
   @Prop({ type: Object, required: true })
   applicant_snapshot: ApplicantSnapshot;
 }

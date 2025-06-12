@@ -7,6 +7,8 @@ import { AnalyticsController } from './controllers/analytics.controller';
 import { SearchHistoryAnalyticsService } from './services/search-history.analytics.service';
 import { ConversationModelModule } from 'src/chat/conversation-models.module';
 import { ExternalApplicationsModule } from 'src/external-applications/external-applications.module';
+import { ApplicationsModule } from 'src/applications/applications.module';
+import { StudentScholarshipsModule } from 'src/student-scholarships/student-scholarships.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { ExternalApplicationsModule } from 'src/external-applications/external-a
     UniversityModelsModule,
     ConversationModelModule,
     ExternalApplicationsModule,
+    ApplicationsModule,
+    StudentScholarshipsModule,
   ],
   controllers: [AnalyticsController],
   providers: [

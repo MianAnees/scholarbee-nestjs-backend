@@ -23,6 +23,7 @@ import { ApplicationsService } from 'src/applications/services/applications.serv
 import { StudentScholarshipsService } from 'src/student-scholarships/services/student-scholarships.service';
 
 // Authenticated with Guard
+// TODO: Refactor into smaller controllers i.e. SearchTrendsAnalyticsController, ApplicationAnalyticsController, ExternalProgramApplicationAnalyticsController, etc.
 @UseGuards(ResourceProtectionGuard)
 @UseInterceptors(ResponseInterceptor)
 @Controller('analytics')

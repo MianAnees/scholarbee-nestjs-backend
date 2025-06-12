@@ -251,7 +251,7 @@ export class ApplicationsService {
     }
 
     // Trigger notification for application approval
-    if (status === 'Approved') {
+    if (status === ApplicationStatus.APPROVED) {
       try {
         await this.notificationService.createSpecificUsersNotification({
           title: 'Application Approved!',
@@ -265,7 +265,7 @@ export class ApplicationsService {
     }
 
     // Trigger notification for application rejection
-    if (status === 'Rejected') {
+    if (status === ApplicationStatus.REJECTED) {
       try {
         await this.notificationService.createSpecificUsersNotification({
           title: 'Application Status Update',
@@ -279,7 +279,7 @@ export class ApplicationsService {
     }
 
     // Trigger notification for application under review
-    if (status === 'Under Review') {
+    if (status === ApplicationStatus.UNDER_REVIEW) {
       try {
         await this.notificationService.createSpecificUsersNotification({
           title: 'Application Under Review',

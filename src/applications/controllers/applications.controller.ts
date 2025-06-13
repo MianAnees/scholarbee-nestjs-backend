@@ -42,7 +42,7 @@ export class ApplicationsController {
     );
   }
 
-  @UseGuards(RolesGuard)
+  // @UseGuards(RolesGuard)
   // @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Get()
   findAll(@Query() queryDto: QueryApplicationDto) {
@@ -85,8 +85,8 @@ export class ApplicationsController {
     );
   }
 
-  @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
+  // @UseGuards(RolesGuard)
+  // @Roles(Role.ADMIN, Role.CAMPUS_ADMIN)
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,

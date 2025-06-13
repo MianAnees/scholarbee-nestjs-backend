@@ -191,7 +191,7 @@ export class ApplicationsService {
     user: AuthenticatedRequest['user'],
   ): Promise<ApplicationDocument> {
     let updatedDocument: UpdateQuery<ApplicationDocument> =
-      updateApplicationDto;
+      updateApplicationDto; // includes the `accepted_legal_documents`
 
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');

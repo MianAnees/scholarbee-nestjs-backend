@@ -142,7 +142,7 @@ export class ExternalApplicationsService {
 
     try {
       // Start the transaction
-      await session.withTransaction(async () => {
+      const savedApplication = await session.withTransaction(async () => {
         // Create the external application within the transaction
         const externalApplication = new this.externalApplicationModel(
           applicationData,
@@ -160,12 +160,6 @@ export class ExternalApplicationsService {
 
         return savedApplication;
       });
-
-      // If we reach here, the transaction was successful
-      // Fetch the saved application to return it
-      const savedApplication = await this.externalApplicationModel
-        .findOne({ applicant: stringToObjectId(user._id) })
-        .sort({ createdAt: -1 });
 
       return savedApplication;
     } catch (error) {

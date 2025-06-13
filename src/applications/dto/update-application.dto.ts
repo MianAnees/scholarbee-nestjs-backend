@@ -12,6 +12,6 @@ export class UpdateApplicationDto extends PartialType(CreateApplicationDto) {
 
 export class UpdateApplicationStatusDto {
   @IsNotEmpty()
-  @IsEnum(ApplicationStatus)
+  @IsEnum(ApplicationStatus) // TODO: If this api is meant for admins, then only allow status to be one of the following: APPROVED, REJECTED, UNDER_REVIEW
   status: ApplicationStatus;
 }

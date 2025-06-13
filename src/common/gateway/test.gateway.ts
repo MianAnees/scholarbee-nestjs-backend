@@ -12,9 +12,14 @@ export class TestGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   handleConnection(client: Socket) {
-    // const queryToken = client.handshake.query.token;
+    console.log('Client connected:', client.id);
+    console.log(
+      '🚀 ~ TestGateway ~ handleConnection ~ client.handshake:',
+      client.handshake,
+    );
+    const queryToken = client.handshake.query.token;
     const headerToken = client.handshake.headers.authorization?.split(' ')[1];
-    const token = headerToken; // Only using headerToken for now
+    const token = queryToken || headerToken;
     console.log('Client connected:', client.id);
     console.log('Token received:', token);
   }

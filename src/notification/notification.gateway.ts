@@ -1,10 +1,5 @@
-import {
-  HttpException,
-  NotFoundException
-} from '@nestjs/common';
-import {
-  WebSocketGateway
-} from '@nestjs/websockets';
+import { HttpException, NotFoundException } from '@nestjs/common';
+import { WebSocketGateway } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { AuthenticatedSocket } from 'src/auth/types/auth.interface';

@@ -8,7 +8,7 @@ export namespace UserNS {
   export enum UserType {
     Student = 'Student',
     Admin = 'Admin',
-    Campus_Admin = 'Campus_Admin',
+    Campus_Admin = 'Admin',
   }
   // Educational background interfaces
   export interface IMarksGPA {

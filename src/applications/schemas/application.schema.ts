@@ -36,11 +36,13 @@ interface IApplicantSnapshot {
   user_type: string;
 }
 
+type IApplicantSnapshotOptional = Partial<IApplicantSnapshot>;
+
 @Schema({
   timestamps: false,
   _id: false,
 })
-export class ApplicantSnapshot implements IApplicantSnapshot {
+export class ApplicantSnapshot implements IApplicantSnapshotOptional {
   @Prop({ required: true })
   first_name: string;
 
@@ -56,8 +58,8 @@ export class ApplicantSnapshot implements IApplicantSnapshot {
   @Prop({ required: true })
   date_of_birth: Date;
 
-  @Prop({ required: true })
-  father_name: string;
+  @Prop({ required: false })
+  father_name?: string;
 
   @Prop({ required: false })
   father_profession?: string;
@@ -117,8 +119,8 @@ export class ApplicantSnapshot implements IApplicantSnapshot {
   @Prop({ required: true })
   streetAddress: string;
 
-  @Prop({ required: true })
-  profile_image_url: string;
+  @Prop({ required: false })
+  profile_image_url?: string;
 
   @Prop({ required: true, enum: UserNS.UserType })
   user_type: UserNS.UserType;

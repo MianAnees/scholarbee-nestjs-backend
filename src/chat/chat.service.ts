@@ -25,7 +25,20 @@ import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  // Add in-memory cache for campus admins
+  /**
+   * In-memory cache mapping campus IDs (as strings) to arrays of campus admin user IDs (as strings).
+   *
+   * Purpose:
+   * - Used to quickly retrieve the list of campus admin user IDs for a given campus, reducing the need for frequent database queries.
+   * - Optimizes performance for chat message delivery to campus admins, especially under high load.
+   *
+   * Usage:
+   * - Populated and read by getCampusAdminIdsForCampus().
+   * - Cleared for a specific campus via invalidateCampusAdminsCache() when campus admin membership changes.
+   *
+   * Cache Invalidation:
+   * - Always invalidate the cache for a campus when campus admins are added or removed to prevent serving stale data.
+   */
   private campusAdminsCache: Map<string, string[]> = new Map();
 
   constructor(

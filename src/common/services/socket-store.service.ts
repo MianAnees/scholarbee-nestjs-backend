@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 interface Connection {
   userId: string;
@@ -6,6 +6,7 @@ interface Connection {
 }
 
 export class SocketStoreService {
+  private readonly logger = new Logger(SocketStoreService.name);
   private readonly connectionsUserToSocket = new Map<string, string>();
   private readonly connectionsSocketToUser = new Map<string, string>();
 
@@ -39,27 +40,33 @@ export class SocketStoreService {
    * @param socketId
    * @returns Connection
    */
-  getConnection({ userId, socketId }: Partial<Connection>) {
-    let connection: Connection | null = null;
+  getConnection({ userId, socketId }: Partial<Connection>): Connection | null {
+    try {
+      let connection: Connection | null = null;
 
-    if (userId) {
-      const socketId = this.connectionsUserToSocket.get(userId);
-      if (!socketId)
-        throw new Error('No socketId found for the provided userId');
+      if (userId) {
+        const socketId = this.connectionsUserToSocket.get(userId);
+        if (!socketId)
+          throw new Error('No socketId found for the provided userId');
 
-      connection = { userId, socketId };
+        connection = { userId, socketId };
+      }
+
+      if (socketId) {
+        const userId = this.connectionsSocketToUser.get(socketId);
+        if (!userId)
+          throw new Error('No userId found for the provided socketId');
+
+        connection = { userId, socketId };
+      }
+
+      if (!connection) throw new Error('No userId or socketId provided');
+
+      return connection;
+    } catch (error) {
+      // this.logger.error('Error in getConnection', error);
+      return null;
     }
-
-    if (socketId) {
-      const userId = this.connectionsSocketToUser.get(socketId);
-      if (!userId) throw new Error('No userId found for the provided socketId');
-
-      connection = { userId, socketId };
-    }
-
-    if (!connection) throw new Error('No userId or socketId provided');
-
-    return connection;
   }
 
   /**
@@ -73,9 +80,10 @@ export class SocketStoreService {
     const connections: Connection[] = [];
 
     const connectionEntries = filterUserIds
-      // if filterUserIds are provided, only return the active connections for the provided userIds
-      ? Array.from(this.connectionsUserToSocket.entries())
-        .filter(([connUserId]) => filterUserIds.includes(connUserId))
+      ? // if filterUserIds are provided, only return the active connections for the provided userIds
+        Array.from(this.connectionsUserToSocket.entries()).filter(
+          ([connUserId]) => filterUserIds.includes(connUserId),
+        )
       : this.connectionsUserToSocket.entries();
 
     for (const [userId, socketId] of connectionEntries) {
@@ -106,20 +114,25 @@ export class SocketStoreService {
     userId?: string;
     socketId?: string;
   }) {
-    let connection: Connection | null = null;
+    try {
+      let connection: Connection | null = null;
 
-    // if userId is provided, first retrieve the associated socketId and then remove the connection from both maps
-    if (userId) {
-      connection = this.getConnection({ userId });
+      // if userId is provided, first retrieve the associated socketId and then remove the connection from both maps
+      if (userId) {
+        connection = this.getConnection({ userId });
+      }
+
+      // if socketId is provided, first retrieve the associated userId and then remove the connection from both maps
+      if (socketId) {
+        connection = this.getConnection({ socketId });
+      }
+
+      if (!connection) throw new Error('No userId or socketId provided');
+
+      return this.removeConnection(connection);
+    } catch (error) {
+      this.logger.error('Error in removeAssociatedConnection', error);
+      return null;
     }
-
-    // if socketId is provided, first retrieve the associated userId and then remove the connection from both maps
-    if (socketId) {
-      connection = this.getConnection({ socketId });
-    }
-
-    if (!connection) throw new Error('No userId or socketId provided');
-
-    return this.removeConnection(connection);
   }
 }

@@ -52,9 +52,8 @@ export class ChatController {
   }
 
   @Get('conversations/user')
-  findAllConversationsForUser(@Req() req) {
+  findAllConversationsForUser(@AuthReq() req: AuthenticatedRequest) {
     try {
-      console.log(req.user);
       const userId = req.user.sub;
 
       // Validate userId

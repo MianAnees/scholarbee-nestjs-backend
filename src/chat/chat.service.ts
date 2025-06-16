@@ -17,6 +17,7 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import {
   Conversation,
   ConversationDocument,
+  ConversationParticipantType,
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
@@ -210,7 +211,7 @@ export class ChatService {
   private async handleMessageCreation(
     createMessageDto: CreateMessageDto,
     userId: string,
-    senderType: 'user' | 'campus',
+    senderType: ConversationParticipantType,
     curMsgTime: Date,
     conversationId: Types.ObjectId,
     senderId: Types.ObjectId,
@@ -223,17 +224,18 @@ export class ChatService {
       conversation_id: conversationId,
       sender_id: senderId,
       sender_type: senderType,
-      sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
+      sender_type_ref:
+        senderType === ConversationParticipantType.USER ? 'User' : 'Campus',
       content: createMessageDto.content,
-      is_read_by_user: senderType === 'user',
-      is_read_by_campus: senderType === 'campus',
+      is_read_by_user: senderType === ConversationParticipantType.USER,
+      is_read_by_campus: senderType === ConversationParticipantType.CAMPUS,
       attachments: createMessageDto.attachments || [],
       created_at: curMsgTime,
       sessionId: sessionResult.sessionId,
     };
 
     // If the message is sent by the campus, then keep a track of which user replied on behalf of the campus
-    if (senderType === 'campus') {
+    if (senderType === ConversationParticipantType.CAMPUS) {
       messageData.replied_by_user_id = new Types.ObjectId(userId);
     }
 
@@ -323,7 +325,7 @@ export class ChatService {
   async createMessage(
     createMessageDto: CreateMessageDto,
     user: AuthenticatedRequest['user'],
-    senderType: 'user' | 'campus',
+    senderType: ConversationParticipantType,
   ): Promise<Message> {
     try {
       const userId = user.sub;
@@ -340,6 +342,7 @@ export class ChatService {
       const conversationObjectId = new Types.ObjectId(conversationId);
 
       // Retrieve the current conversation
+
       const currentConversation =
         await this.conversationModel.findById(conversationObjectId);
       if (!currentConversation) {
@@ -351,7 +354,7 @@ export class ChatService {
       // Determine the correct sender_id based on sender_type
       let senderId: Types.ObjectId;
       let recipientIds: string[];
-      if (senderType === 'user') {
+      if (senderType === ConversationParticipantType.USER) {
         senderId = userObjectId;
         const recipientCampusId = currentConversation.campus_id;
         // Use the cache-aware method
@@ -370,10 +373,6 @@ export class ChatService {
       } else {
         senderId = currentConversation.campus_id;
         recipientIds = [currentConversation.user_id.toString()];
-        console.log(
-          '🚀 ~ ChatService ~ Campus sending message to User:',
-          recipientIds, // !BUG: This should show the student-user's userId
-        );
       }
 
       // Get current time
@@ -403,8 +402,8 @@ export class ChatService {
         last_message: createMessageDto.content,
         last_message_time: curMsgTime,
         last_message_sender: senderType,
-        is_read_by_user: senderType === 'user',
-        is_read_by_campus: senderType === 'campus',
+        is_read_by_user: senderType === ConversationParticipantType.USER,
+        is_read_by_campus: senderType === ConversationParticipantType.CAMPUS,
         ...sessionResult.conversationDocUpdate,
       });
       this.logger.debug('🍎 Conversation updated');
@@ -585,9 +584,14 @@ export class ChatService {
       }
 
       // Mark all messages from the other party as read
-      const senderType = userType === 'user' ? 'campus' : 'user';
+      const senderType =
+        userType === ConversationParticipantType.USER
+          ? ConversationParticipantType.CAMPUS
+          : ConversationParticipantType.USER;
       const readField =
-        userType === 'user' ? 'is_read_by_user' : 'is_read_by_campus';
+        userType === ConversationParticipantType.USER
+          ? 'is_read_by_user'
+          : 'is_read_by_campus';
 
       await this.messageModel.updateMany(
         {

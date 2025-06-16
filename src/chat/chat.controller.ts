@@ -1,17 +1,17 @@
 import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    UseGuards,
-    Req,
-    Query,
-    ForbiddenException,
-    BadRequestException,
-    NotFoundException,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  Query,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -21,6 +21,7 @@ import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guar
 import { ChatGateway } from './chat.gateway';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { ConversationParticipantType } from './schemas/conversation.schema';
 
 @Controller('chat')
 @UseGuards(ResourceProtectionGuard)
@@ -125,7 +126,7 @@ export class ChatController {
       const message = await this.chatService.createMessage(
         createMessageDto,
         req.user,
-        'user',
+        ConversationParticipantType.USER,
       );
 
       return message;
@@ -155,7 +156,7 @@ export class ChatController {
       const message = await this.chatService.createMessage(
         createMessageDto,
         req.user,
-        'campus',
+        ConversationParticipantType.CAMPUS,
       );
 
       return message;
@@ -193,4 +194,4 @@ export class ChatController {
   markMessagesAsReadByCampus(@Param('conversationId') conversationId: string) {
     return this.chatService.markMessagesAsRead(conversationId, 'campus');
   }
-} 
+}

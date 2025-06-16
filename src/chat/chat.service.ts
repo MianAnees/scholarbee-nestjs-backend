@@ -351,6 +351,23 @@ export class ChatService {
         );
       }
 
+      // If the sender is a user, then verify that the user is a participant in the conversation
+      if (
+        senderType === ConversationParticipantType.USER &&
+        !currentConversation.user_id.equals(userObjectId)
+      ) {
+        throw new NotFoundException(
+          `User with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+        );
+      } else if (
+        senderType === ConversationParticipantType.CAMPUS &&
+        !currentConversation.campus_id.equals(userObjectId)
+      ) {
+        throw new NotFoundException(
+          `Campus with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+        );
+      }
+
       // Determine the correct sender_id based on sender_type
       let senderId: Types.ObjectId;
       let recipientIds: string[];

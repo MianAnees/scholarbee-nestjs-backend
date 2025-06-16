@@ -21,25 +21,30 @@ import {
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { InMemHybridCache } from 'src/common/services/in-mem-hybrid-cache';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
+
+  // Add max entries for the cache
+  private readonly campusAdminsCacheMaxEntries = 100; // max 100 (admins for 100 campuses)
+
+  // Add TTLs for the cache (sliding and absolute)
+  private readonly campusAdminsCacheSlidingTTL = 10 * 60 * 1000; // 10 minutes
+  private readonly campusAdminsCacheAbsoluteTTL = 4 * 60 * 60 * 1000; // 4 hours
+
   /**
-   * In-memory cache mapping campus IDs (as strings) to arrays of campus admin user IDs (as strings).
-   *
-   * Purpose:
-   * - Used to quickly retrieve the list of campus admin user IDs for a given campus, reducing the need for frequent database queries.
-   * - Optimizes performance for chat message delivery to campus admins, especially under high load.
-   *
-   * Usage:
-   * - Populated and read by getCampusAdminIdsForCampus().
-   * - Cleared for a specific campus via invalidateCampusAdminsCache() when campus admin membership changes.
-   *
-   * Cache Invalidation:
-   * - Always invalidate the cache for a campus when campus admins are added or removed to prevent serving stale data.
+   * In-memory cache for campus admin user IDs, using InMemHybridCache.
+   * - Max 100 campuses
+   * - Sliding expiration: 10 minutes
+   * - Absolute max staleness: 4 hours
    */
-  private campusAdminsCache: Map<string, string[]> = new Map();
+  private campusAdminsCache = new InMemHybridCache<string, string[]>(
+    this.campusAdminsCacheMaxEntries,
+    this.campusAdminsCacheSlidingTTL,
+    this.campusAdminsCacheAbsoluteTTL,
+  );
 
   constructor(
     @InjectModel(Conversation.name)
@@ -293,8 +298,9 @@ export class ChatService {
   ): Promise<string[]> {
     const campusIdString = campusId.toString();
 
-    if (useCache && this.campusAdminsCache.has(campusIdString)) {
-      return this.campusAdminsCache.get(campusIdString)!;
+    if (useCache) {
+      const cached = this.campusAdminsCache.get(campusIdString);
+      if (cached) return cached;
     }
     // Fetch from DB
     const campusAdmins = await this.userModel

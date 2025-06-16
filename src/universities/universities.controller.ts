@@ -38,10 +38,12 @@ export class UniversitiesController {
     return result;
   }
 
+  // TODO: Remove this endpoint when the admission_program_status is supported in the findAll method
+  // TODO: change the endpoint route to /available-programs instead of /open-programs
   @Get('open-programs')
-  async findAllWithOpenPrograms(@Query() queryDto: QueryUniversityDto) {
+  async findAllWithAvailablePrograms(@Query() queryDto: QueryUniversityDto) {
     const result =
-      await this.universitiesService.findAllWithOpenPrograms(queryDto);
+      await this.universitiesService.findAllWithAvailablePrograms(queryDto);
 
     return result;
   }

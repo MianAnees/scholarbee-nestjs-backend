@@ -1,9 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Scholarship, ScholarshipDocument } from '../schemas/scholarship.schema';
+import {
+  Model,
+  RootFilterQuery,
+  Types,
+  Schema as MongooseSchema,
+} from 'mongoose';
+import {
+  Scholarship,
+  ScholarshipDocument,
+} from '../schemas/scholarship.schema';
 import { CreateScholarshipDto } from '../dto/create-scholarship.dto';
 import { QueryScholarshipDto } from '../dto/query-scholarship.dto';
+import { stringToObjectId, verifyStringObjectId } from 'src/utils/db.utils';
 
 @Injectable()
 export class ScholarshipsService {
@@ -51,9 +60,16 @@ export class ScholarshipsService {
       sortBy = 'created_at',
       sortOrder = 'desc',
       populate = true,
+      degree_level,
+      location,
+      campus_id,
+      major,
+      start_date,
+      end_date,
+      rating,
     } = queryDto;
 
-    const filter: any = {};
+    const filter: RootFilterQuery<ScholarshipDocument> = {};
 
     if (search) {
       filter.$or = [
@@ -106,8 +122,41 @@ export class ScholarshipsService {
       }
     }
 
+    // `is_favourite` flag can be used to get the favorites of the requesting user. However, the endpoint is public and the requesting user might not be authenticated
     if (favouriteBy && favouriteBy.length > 0) {
-      filter.favouriteBy = { $in: favouriteBy };
+      filter.favouriteBy = {
+        $in: favouriteBy.map((id) => new Types.ObjectId(id)),
+      };
+    }
+
+    if (degree_level) {
+      filter.degree_level = degree_level;
+    }
+
+    if (location) {
+      filter.location = location;
+    }
+
+    if (campus_id) {
+      filter.campus_ids = { $in: [new Types.ObjectId(campus_id)] };
+    }
+
+    if (major) {
+      filter.major = { $regex: major, $options: 'i' };
+    }
+
+    if (rating) {
+      filter.rating = { $gte: rating };
+    }
+
+    if (start_date || end_date) {
+      filter.application_opening_date = {};
+      if (start_date) {
+        filter.application_opening_date.$gte = start_date;
+      }
+      if (end_date) {
+        filter.application_opening_date.$lte = end_date;
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -209,42 +258,68 @@ export class ScholarshipsService {
     scholarshipId: string,
     userId: string,
   ): Promise<ScholarshipDocument> {
-    if (!Types.ObjectId.isValid(scholarshipId)) {
+    if (!verifyStringObjectId(scholarshipId)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
-    const scholarship = await this.scholarshipModel.findById(scholarshipId);
-    if (!scholarship) {
+
+    if (!verifyStringObjectId(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const userIdObject = stringToObjectId(userId);
+
+    // Additional safety: Check if scholarship exists first
+    const existingScholarship =
+      await this.scholarshipModel.findById(scholarshipId);
+    if (!existingScholarship) {
       throw new NotFoundException(
         `Scholarship with ID ${scholarshipId} not found`,
       );
     }
-    if (!scholarship.favouriteBy) {
-      scholarship.favouriteBy = [];
-    }
-    if (!scholarship.favouriteBy.includes(userId)) {
-      scholarship.favouriteBy.push(userId);
-      await scholarship.save();
-    }
-    return scholarship;
+
+    // Safe to use runValidators: false because:
+    // 1. favouriteBy has no custom validators
+    // 2. We're only updating this field with $addToSet
+    // 3. ObjectId validation is done above
+    // 4. MongoDB ensures type safety
+    const scholarship = await this.scholarshipModel.findByIdAndUpdate(
+      scholarshipId,
+      { $addToSet: { favouriteBy: userIdObject } },
+      { new: true, runValidators: false },
+    );
+
+    return scholarship!; // We know it exists from check above
   }
 
   async removeFromFavorites(
     id: string,
     userId: string,
   ): Promise<ScholarshipDocument> {
-    if (!Types.ObjectId.isValid(id)) {
+    if (!verifyStringObjectId(id)) {
       throw new BadRequestException('Invalid scholarship ID');
     }
-    const scholarship = await this.scholarshipModel.findById(id);
+
+    if (!verifyStringObjectId(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
+    const userIdObject = stringToObjectId(userId);
+
+    // Safe to use runValidators: false because:
+    // 1. favouriteBy has no custom validators
+    // 2. We're only updating this field with $pull
+    // 3. ObjectId validation is done above
+    // 4. MongoDB ensures type safety
+    const scholarship = await this.scholarshipModel.findByIdAndUpdate(
+      id,
+      { $pull: { favouriteBy: userIdObject } },
+      { new: true, runValidators: false },
+    );
+
     if (!scholarship) {
       throw new NotFoundException(`Scholarship with ID ${id} not found`);
     }
-    if (scholarship.favouriteBy && scholarship.favouriteBy.includes(userId)) {
-      scholarship.favouriteBy = scholarship.favouriteBy.filter(
-        (uid) => uid !== userId,
-      );
-      await scholarship.save();
-    }
+
     return scholarship;
   }
 

@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
-
+import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
+import { RequiredDocumentTitleEnum } from 'src/common/constants/shared.constants';
 
 /* 
 // ? Example document present in database
@@ -42,33 +44,6 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 }
  */
 
-
-export enum FatherLivingStatusEnum {
-  Alive = 'alive',
-  Deceased = 'deceased',
-}
-
-export enum LastDegreeLevelEnum {
-  Matriculation = 'Matriculation',
-  IntermediateFScFA = 'Intermediate/FSc/FA',
-  Bachelors = 'Bachelors',
-  Masters = 'Masters',
-  PhD = 'PhD',
-}
-
-
-export enum RequiredDocumentTitleEnum {
-  passport = 'passport',
-  national_id = 'national_id',
-  birth_certificate = 'birth_certificate',
-  academic_transcripts = 'academic_transcripts',
-  recommendation_letter = 'recommendation_letter',
-  // personal_statement = 'personal_statement', // ! If this is received from frontend as text, then it shouldn't be validated against uploaded documents
-  financial_statements = 'financial_statements',
-  english_proficiency_certificate = 'english_proficiency_certificate',
-  resume_cv = 'resume_cv',
-}
-
 export enum ScholarshipApprovalStatusEnum {
   Applied = 'Applied',
   Approved = 'Approved',
@@ -76,15 +51,16 @@ export enum ScholarshipApprovalStatusEnum {
 }
 
 interface IStudentSnapshotLastDegree {
-  level: LastDegreeLevelEnum;
+  level: DegreeLevelEnum;
   percentage: number;
 }
 
 interface IStudentSnapshot {
   name: string;
   father_name: string;
-  father_status: FatherLivingStatusEnum;
-  domicile: string;
+  father_status: LivingStatusEnum;
+  districtOfDomicile: string;
+  provinceOfDomicile: string;
   monthly_household_income: string;
   last_degree: IStudentSnapshotLastDegree;
 }
@@ -132,11 +108,14 @@ class StudentSnapshotDto implements IStudentSnapshot {
   @Prop({ type: String, required: true })
   father_name: IStudentSnapshot['father_name'];
 
-  @Prop({ type: String, enum: FatherLivingStatusEnum, required: true })
+  @Prop({ type: String, enum: LivingStatusEnum, required: true })
   father_status: IStudentSnapshot['father_status'];
 
   @Prop({ type: String, required: true })
-  domicile: IStudentSnapshot['domicile'];
+  districtOfDomicile: IStudentSnapshot['districtOfDomicile'];
+
+  @Prop({ type: String, required: true })
+  provinceOfDomicile: IStudentSnapshot['provinceOfDomicile'];
 
   @Prop({ type: String, required: true })
   monthly_household_income: IStudentSnapshot['monthly_household_income'];
@@ -144,7 +123,7 @@ class StudentSnapshotDto implements IStudentSnapshot {
   @Prop({
     _id: false,
     type: {
-      level: { type: String, enum: LastDegreeLevelEnum, required: true },
+      level: { type: String, enum: DegreeLevelEnum, required: true },
       percentage: { type: Number, required: true },
     },
   })
@@ -192,6 +171,7 @@ export class StudentScholarship implements IStudentScholarship {
     default: [],
     required: false /* , min:1 */,
   })
+  // TODO: Ensure that add-required-documents dto required
   required_documents?: IStudentScholarship['required_documents'];
 
   @Prop({ type: Date, default: Date.now })
@@ -201,5 +181,6 @@ export class StudentScholarship implements IStudentScholarship {
   createdBy: IStudentScholarship['createdBy'];
 }
 
-export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>
-export const StudentScholarshipSchema = SchemaFactory.createForClass(StudentScholarship);
+export type StudentScholarshipDocument = HydratedDocument<StudentScholarship>;
+export const StudentScholarshipSchema =
+  SchemaFactory.createForClass(StudentScholarship);

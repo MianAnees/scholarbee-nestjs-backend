@@ -25,10 +25,16 @@ import { ProgramsModule } from './programs/programs.module';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
 import { ScholarshipsModule } from './scholarships/scholarships.module';
 import { MediaManagementModule } from './media-management/media-management.module';
-import { configuration, EnvValidationSchema, envValidationSchema } from 'src/config';
+import {
+  configuration,
+  EnvValidationSchema,
+  envValidationSchema,
+} from 'src/config';
 import { IConfiguration } from 'src/config/configuration';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationModule } from './notification/notification.module';
+import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
+import { ExternalApplicationsModule } from './external-applications/external-applications.module';
 
 @Module({
   imports: [
@@ -65,6 +71,7 @@ import { NotificationModule } from './notification/notification.module';
     AdmissionsModule,
     AdmissionProgramsModule,
     ApplicationsModule,
+    ExternalApplicationsModule,
     ContactUsModule,
     FeesModule,
     ProgramTemplatesModule,
@@ -76,6 +83,7 @@ import { NotificationModule } from './notification/notification.module';
     MediaManagementModule,
     AnalyticsModule,
     NotificationModule,
+    LegalDocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

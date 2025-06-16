@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -34,10 +39,16 @@ export class UsersService {
           // TODO: shouldn't we use the generateVerificationToken function here?
           const newVerifyToken = crypto.randomBytes(20).toString('hex');
 
-          await this.updateUser(existingUser._id.toString(), {
-            verifyToken: newVerifyToken,
-            _verified: false,
-          });
+          await this.userModel
+            .findByIdAndUpdate(
+              existingUser._id.toString(),
+              {
+                verifyToken: newVerifyToken,
+                _verified: false,
+              },
+              { new: true },
+            )
+            .select('-password -salt');
 
           const verificationUrl = `${process.env.FRONTEND_URL}/verification/${newVerifyToken}`;
 
@@ -118,9 +129,7 @@ export class UsersService {
     }
   }
 
-  async findAll(
-    query: any = {},
-  ): Promise<{
+  async findAll(query: any = {}): Promise<{
     docs: User[];
     totalDocs: number;
     page: number;
@@ -171,9 +180,9 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updated_user_doc: UpdateQuery<User>): Promise<User> {
     const updatedUser = await this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .findByIdAndUpdate(id, updated_user_doc, { new: true })
       .select('-password -salt');
 
     if (!updatedUser) {
@@ -254,6 +263,15 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
+    if (
+      !payload.marks_gpa.total_marks_gpa ||
+      !payload.marks_gpa.obtained_marks_gpa
+    ) {
+      throw new BadRequestException(
+        'total_marks_gpa and obtained_marks_gpa are required in marks_gpa',
+      );
+    }
+
     if (!user.educational_backgrounds) {
       user.educational_backgrounds = [];
     }
@@ -304,6 +322,23 @@ export class UsersService {
       throw new NotFoundException(
         `Educational background with ID ${backgroundId} not found`,
       );
+    }
+
+    // Validate marks_gpa if being updated
+    if (payload.marks_gpa) {
+      const updatedMarksGpa = {
+        ...user.educational_backgrounds[index].marks_gpa,
+        ...payload.marks_gpa,
+      };
+
+      if (
+        !updatedMarksGpa.total_marks_gpa ||
+        !updatedMarksGpa.obtained_marks_gpa
+      ) {
+        throw new BadRequestException(
+          'total_marks_gpa and obtained_marks_gpa are required in marks_gpa',
+        );
+      }
     }
 
     user.educational_backgrounds[index] = {
@@ -362,12 +397,6 @@ export class UsersService {
     return this.userModel.findById(id).exec();
   }
 
-  async updateUser(id: string, updateData: any): Promise<UserDocument> {
-    return this.userModel
-      .findByIdAndUpdate(id, updateData, { new: true })
-      .exec();
-  }
-
   async findByResetToken(token: string, date: Date): Promise<UserDocument> {
     return this.userModel
       .findOne({
@@ -380,4 +409,4 @@ export class UsersService {
   async findByVerifyToken(token: string): Promise<UserDocument> {
     return this.userModel.findOne({ verifyToken: token }).exec();
   }
-} 
+}

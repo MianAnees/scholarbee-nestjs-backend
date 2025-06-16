@@ -18,8 +18,12 @@ import { ResourceProtectionGuard } from 'src/auth/guards/resource-protection.gua
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { ResponseInterceptor } from '../../common/interceptors/response.interceptor';
+import { ExternalApplicationsService } from 'src/external-applications/external-applications.service';
+import { ApplicationsService } from 'src/applications/services/applications.service';
+import { StudentScholarshipsService } from 'src/student-scholarships/services/student-scholarships.service';
 
 // Authenticated with Guard
+// TODO: Refactor into smaller controllers i.e. SearchTrendsAnalyticsController, ApplicationAnalyticsController, ExternalProgramApplicationAnalyticsController, etc.
 @UseGuards(ResourceProtectionGuard)
 @UseInterceptors(ResponseInterceptor)
 @Controller('analytics')
@@ -28,6 +32,9 @@ export class AnalyticsController {
     private readonly searchHistoryAnalyticsService: SearchHistoryAnalyticsService,
     private readonly applicationMetricsAnalyticsService: ApplicationMetricsAnalyticsService,
     private readonly chatAnalyticsService: ChatAnalyticsService,
+    private readonly externalApplicationsService: ExternalApplicationsService,
+    private readonly applicationsService: ApplicationsService,
+    private readonly studentScholarshipsService: StudentScholarshipsService,
   ) {}
 
   @Get('search-trends/most-searched-degree-levels')
@@ -70,7 +77,9 @@ export class AnalyticsController {
 
   @Get('application-metrics/daily-breakdown')
   async getDailyApplicationMetrics(@Query() query: QueryAnalyticsCommonDto) {
-    return this.applicationMetricsAnalyticsService.getDailyApplicationMetrics(query);
+    return this.applicationMetricsAnalyticsService.getDailyApplicationMetrics(
+      query,
+    );
   }
 
   @Post('application-metrics/register-event')
@@ -126,5 +135,20 @@ export class AnalyticsController {
     return this.chatAnalyticsService.getResponseAnalyticsForAllCampuses(
       !isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10,
     );
+  }
+
+  @Get('external-program-applications')
+  async getExternalApplicationsAnalytics() {
+    return this.externalApplicationsService.getAnalytics();
+  }
+
+  @Get('program-applications')
+  async getApplicationsAnalytics() {
+    return this.applicationsService.getApplicationsAnalytics();
+  }
+
+  @Get('scholarship-applications')
+  async getScholarshipApplicationsAnalytics() {
+    return this.studentScholarshipsService.getScholarshipApplicationsAnalytics();
   }
 }

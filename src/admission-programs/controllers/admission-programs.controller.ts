@@ -17,6 +17,11 @@ import { FilterAdmissionProgramDto } from '../dto/filter-admission-program.dto';
 import { QueryAdmissionProgramDto } from '../dto/query-admission-program.dto';
 import { UpdateAdmissionProgramDto } from '../dto/update-admission-program.dto';
 import { AdmissionProgramsService } from '../services/admission-programs.service';
+import { QueryAdmissionProgramDegreeLevelsDto } from '../dto/query-admission-program-degree-levels.dto';
+import { QueryAdmissionProgramMajorsDto } from '../dto/query-admission-program-majors.dto';
+import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { QueryAdmissionProgramByIdDto } from '../dto/query-admission-program.dto';
 
 @Controller('admission-programs')
 export class AdmissionProgramsController {
@@ -36,17 +41,64 @@ export class AdmissionProgramsController {
     );
   }
 
+  // /degree-levels
+  @Get('degree-levels')
+  findAllDegreeLevels(
+    @Query()
+    queryAdmissionProgramDegreeLevelsDto: QueryAdmissionProgramDegreeLevelsDto,
+  ) {
+    return this.admissionProgramsService.findAllDegreeLevels(
+      queryAdmissionProgramDegreeLevelsDto,
+    );
+  }
+
+  // /majors
+  @Get('majors')
+  findAllMajors(
+    @Query() queryAdmissionProgramMajorsDto: QueryAdmissionProgramMajorsDto,
+  ) {
+    return this.admissionProgramsService.findAllMajors(
+      queryAdmissionProgramMajorsDto,
+    );
+  }
+
   @Get()
   findAll(@Query() queryDto: QueryAdmissionProgramDto) {
     return this.admissionProgramsService.findAll(queryDto);
   }
 
-  @Get('by-id/:id')
-  findOne(
-    @Param('id') id: string,
-    @Query('populate') populate: boolean = true,
+  @UseGuards(ResourceProtectionGuard)
+  @Get('user/favorites')
+  findFavorites(@Req() req, @Query() queryDto: QueryAdmissionProgramDto) {
+    return this.admissionProgramsService.findFavorites(req.user.sub, queryDto);
+  }
+
+  @Get('with-filters')
+  async findWithFilters(
+    @Query() filterDto: FilterAdmissionProgramDto,
+    @Req() req: Request,
   ) {
-    return this.admissionProgramsService.findOne(id, populate);
+    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
+      req.user?.['sub'],
+      filterDto,
+    );
+    const result =
+      await this.admissionProgramsService.findWithFilters(filterDto);
+    return result;
+  }
+
+  @UseGuards(ResourceProtectionGuard)
+  @Get(':admission_program_id')
+  findOne(
+    @AuthReq() authReq: AuthenticatedRequest,
+    @Param('admission_program_id') admission_program_id: string,
+    @Query() queryDto: QueryAdmissionProgramByIdDto,
+  ) {
+    return this.admissionProgramsService.findOne(
+      admission_program_id,
+      authReq.user,
+      queryDto,
+    );
   }
 
   @UseGuards(ResourceProtectionGuard)
@@ -74,25 +126,5 @@ export class AdmissionProgramsController {
   @Delete(':id/favorites')
   removeFromFavorites(@Param('id') id: string, @Req() req) {
     return this.admissionProgramsService.removeFromFavorites(id, req.user.sub);
-  }
-
-  @UseGuards(ResourceProtectionGuard)
-  @Get('user/favorites')
-  findFavorites(@Req() req, @Query() queryDto: QueryAdmissionProgramDto) {
-    return this.admissionProgramsService.findFavorites(req.user.sub, queryDto);
-  }
-
-  @Get('with-filters')
-  async findWithFilters(
-    @Query() filterDto: FilterAdmissionProgramDto,
-    @Req() req: Request,
-  ) {
-    await this.admissionProgramsService.indexAdmissionProgramSearchHistory(
-      req.user?.['sub'],
-      filterDto,
-    );
-    const result =
-      await this.admissionProgramsService.findWithFilters(filterDto);
-    return result;
   }
 }

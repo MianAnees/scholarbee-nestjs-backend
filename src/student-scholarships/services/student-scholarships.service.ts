@@ -24,12 +24,12 @@ import {
   UpdateStudentScholarshipDto,
 } from '../dto/update-student-scholarship.dto';
 import {
-  FatherLivingStatusEnum,
   IStudentScholarship,
   ScholarshipApprovalStatusEnum,
   StudentScholarship,
   StudentScholarshipDocument,
 } from '../schemas/student-scholarship.schema';
+import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
 @Injectable()
 export class StudentScholarshipsService {
@@ -45,39 +45,48 @@ export class StudentScholarshipsService {
 
   async createUserSnapshot(
     userId: string,
-    clientSnapshotData: Pick<
+    apiPayloadSnapshotData: Pick<
       IStudentScholarship['student_snapshot'],
-      'last_degree' | 'monthly_household_income' | 'father_status'
+      'last_degree' | 'monthly_household_income'
     >,
   ): Promise<IStudentScholarship['student_snapshot']> {
-    const user = await this.userModel.findById(userId).exec();
+    const userProfile = await this.userModel.findById<User>(userId).exec();
 
-    if (!user) {
+    if (!userProfile) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    if (!user.father_name || !user.provinceOfDomicile) {
+    if (!userProfile.father_name || !userProfile.provinceOfDomicile) {
       throw new BadRequestException(
         'Incomplete data in profile. Please complete your profile to continue.',
       );
     }
 
+    const {
+      first_name,
+      last_name,
+      father_name,
+      father_status,
+      provinceOfDomicile,
+      districtOfDomicile,
+    } = userProfile;
+
+    const { monthly_household_income, last_degree } = apiPayloadSnapshotData;
+
     // Create a partial snapshot with data from the user document
     const userSnapshot: IStudentScholarship['student_snapshot'] = {
-      name: `${user.first_name} ${user.last_name}`,
-      father_name: user.father_name,
-      father_status:
-        clientSnapshotData.father_status ||
-        user.father_status ||
-        FatherLivingStatusEnum.Alive,
-      domicile: user.provinceOfDomicile, // REVIEW: Are we supposed to check the province or district of domicile?
-      monthly_household_income: clientSnapshotData.monthly_household_income,
-      last_degree: clientSnapshotData.last_degree,
+      name: `${first_name} ${last_name}`,
+      father_name,
+      father_status,
+      provinceOfDomicile,
+      districtOfDomicile,
+      monthly_household_income,
+      last_degree,
     };
 
     // Return the partial snapshot - client will need to provide:
     // - monthly_household_income
-    // - last_degree (level and percentage)
+    // - last_degree
     return userSnapshot;
   }
 
@@ -561,5 +570,44 @@ export class StudentScholarshipsService {
       (doc) => doc.document_name !== documentName,
     );
     return await scholarship.save();
+  }
+
+  async getScholarshipApplicationsAnalytics() {
+    // Get total count of scholarship applications
+    const totalScholarshipApplications =
+      await this.studentScholarshipModel.countDocuments();
+
+    // Get breakdown by approval_status using aggregation
+    const approvalStatusBreakdown =
+      await this.studentScholarshipModel.aggregate([
+        {
+          $group: {
+            _id: '$approval_status',
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ]);
+
+    // Create breakdown object with all possible approval statuses
+    const breakdown = {
+      [ScholarshipApprovalStatusEnum.Applied]: 0,
+      [ScholarshipApprovalStatusEnum.Approved]: 0,
+      [ScholarshipApprovalStatusEnum.Rejected]: 0,
+    };
+
+    // Fill in the actual counts
+    approvalStatusBreakdown.forEach((item) => {
+      if (item._id && breakdown.hasOwnProperty(item._id)) {
+        breakdown[item._id] = item.count;
+      }
+    });
+
+    return {
+      totalScholarshipApplications,
+      breakdown,
+    };
   }
 }

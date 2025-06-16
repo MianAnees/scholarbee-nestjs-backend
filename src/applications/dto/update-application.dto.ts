@@ -1,9 +1,17 @@
 import { PartialType } from '@nestjs/mapped-types';
+import { IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsValidBoolean } from 'src/auth/decorators/is-valid-boolean.decorator';
 import { CreateApplicationDto } from './create-application.dto';
-import { IsEnum, IsOptional } from 'class-validator';
+import { ApplicationStatus } from '../schemas/application.schema';
 
 export class UpdateApplicationDto extends PartialType(CreateApplicationDto) {
-    @IsOptional()
-    @IsEnum(['Pending', 'Approved', 'Rejected', 'Under Review'])
-    status?: string;
-} 
+  @IsOptional()
+  @IsValidBoolean()
+  is_submitted?: boolean;
+}
+
+export class UpdateApplicationStatusDto {
+  @IsNotEmpty()
+  @IsEnum(ApplicationStatus) // TODO: If this api is meant for admins, then only allow status to be one of the following: APPROVED, REJECTED, UNDER_REVIEW
+  status: ApplicationStatus;
+}

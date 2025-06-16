@@ -19,6 +19,7 @@ import {
   ConversationDocument,
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
 @Injectable()
 export class ChatService {
@@ -321,15 +322,12 @@ export class ChatService {
    */
   async createMessage(
     createMessageDto: CreateMessageDto,
-    userId: string,
+    user: AuthenticatedRequest['user'],
     senderType: 'user' | 'campus',
   ): Promise<Message> {
-    console.log('🚀 ~ ChatService ~ userId:', userId);
     try {
-      // Validate IDs
-      if (!Types.ObjectId.isValid(userId)) {
-        throw new BadRequestException(`Invalid user ID: ${userId}`);
-      }
+      const userId = user.sub;
+
       if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
         throw new BadRequestException(
           `Invalid conversation ID: ${createMessageDto.conversation_id}`,

@@ -121,17 +121,10 @@ export class ChatController {
     @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
-      const userId = req.user.sub;
-
-      // Validate userId
-      if (!userId) {
-        throw new BadRequestException('User ID not found in token');
-      }
-
       // Save message to database first
       const message = await this.chatService.createMessage(
         createMessageDto,
-        userId,
+        req.user,
         'user',
       );
 
@@ -153,15 +146,6 @@ export class ChatController {
     @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
-      // Get user info from token
-      const userId = req.user.sub;
-      const userType = req.user.user_type;
-
-      // Validate userId
-      if (!userId) {
-        throw new BadRequestException('User ID not found in token');
-      }
-
       // // Check if user has admin rights
       // if (userType !== 'Admin' && userType !== 'Student') {
       //     throw new ForbiddenException('You do not have permission to send messages as campus');
@@ -170,7 +154,7 @@ export class ChatController {
       // Save message to database first
       const message = await this.chatService.createMessage(
         createMessageDto,
-        userId,
+        req.user,
         'campus',
       );
 

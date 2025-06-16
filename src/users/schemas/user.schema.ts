@@ -213,7 +213,7 @@ export class User {
   @Prop({ type: [EducationalBackground], default: [] })
   educational_backgrounds: EducationalBackground[];
 
-  @Prop({ type: NationalIdCard, required: true })
+  @Prop({ type: NationalIdCard })
   national_id_card: NationalIdCard;
 
   @Prop({ default: () => new Date() })

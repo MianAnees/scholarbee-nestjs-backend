@@ -250,7 +250,29 @@ export class ChatService {
   }
 
   /**
-   * Get campus admin user IDs for a campus, using cache if available.
+   * Retrieves the user IDs of campus admins for a given campus, using an in-memory cache for efficiency.
+   *
+   * Why this method exists:
+   * - In the chat system, when a user sends a message to a campus, the message must be delivered to all campus admins.
+   * - To do this, we need to quickly retrieve the user IDs of all campus admins associated with a campus.
+   *
+   * Why caching is used:
+   * - The list of campus admins for a campus is unlikely to change frequently, but is queried often (on every message sent to a campus).
+   * - Querying the database every time would be inefficient and could lead to performance bottlenecks under high load.
+   * - An in-memory cache (campusAdminsCache) is used to store the mapping from campusId to campus admin user IDs, reducing database reads and improving response times.
+   *
+   * Cache invalidation:
+   * - The cache should be invalidated (using invalidateCampusAdminsCache) whenever campus admins are added or removed for a campus.
+   * - This ensures that the cache does not serve stale data and always reflects the current set of campus admins.
+   * - Cache invalidation can be triggered by admin management events or hooks in the user/campus admin management logic.
+   *
+   * Usage:
+   * - This method should be used whenever the system needs to determine the recipients for campus-directed chat messages.
+   * - It is safe to use the cache for read-heavy, write-light scenarios, but always ensure proper invalidation on admin changes.
+   *
+   * @param campusId - The ObjectId of the campus whose admin user IDs are to be retrieved.
+   * @param useCache - Whether to use the cache (default: true).
+   * @returns Promise<string[]> - Array of campus admin user IDs as strings.
    */
   private async getCampusAdminIdsForCampus(
     campusId: Types.ObjectId,

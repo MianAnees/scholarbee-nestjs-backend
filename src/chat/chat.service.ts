@@ -3,6 +3,8 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -21,30 +23,11 @@ import {
 } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { InMemHybridCache } from 'src/common/services/in-mem-hybrid-cache';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-
-  // Add max entries for the cache
-  private readonly campusAdminsCacheMaxEntries = 100; // max 100 (admins for 100 campuses)
-
-  // Add TTLs for the cache (sliding and absolute)
-  private readonly campusAdminsCacheSlidingTTL = 10 * 60 * 1000; // 10 minutes
-  private readonly campusAdminsCacheAbsoluteTTL = 4 * 60 * 60 * 1000; // 4 hours
-
-  /**
-   * In-memory cache for campus admin user IDs, using InMemHybridCache.
-   * - Max 100 campuses
-   * - Sliding expiration: 10 minutes
-   * - Absolute max staleness: 4 hours
-   */
-  private campusAdminsCache = new InMemHybridCache<string, string[]>(
-    this.campusAdminsCacheMaxEntries,
-    this.campusAdminsCacheSlidingTTL,
-    this.campusAdminsCacheAbsoluteTTL,
-  );
 
   constructor(
     @InjectModel(Conversation.name)
@@ -53,7 +36,33 @@ export class ChatService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
     private readonly chatSessionService: ChatSessionService,
+    @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
+    /**
+     * Why is this required:
+     * - In the chat system, when a user sends a message to a campus, the message must be delivered to all campus admins.
+     * - To do this, we need to quickly retrieve the user IDs of all campus admins associated with a campus.
+     *
+     * Why caching is used:
+     * - The list of campus admins for a campus is unlikely to change frequently, but is queried often (on every message sent to a campus).
+     * - Querying the database every time would be inefficient and could lead to performance bottlenecks under high load.
+     * - An in-memory cache (campusAdminsCache) is used to store the mapping from campusId to campus admin user IDs, reducing database reads and improving response times.
+     *
+     * Cache invalidation:
+     * - The cache should be invalidated (using invalidateCampusAdminsCache) whenever campus admins are added or removed for a campus.
+     * - This ensures that the cache does not serve stale data and always reflects the current set of campus admins.
+     * - Cache invalidation can be triggered by admin management events or hooks in the user/campus admin management logic.
+     *
+     * Usage:
+     * - This method should be used whenever the system needs to determine the recipients for campus-directed chat messages.
+     * - It is safe to use the cache for read-heavy, write-light scenarios, but always ensure proper invalidation on admin changes.
+     *
+     * @param campusId - The ObjectId of the campus whose admin user IDs are to be retrieved.
+     * @param useCache - Whether to use the cache (default: true).
+     * @returns Promise<string[]> - Array of campus admin user IDs as strings.
+     */
+
+    private readonly campusAdminCacheService: CampusAdminCacheService,
   ) {}
 
   async createConversation(
@@ -268,59 +277,6 @@ export class ChatService {
   }
 
   /**
-   * Retrieves the user IDs of campus admins for a given campus, using an in-memory cache for efficiency.
-   *
-   * Why this method exists:
-   * - In the chat system, when a user sends a message to a campus, the message must be delivered to all campus admins.
-   * - To do this, we need to quickly retrieve the user IDs of all campus admins associated with a campus.
-   *
-   * Why caching is used:
-   * - The list of campus admins for a campus is unlikely to change frequently, but is queried often (on every message sent to a campus).
-   * - Querying the database every time would be inefficient and could lead to performance bottlenecks under high load.
-   * - An in-memory cache (campusAdminsCache) is used to store the mapping from campusId to campus admin user IDs, reducing database reads and improving response times.
-   *
-   * Cache invalidation:
-   * - The cache should be invalidated (using invalidateCampusAdminsCache) whenever campus admins are added or removed for a campus.
-   * - This ensures that the cache does not serve stale data and always reflects the current set of campus admins.
-   * - Cache invalidation can be triggered by admin management events or hooks in the user/campus admin management logic.
-   *
-   * Usage:
-   * - This method should be used whenever the system needs to determine the recipients for campus-directed chat messages.
-   * - It is safe to use the cache for read-heavy, write-light scenarios, but always ensure proper invalidation on admin changes.
-   *
-   * @param campusId - The ObjectId of the campus whose admin user IDs are to be retrieved.
-   * @param useCache - Whether to use the cache (default: true).
-   * @returns Promise<string[]> - Array of campus admin user IDs as strings.
-   */
-  private async getCampusAdminIdsForCampus(
-    campusId: Types.ObjectId,
-    useCache: boolean = true,
-  ): Promise<string[]> {
-    const campusIdString = campusId.toString();
-
-    if (useCache) {
-      const cached = this.campusAdminsCache.get(campusIdString);
-      if (cached) return cached;
-    }
-    // Fetch from DB
-    const campusAdmins = await this.userModel
-      .find({ campus_id: campusId, user_type: UserNS.UserType.Campus_Admin })
-      .select('_id');
-    const campusAdminIds = campusAdmins.map((a) => a._id.toString());
-    if (useCache) {
-      this.campusAdminsCache.set(campusIdString, campusAdminIds);
-    }
-    return campusAdminIds;
-  }
-
-  /**
-   * Invalidate the campus admin cache for a campus (call this when admins are added/removed)
-   */
-  public invalidateCampusAdminsCache(campusId: string) {
-    this.campusAdminsCache.delete(campusId);
-  }
-
-  /**
    * * How to "check for session validity" (a session is always started from a student message)
    * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
    *
@@ -417,7 +373,9 @@ export class ChatService {
         const recipientCampusId = currentConversation.campus_id;
         // Use the cache-aware method
         const recipientCampusAdminIds =
-          await this.getCampusAdminIdsForCampus(recipientCampusId);
+          await this.campusAdminCacheService.getCampusAdminIdsForCampus(
+            recipientCampusId,
+          );
         if (recipientCampusAdminIds.length === 0) {
           throw new NotFoundException(
             `No campus admins found for campus with ID ${recipientCampusId}`,

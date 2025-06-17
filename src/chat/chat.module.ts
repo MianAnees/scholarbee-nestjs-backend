@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from 'src/auth/auth.module';
 import { Campus, CampusSchema } from '../campuses/schemas/campus.schema';
@@ -9,6 +9,7 @@ import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import { ConversationModelModule } from './conversation-models.module';
 import { Message, MessageSchema } from './schemas/message.schema';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 @Module({
   imports: [
@@ -21,7 +22,17 @@ import { Message, MessageSchema } from './schemas/message.schema';
     ]),
   ],
   controllers: [ChatController],
-  providers: [ChatService, ChatGateway, ChatSessionService],
-  exports: [ChatService, ChatGateway, ChatSessionService],
+  providers: [
+    ChatService,
+    ChatGateway,
+    ChatSessionService,
+    CampusAdminCacheService,
+  ],
+  exports: [
+    ChatService,
+    ChatGateway,
+    ChatSessionService,
+    CampusAdminCacheService,
+  ],
 })
 export class ChatModule {}

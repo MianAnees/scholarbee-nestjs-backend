@@ -18,13 +18,13 @@ import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
 import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
 import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
 import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
-import { ChatService } from 'src/chat/chat.service';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @Inject(forwardRef(() => ChatService)) private chatService: ChatService,
+    private readonly campusAdminCacheService: CampusAdminCacheService,
   ) {}
 
   async findByEmail(email: string): Promise<UserDocument | null> {
@@ -207,9 +207,9 @@ export class UsersService {
     // so we need to invalidate the cache for both old and new campus_id, but only if the campus_id is valid and non-empty
     if (oldCampusId !== newCampusId) {
       if (oldCampusId)
-        this.chatService.invalidateCampusAdminsCache(oldCampusId);
+        this.campusAdminCacheService.invalidateCampusAdminsCache(oldCampusId);
       if (newCampusId)
-        this.chatService.invalidateCampusAdminsCache(newCampusId);
+        this.campusAdminCacheService.invalidateCampusAdminsCache(newCampusId);
     }
 
     return updatedUser;
@@ -224,7 +224,9 @@ export class UsersService {
     }
     // Invalidate campus admin cache if the deleted user was a campus admin
     if (user?.user_type === UserNS.UserType.Campus_Admin && user?.campus_id) {
-      this.chatService.invalidateCampusAdminsCache(user.campus_id.toString());
+      this.campusAdminCacheService.invalidateCampusAdminsCache(
+        user.campus_id.toString(),
+      );
     }
   }
 

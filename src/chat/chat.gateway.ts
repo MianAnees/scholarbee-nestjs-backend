@@ -8,6 +8,10 @@ import { AuthenticatedSocket } from 'src/auth/types/auth.interface';
 import { AuthenticatedConnectionStoreGateway } from 'src/common/gateway/authenticated-connection-store.gateway';
 import { Message } from './schemas/message.schema';
 import chat_gateway_constants from './chat-gateway.constant';
+import { ChatService } from './chat.service';
+import { UserNS } from '../users/schemas/user.schema';
+import { Inject, forwardRef } from '@nestjs/common';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 // type ActiveConversationStore = {
 //   userId: string;
@@ -36,14 +40,17 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   protected activeConversationStore: Map<string, string> = new Map();
   // Only inject the services needed for this gateway
   constructor(
-    // private readonly chatService: ChatService,
-    protected readonly authService: AuthService, // Do not redeclare as private/protected, just pass to super
+    protected readonly authService: AuthService,
+    @Inject(forwardRef(() => ChatService))
+    private readonly chatService: ChatService,
+    private readonly campusAdminCacheService: CampusAdminCacheService,
   ) {
     super(authService);
   }
 
   private getUserActiveConversation(userId: string) {
-    const activeConversationId = this.activeConversationStore.get(userId) ?? null;
+    const activeConversationId =
+      this.activeConversationStore.get(userId) ?? null;
     this.logger.log(
       `Retrieved active conversation for user: ${userId} to ${activeConversationId}`,
     );
@@ -106,32 +113,74 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
   // Subscription methods
   // ***********************
 
-  // TODO: Method to join a conversation room
   /**
-   * User can use this method to subscribe to a conversation
-   * @param conversationId
+   * Validates if the user is allowed to join the conversation room.
+   * Throws an error if not allowed.
    */
+  private async validateUserCanJoinConversation(
+    authSocket: AuthenticatedSocket,
+    conversationId: string,
+  ) {
+    const user = authSocket.data.user;
+    const userId = user._id;
+    const userType = user.user_type;
+
+    // Fetch conversation
+    const conversation =
+      await this.chatService.findConversation(conversationId);
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    // Student: must match user_id
+    if (userType === UserNS.UserType.Student) {
+      if (conversation.user_id.toString() !== userId) {
+        throw new Error('You are not a participant of this conversation.');
+      }
+    } else if (userType === UserNS.UserType.Campus_Admin) {
+      // Campus admin: must be a campus admin for the campus in the conversation
+      const campusAdminIds =
+        await this.campusAdminCacheService.getCampusAdminIdsForCampus(
+          conversation.campus_id,
+        );
+      if (!campusAdminIds.includes(userId)) {
+        throw new Error('You are not a campus admin for this conversation.');
+      }
+    } else {
+      // Other user types not allowed
+      throw new Error('You are not allowed to join this conversation.');
+    }
+    // If no error thrown, validation passed
+    return conversation;
+  }
+
   @SubscribeMessage(
     chat_gateway_constants.subscription_events.join_conversation,
   )
-  joinConversation(authSocket: AuthenticatedSocket, conversationId: string) {
-    // TODO: Add validation to check if the requested conversationId is associated with the user
-
-    // Emit to the conversation room
-    const conversationRoom =
-      chat_gateway_constants.rooms.conversation(conversationId);
-
-    // Join the conversation room
-    authSocket.join(conversationRoom);
-    this.logger.log(
-      `User (${authSocket.data.user._id}) joined conversation room (${conversationRoom})`,
-    );
-
-    // Set the user's active conversation
-    this.setUserActiveConversation(authSocket.data.user._id, conversationId);
-    this.logger.log(
-      `User (${authSocket.data.user._id}) set active conversation to (${conversationId})`,
-    );
+  async joinConversation(
+    authSocket: AuthenticatedSocket,
+    conversationId: string,
+  ) {
+    // Validation: Only allow participants to join the conversation room
+    try {
+      await this.validateUserCanJoinConversation(authSocket, conversationId);
+      // Passed validation, join the room
+      const userId = authSocket.data.user._id;
+      const conversationRoom =
+        chat_gateway_constants.rooms.conversation(conversationId);
+      authSocket.join(conversationRoom);
+      this.logger.log(
+        `User (${userId}) joined conversation room (${conversationRoom})`,
+      );
+      this.setUserActiveConversation(userId, conversationId);
+      this.logger.log(
+        `User (${userId}) set active conversation to (${conversationId})`,
+      );
+    } catch (err) {
+      this.logger.error('Error joining conversation:', err);
+      authSocket.emit(chat_gateway_constants.emit_events.ERROR, {
+        message: err.message || 'Failed to join conversation.',
+      });
+    }
   }
 
   // leave conversation
@@ -257,7 +306,6 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     this.logger.debug(
       `🍌 Sending the message notification to the valid recipients`,
     );
-
 
     if (validRecipientsOfMessageNotification.length > 0) {
       // Send the message notification to the valid recipients

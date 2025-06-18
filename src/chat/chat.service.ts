@@ -277,47 +277,20 @@ export class ChatService {
   }
 
   /**
-   * * How to "check for session validity" (a session is always started from a student message)
-   * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
+   * Creates a new chat message in a conversation.
    *
-   * * How to "update average response time"
-   * get the existing sessionsCount
-   * TODO: calculate the current session's responseTime
-   * TODO: check if responseTime exists in the conversation already
-   * ? isResponseTimeExists,
-   *      calculate the avgResponseTime ((prevAvg * prevCount + currentResponseTime) / newCount) and update field
-   * ? isResponseTimeNotExists,
-   *   -   store the current session's response as averageResponseTime
+   * This method handles the following:
+   * - Validates the conversation ID and user permissions.
+   * - Ensures the sender is a participant in the conversation (student or campus admin).
+   * - Determines the correct sender and recipient IDs based on sender type.
+   * - Fetches campus admin IDs from cache if the recipient is a campus.
+   * - Throws appropriate errors if validation fails.
+   * - Proceeds to session handling and message creation.
    *
-   * * How to "calculate the current session's responseTime"
-   * get the first student message in this conversation
-   * TODO: timeDiff(currentMessageTime - timeOfFirstStudentMessageInThisSession)
-   *
-   *
-   * * On each new message
-   * TODO: get sender type of the message => senderType
-   * TODO: check for session validity
-   * ? isExistingSessionValid:
-   *   ? isSentByStudent (senderType === 'user'),
-   *       1.2a.1 do nothing;
-   *   ? isSentByCampus,
-   *       TODO: check if this is the first message from campus in this session
-   *       ? isCurrentMessageTheFirstCampusMessageInSession,
-   *           TODO: update average response time
-   *       ? isCurrentMessageNotTheFirstCampusMessageInSession,
-   *       -   do nothing;
-   * ? isExistingSessionInvalid:
-   *   ? isSentByStudent,
-   *       -   update sessionsCount
-   *       -   update sessionId
-   *   ? isSentByCampus,
-   *       -   do nothing;
-   *
-   *
-   * @param createMessageDto
-   * @param userId
-   * @param senderType
-   * @returns
+   * @param createMessageDto - DTO containing message content and conversation ID
+   * @param user - Authenticated user sending the message
+   * @param senderType - Type of sender (USER or CAMPUS)
+   * @returns The created Message document
    */
   async createMessage(
     createMessageDto: CreateMessageDto,
@@ -327,19 +300,19 @@ export class ChatService {
     try {
       const userId = user.sub;
 
+      // Validate the provided conversation ID
       if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
         throw new BadRequestException(
           `Invalid conversation ID: ${createMessageDto.conversation_id}`,
         );
       }
 
-      // Convert IDs to ObjectId
+      // Convert IDs to ObjectId for MongoDB operations
       const userObjectId = new Types.ObjectId(userId);
       const conversationId = createMessageDto.conversation_id;
       const conversationObjectId = new Types.ObjectId(conversationId);
 
-      // Retrieve the current conversation
-
+      // Retrieve the current conversation from the database
       const currentConversation =
         await this.conversationModel.findById(conversationObjectId);
       if (!currentConversation) {
@@ -348,30 +321,52 @@ export class ChatService {
         );
       }
 
-      // If the sender is a user, then verify that the user is a participant in the conversation
-      if (
-        senderType === ConversationParticipantType.USER &&
-        !currentConversation.user_id.equals(userObjectId)
-      ) {
-        throw new NotFoundException(
-          `User with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
-        );
-      } else if (
-        senderType === ConversationParticipantType.CAMPUS &&
-        !currentConversation.campus_id.equals(userObjectId)
-      ) {
-        throw new NotFoundException(
-          `Campus with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
-        );
+      // Permission check: Ensure the sender is a participant in the conversation
+      if (senderType === ConversationParticipantType.USER) {
+        // If sender is a student, they must match the user_id in the conversation
+        const isUserParticipant =
+          currentConversation.user_id.equals(userObjectId);
+        if (!isUserParticipant) {
+          this.logger.debug(
+            `User with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a student participant in this conversation`,
+          );
+        }
+      } else if (senderType === ConversationParticipantType.CAMPUS) {
+        // If sender is a campus admin, they must have a campus assigned and match the campus_id in the conversation
+        const userCampusId = user.campus_id;
+        if (!userCampusId) {
+          this.logger.error(
+            `User with ID ${userId} does not have a campus assigned to them`, // This should not happen as the user should have a campus assigned to them if they are a campus admin
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a campus admin participant in this conversation`,
+          );
+        }
+
+        const isCampusParticipant =
+          currentConversation.campus_id.equals(userCampusId);
+
+        if (!isCampusParticipant) {
+          this.logger.debug(
+            `Campus with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a participant in this conversation`,
+          );
+        }
       }
 
-      // Determine the correct sender_id based on sender_type
+      // Determine sender and recipient IDs based on sender type
       let senderId: Types.ObjectId;
       let recipientIds: string[];
       if (senderType === ConversationParticipantType.USER) {
+        // If the sender is a user, set senderId to the user's ObjectId
         senderId = userObjectId;
         const recipientCampusId = currentConversation.campus_id;
-        // Use the cache-aware method
+        // Fetch campus admin IDs for the campus (using cache for efficiency)
         const recipientCampusAdminIds =
           await this.campusAdminCacheService.getCampusAdminIdsForCampus(
             recipientCampusId,
@@ -382,18 +377,22 @@ export class ChatService {
           );
         }
         recipientIds = recipientCampusAdminIds;
+        // Log the recipient admin IDs for debugging
         console.log(
           '🚀 ~ ChatService ~ User sending message to Campus Admins:',
           recipientIds,
         );
       } else {
+        // If the sender is a campus admin, set senderId to the campus's ObjectId
         senderId = currentConversation.campus_id;
+        // The recipient is the user in the conversation
         recipientIds = [currentConversation.user_id.toString()];
       }
 
-      // Get current time
+      // Get the current timestamp for the message
       const curMsgTime = new Date();
 
+      // Handle chat session logic (e.g., session validity, response time updates)
       const sessionResult = await this.chatSessionService.handleChatSession({
         conversation: currentConversation,
         senderType,

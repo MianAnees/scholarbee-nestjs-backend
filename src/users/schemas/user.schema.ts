@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { Types } from 'mongoose';
 import { Document } from 'mongoose';
 import { LivingStatusEnum } from 'src/common/constants/shared.constants';
 
@@ -90,7 +91,7 @@ export class NationalIdCard implements UserNS.INationalIdCard {
 }
 
 // Add the comparePassword method to the interface
-export interface UserDocument extends User, Document {
+export interface UserDocument extends User, Document<Types.ObjectId> {
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 

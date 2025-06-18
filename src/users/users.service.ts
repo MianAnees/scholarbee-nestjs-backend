@@ -3,10 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, UpdateQuery } from 'mongoose';
-import { User, UserDocument } from './schemas/user.schema';
+import { User, UserDocument, UserNS } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
@@ -16,10 +18,14 @@ import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
 import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
 import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
 import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly campusAdminCacheService: CampusAdminCacheService,
+  ) {}
 
   async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email }).exec();
@@ -181,6 +187,10 @@ export class UsersService {
   }
 
   async update(id: string, updated_user_doc: UpdateQuery<User>): Promise<User> {
+    // Fetch the old user to compare changes
+    const oldUser = await this.userModel.findById(id);
+
+    // Update the user
     const updatedUser = await this.userModel
       .findByIdAndUpdate(id, updated_user_doc, { new: true })
       .select('-password -salt');
@@ -189,13 +199,34 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
+    // Campus admin cache invalidation logic
+    const oldCampusId = oldUser?.campus_id?.toString();
+    const newCampusId = updatedUser?.campus_id?.toString();
+
+    // if the campus_id changed, it means either admin status changed or campus_id changed
+    // so we need to invalidate the cache for both old and new campus_id, but only if the campus_id is valid and non-empty
+    if (oldCampusId !== newCampusId) {
+      if (oldCampusId)
+        this.campusAdminCacheService.invalidateCampusAdminsCache(oldCampusId);
+      if (newCampusId)
+        this.campusAdminCacheService.invalidateCampusAdminsCache(newCampusId);
+    }
+
     return updatedUser;
   }
 
   async remove(id: string): Promise<void> {
+    // Fetch the user before deletion
+    const user = await this.userModel.findById(id);
     const result = await this.userModel.deleteOne({ _id: id });
     if (result.deletedCount === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    // Invalidate campus admin cache if the deleted user was a campus admin
+    if (user?.user_type === UserNS.UserType.Campus_Admin && user?.campus_id) {
+      this.campusAdminCacheService.invalidateCampusAdminsCache(
+        user.campus_id.toString(),
+      );
     }
   }
 

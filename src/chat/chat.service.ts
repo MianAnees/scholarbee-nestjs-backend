@@ -1,14 +1,17 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
-import { User, UserDocument, UserNS } from '../users/schemas/user.schema';
-import chat_events from './chat-gateway.constant';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { ChatSessionService } from './chat-session.service';
 import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -17,14 +20,17 @@ import { UpdateConversationDto } from './dto/update-conversation.dto';
 import {
   Conversation,
   ConversationDocument,
+  ConversationParticipantType,
 } from './schemas/conversation.schema';
+import {
+  isPopulatedAll,
+  PopulatedConversationAll,
+} from './schemas/conversation.schema.utils';
 import { Message, MessageDocument } from './schemas/message.schema';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
-  // Add in-memory cache for campus admins
-  private campusAdminsCache: Map<string, string[]> = new Map();
 
   constructor(
     @InjectModel(Conversation.name)
@@ -33,7 +39,33 @@ export class ChatService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Campus.name) private campusModel: Model<CampusDocument>,
     private readonly chatSessionService: ChatSessionService,
+    @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
+    /**
+     * Why is this required:
+     * - In the chat system, when a user sends a message to a campus, the message must be delivered to all campus admins.
+     * - To do this, we need to quickly retrieve the user IDs of all campus admins associated with a campus.
+     *
+     * Why caching is used:
+     * - The list of campus admins for a campus is unlikely to change frequently, but is queried often (on every message sent to a campus).
+     * - Querying the database every time would be inefficient and could lead to performance bottlenecks under high load.
+     * - An in-memory cache (campusAdminsCache) is used to store the mapping from campusId to campus admin user IDs, reducing database reads and improving response times.
+     *
+     * Cache invalidation:
+     * - The cache should be invalidated (using invalidateCampusAdminsCache) whenever campus admins are added or removed for a campus.
+     * - This ensures that the cache does not serve stale data and always reflects the current set of campus admins.
+     * - Cache invalidation can be triggered by admin management events or hooks in the user/campus admin management logic.
+     *
+     * Usage:
+     * - This method should be used whenever the system needs to determine the recipients for campus-directed chat messages.
+     * - It is safe to use the cache for read-heavy, write-light scenarios, but always ensure proper invalidation on admin changes.
+     *
+     * @param campusId - The ObjectId of the campus whose admin user IDs are to be retrieved.
+     * @param useCache - Whether to use the cache (default: true).
+     * @returns Promise<string[]> - Array of campus admin user IDs as strings.
+     */
+
+    private readonly campusAdminCacheService: CampusAdminCacheService,
   ) {}
 
   async createConversation(
@@ -144,7 +176,7 @@ export class ChatService {
       .exec();
   }
 
-  async findConversation(id: string) {
+  async findConversation(id: string): Promise<PopulatedConversationAll> {
     const conversation = await this.conversationModel
       .findById(id)
       .populate('user_id')
@@ -153,6 +185,10 @@ export class ChatService {
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
+    }
+
+    if (!isPopulatedAll(conversation)) {
+      throw new Error('Conversation is not fully populated');
     }
 
     return conversation;
@@ -209,7 +245,7 @@ export class ChatService {
   private async handleMessageCreation(
     createMessageDto: CreateMessageDto,
     userId: string,
-    senderType: 'user' | 'campus',
+    senderType: ConversationParticipantType,
     curMsgTime: Date,
     conversationId: Types.ObjectId,
     senderId: Types.ObjectId,
@@ -222,17 +258,18 @@ export class ChatService {
       conversation_id: conversationId,
       sender_id: senderId,
       sender_type: senderType,
-      sender_type_ref: senderType === 'user' ? 'User' : 'Campus',
+      sender_type_ref:
+        senderType === ConversationParticipantType.USER ? 'User' : 'Campus',
       content: createMessageDto.content,
-      is_read_by_user: senderType === 'user',
-      is_read_by_campus: senderType === 'campus',
+      is_read_by_user: senderType === ConversationParticipantType.USER,
+      is_read_by_campus: senderType === ConversationParticipantType.CAMPUS,
       attachments: createMessageDto.attachments || [],
       created_at: curMsgTime,
       sessionId: sessionResult.sessionId,
     };
 
     // If the message is sent by the campus, then keep a track of which user replied on behalf of the campus
-    if (senderType === 'campus') {
+    if (senderType === ConversationParticipantType.CAMPUS) {
       messageData.replied_by_user_id = new Types.ObjectId(userId);
     }
 
@@ -247,101 +284,42 @@ export class ChatService {
   }
 
   /**
-   * Get campus admin user IDs for a campus, using cache if available.
-   */
-  private async getCampusAdminIdsForCampus(
-    campusId: Types.ObjectId,
-    useCache: boolean = true,
-  ): Promise<string[]> {
-    const campusIdString = campusId.toString();
-
-    if (useCache && this.campusAdminsCache.has(campusIdString)) {
-      return this.campusAdminsCache.get(campusIdString)!;
-    }
-    // Fetch from DB
-    const campusAdmins = await this.userModel
-      .find({ campus_id: campusId, user_type: UserNS.UserType.Campus_Admin })
-      .select('_id');
-    const campusAdminIds = campusAdmins.map((a) => a._id.toString());
-    if (useCache) {
-      this.campusAdminsCache.set(campusIdString, campusAdminIds);
-    }
-    return campusAdminIds;
-  }
-
-  /**
-   * Invalidate the campus admin cache for a campus (call this when admins are added/removed)
-   */
-  public invalidateCampusAdminsCache(campusId: string) {
-    this.campusAdminsCache.delete(campusId);
-  }
-
-  /**
-   * * How to "check for session validity" (a session is always started from a student message)
-   * ? isSentByStudent AND isLastMessageInConversionFresh (gap < 1hr)
+   * Creates a new chat message in a conversation.
    *
-   * * How to "update average response time"
-   * get the existing sessionsCount
-   * TODO: calculate the current session's responseTime
-   * TODO: check if responseTime exists in the conversation already
-   * ? isResponseTimeExists,
-   *      calculate the avgResponseTime ((prevAvg * prevCount + currentResponseTime) / newCount) and update field
-   * ? isResponseTimeNotExists,
-   *   -   store the current session's response as averageResponseTime
+   * This method handles the following:
+   * - Validates the conversation ID and user permissions.
+   * - Ensures the sender is a participant in the conversation (student or campus admin).
+   * - Determines the correct sender and recipient IDs based on sender type.
+   * - Fetches campus admin IDs from cache if the recipient is a campus.
+   * - Throws appropriate errors if validation fails.
+   * - Proceeds to session handling and message creation.
    *
-   * * How to "calculate the current session's responseTime"
-   * get the first student message in this conversation
-   * TODO: timeDiff(currentMessageTime - timeOfFirstStudentMessageInThisSession)
-   *
-   *
-   * * On each new message
-   * TODO: get sender type of the message => senderType
-   * TODO: check for session validity
-   * ? isExistingSessionValid:
-   *   ? isSentByStudent (senderType === 'user'),
-   *       1.2a.1 do nothing;
-   *   ? isSentByCampus,
-   *       TODO: check if this is the first message from campus in this session
-   *       ? isCurrentMessageTheFirstCampusMessageInSession,
-   *           TODO: update average response time
-   *       ? isCurrentMessageNotTheFirstCampusMessageInSession,
-   *       -   do nothing;
-   * ? isExistingSessionInvalid:
-   *   ? isSentByStudent,
-   *       -   update sessionsCount
-   *       -   update sessionId
-   *   ? isSentByCampus,
-   *       -   do nothing;
-   *
-   *
-   * @param createMessageDto
-   * @param userId
-   * @param senderType
-   * @returns
+   * @param createMessageDto - DTO containing message content and conversation ID
+   * @param user - Authenticated user sending the message
+   * @param senderType - Type of sender (USER or CAMPUS)
+   * @returns The created Message document
    */
   async createMessage(
     createMessageDto: CreateMessageDto,
-    userId: string,
-    senderType: 'user' | 'campus',
+    user: AuthenticatedRequest['user'],
+    senderType: ConversationParticipantType,
   ): Promise<Message> {
-    console.log('🚀 ~ ChatService ~ userId:', userId);
     try {
-      // Validate IDs
-      if (!Types.ObjectId.isValid(userId)) {
-        throw new BadRequestException(`Invalid user ID: ${userId}`);
-      }
+      const userId = user.sub;
+
+      // Validate the provided conversation ID
       if (!Types.ObjectId.isValid(createMessageDto.conversation_id)) {
         throw new BadRequestException(
           `Invalid conversation ID: ${createMessageDto.conversation_id}`,
         );
       }
 
-      // Convert IDs to ObjectId
+      // Convert IDs to ObjectId for MongoDB operations
       const userObjectId = new Types.ObjectId(userId);
       const conversationId = createMessageDto.conversation_id;
       const conversationObjectId = new Types.ObjectId(conversationId);
 
-      // Retrieve the current conversation
+      // Retrieve the current conversation from the database
       const currentConversation =
         await this.conversationModel.findById(conversationObjectId);
       if (!currentConversation) {
@@ -350,37 +328,78 @@ export class ChatService {
         );
       }
 
-      // Determine the correct sender_id based on sender_type
+      // Permission check: Ensure the sender is a participant in the conversation
+      if (senderType === ConversationParticipantType.USER) {
+        // If sender is a student, they must match the user_id in the conversation
+        const isUserParticipant =
+          currentConversation.user_id.equals(userObjectId);
+        if (!isUserParticipant) {
+          this.logger.debug(
+            `User with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a student participant in this conversation`,
+          );
+        }
+      } else if (senderType === ConversationParticipantType.CAMPUS) {
+        // If sender is a campus admin, they must have a campus assigned and match the campus_id in the conversation
+        const userCampusId = user.campus_id;
+        if (!userCampusId) {
+          this.logger.error(
+            `User with ID ${userId} does not have a campus assigned to them`, // This should not happen as the user should have a campus assigned to them if they are a campus admin
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a campus admin participant in this conversation`,
+          );
+        }
+
+        const isCampusParticipant =
+          currentConversation.campus_id.equals(userCampusId);
+
+        if (!isCampusParticipant) {
+          this.logger.debug(
+            `Campus with ID ${userId} is not a participant in conversation with ID ${conversationObjectId}`,
+          );
+          throw new NotFoundException(
+            `You do not have permission to send messages to this conversation because you are not a participant in this conversation`,
+          );
+        }
+      }
+
+      // Determine sender and recipient IDs based on sender type
       let senderId: Types.ObjectId;
       let recipientIds: string[];
-      if (senderType === 'user') {
+      if (senderType === ConversationParticipantType.USER) {
+        // If the sender is a user, set senderId to the user's ObjectId
         senderId = userObjectId;
         const recipientCampusId = currentConversation.campus_id;
-        // Use the cache-aware method
+        // Fetch campus admin IDs for the campus (using cache for efficiency)
         const recipientCampusAdminIds =
-          await this.getCampusAdminIdsForCampus(recipientCampusId);
+          await this.campusAdminCacheService.getCampusAdminIdsForCampus(
+            recipientCampusId,
+          );
         if (recipientCampusAdminIds.length === 0) {
           throw new NotFoundException(
             `No campus admins found for campus with ID ${recipientCampusId}`,
           );
         }
         recipientIds = recipientCampusAdminIds;
+        // Log the recipient admin IDs for debugging
         console.log(
           '🚀 ~ ChatService ~ User sending message to Campus Admins:',
           recipientIds,
         );
       } else {
+        // If the sender is a campus admin, set senderId to the campus's ObjectId
         senderId = currentConversation.campus_id;
+        // The recipient is the user in the conversation
         recipientIds = [currentConversation.user_id.toString()];
-        console.log(
-          '🚀 ~ ChatService ~ Campus sending message to User:',
-          recipientIds, // !BUG: This should show the student-user's userId
-        );
       }
 
-      // Get current time
+      // Get the current timestamp for the message
       const curMsgTime = new Date();
 
+      // Handle chat session logic (e.g., session validity, response time updates)
       const sessionResult = await this.chatSessionService.handleChatSession({
         conversation: currentConversation,
         senderType,
@@ -405,8 +424,8 @@ export class ChatService {
         last_message: createMessageDto.content,
         last_message_time: curMsgTime,
         last_message_sender: senderType,
-        is_read_by_user: senderType === 'user',
-        is_read_by_campus: senderType === 'campus',
+        is_read_by_user: senderType === ConversationParticipantType.USER,
+        is_read_by_campus: senderType === ConversationParticipantType.CAMPUS,
         ...sessionResult.conversationDocUpdate,
       });
       this.logger.debug('🍎 Conversation updated');
@@ -587,9 +606,14 @@ export class ChatService {
       }
 
       // Mark all messages from the other party as read
-      const senderType = userType === 'user' ? 'campus' : 'user';
+      const senderType =
+        userType === ConversationParticipantType.USER
+          ? ConversationParticipantType.CAMPUS
+          : ConversationParticipantType.USER;
       const readField =
-        userType === 'user' ? 'is_read_by_user' : 'is_read_by_campus';
+        userType === ConversationParticipantType.USER
+          ? 'is_read_by_user'
+          : 'is_read_by_campus';
 
       await this.messageModel.updateMany(
         {

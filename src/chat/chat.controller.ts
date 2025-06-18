@@ -1,17 +1,17 @@
 import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    UseGuards,
-    Req,
-    Query,
-    ForbiddenException,
-    BadRequestException,
-    NotFoundException,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  Query,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -21,6 +21,7 @@ import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guar
 import { ChatGateway } from './chat.gateway';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { AuthReq } from 'src/auth/decorators/auth-req.decorator';
+import { ConversationParticipantType } from './schemas/conversation.schema';
 
 @Controller('chat')
 @UseGuards(ResourceProtectionGuard)
@@ -121,18 +122,11 @@ export class ChatController {
     @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
-      const userId = req.user.sub;
-
-      // Validate userId
-      if (!userId) {
-        throw new BadRequestException('User ID not found in token');
-      }
-
       // Save message to database first
       const message = await this.chatService.createMessage(
         createMessageDto,
-        userId,
-        'user',
+        req.user,
+        ConversationParticipantType.USER,
       );
 
       return message;
@@ -153,15 +147,6 @@ export class ChatController {
     @AuthReq() req: AuthenticatedRequest,
   ) {
     try {
-      // Get user info from token
-      const userId = req.user.sub;
-      const userType = req.user.user_type;
-
-      // Validate userId
-      if (!userId) {
-        throw new BadRequestException('User ID not found in token');
-      }
-
       // // Check if user has admin rights
       // if (userType !== 'Admin' && userType !== 'Student') {
       //     throw new ForbiddenException('You do not have permission to send messages as campus');
@@ -170,8 +155,8 @@ export class ChatController {
       // Save message to database first
       const message = await this.chatService.createMessage(
         createMessageDto,
-        userId,
-        'campus',
+        req.user,
+        ConversationParticipantType.CAMPUS,
       );
 
       return message;
@@ -209,4 +194,4 @@ export class ChatController {
   markMessagesAsReadByCampus(@Param('conversationId') conversationId: string) {
     return this.chatService.markMessagesAsRead(conversationId, 'campus');
   }
-} 
+}

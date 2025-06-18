@@ -1,16 +1,17 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
+import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 import { Campus, CampusDocument } from '../campuses/schemas/campus.schema';
-import { User, UserDocument, UserNS } from '../users/schemas/user.schema';
-import chat_events from './chat-gateway.constant';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { ChatSessionService } from './chat-session.service';
 import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -21,9 +22,11 @@ import {
   ConversationDocument,
   ConversationParticipantType,
 } from './schemas/conversation.schema';
+import {
+  isPopulatedAll,
+  PopulatedConversationAll,
+} from './schemas/conversation.schema.utils';
 import { Message, MessageDocument } from './schemas/message.schema';
-import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
-import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
 
 @Injectable()
 export class ChatService {
@@ -173,7 +176,7 @@ export class ChatService {
       .exec();
   }
 
-  async findConversation(id: string) {
+  async findConversation(id: string): Promise<PopulatedConversationAll> {
     const conversation = await this.conversationModel
       .findById(id)
       .populate('user_id')
@@ -182,6 +185,10 @@ export class ChatService {
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
+    }
+
+    if (!isPopulatedAll(conversation)) {
+      throw new Error('Conversation is not fully populated');
     }
 
     return conversation;

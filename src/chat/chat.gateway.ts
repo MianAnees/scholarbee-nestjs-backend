@@ -131,16 +131,21 @@ export class ChatGateway extends AuthenticatedConnectionStoreGateway {
     if (!conversation) {
       throw new Error('Conversation not found');
     }
+
+    const conversationUserId = conversation.user_id._id;
+    const conversationUserIdString = conversationUserId.toString();
+    const conversationCampusId = conversation.campus_id._id;
+
     // Student: must match user_id
     if (userType === UserNS.UserType.Student) {
-      if (conversation.user_id.toString() !== userId) {
+      if (conversationUserIdString !== userId) {
         throw new Error('You are not a participant of this conversation.');
       }
     } else if (userType === UserNS.UserType.Campus_Admin) {
       // Campus admin: must be a campus admin for the campus in the conversation
       const campusAdminIds =
         await this.campusAdminCacheService.getCampusAdminIdsForCampus(
-          conversation.campus_id,
+          conversationCampusId,
         );
       if (!campusAdminIds.includes(userId)) {
         throw new Error('You are not a campus admin for this conversation.');

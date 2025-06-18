@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
-export type ConversationDocument = Conversation & Document;
+export type ConversationDocument = Conversation & Document<Types.ObjectId>;
 
 export enum ConversationParticipantType {
   USER = 'user',

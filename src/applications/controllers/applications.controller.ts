@@ -59,7 +59,7 @@ export class ApplicationsController {
     return this.applicationsService.getApplicationStatistics();
   }
 
-  @Get('legal-documents-requirements')
+  @Get('legal-document-requirements')
   async getApplicationLegalRequirements() {
     return this.applicationsService.getApplicationLegalDocuments();
   }

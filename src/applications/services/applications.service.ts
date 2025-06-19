@@ -191,9 +191,6 @@ export class ApplicationsService {
     updateApplicationDto: UpdateApplicationDto,
     user: AuthenticatedRequest['user'],
   ): Promise<ApplicationDocument> {
-    let updatedDocument: UpdateQuery<ApplicationDocument> =
-      updateApplicationDto; // includes the `accepted_legal_documents`
-
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');
     }
@@ -207,12 +204,16 @@ export class ApplicationsService {
     // Prevent updates to submitted applications (status other than DRAFT)
     if (existingApplication.status !== ApplicationStatus.DRAFT) {
       throw new BadRequestException(
-        `Cannot update application with status "${existingApplication.status}". Application modifications are only allowed for draft applications. Use status update endpoint for status changes.`,
+        `Cannot update application after submission.`,
       );
     }
 
+    const { accepted_legal_documents, ...restUpdateApplicationDto } = updateApplicationDto;
+    let updatedDocument: UpdateQuery<ApplicationDocument> = restUpdateApplicationDto;
+
     if (updateApplicationDto.is_submitted) {
-      await this.validateLegalDocumentAcceptance(
+      // Validate and filter the accepted_legal_documents
+     const validatedAndFilteredAcceptedLegalDocuments = await this.validateAndFilterAcceptedLegalDocuments(
         updateApplicationDto.accepted_legal_documents,
       );
 
@@ -221,6 +222,7 @@ export class ApplicationsService {
 
       updatedDocument.status = ApplicationStatus.PENDING; // "Pending" status is set when application is submitted
       updatedDocument.applicant_snapshot = applicant_snapshot;
+      updatedDocument.accepted_legal_documents = validatedAndFilteredAcceptedLegalDocuments;
     }
 
     const updatedApplication = await this.applicationModel
@@ -540,45 +542,48 @@ export class ApplicationsService {
   }
 
   /**
-   * Validate that all required legal documents have been accepted
+   * Validates that the applicant has accepted all required legal documents and returns the filtered list
+   * of accepted documents that match the requirements.
+   * 
    * @param acceptedLegalDocuments Array of accepted legal document IDs
-   * @throws BadRequestException if validation fails
+   * @returns Filtered array of accepted legal document IDs that match requirements
+   * @throws BadRequestException if any required document is not accepted
    */
-  private async validateLegalDocumentAcceptance(
-    acceptedLegalDocuments?: Types.ObjectId[],
-  ) {
-    // Check if the applicant has accepted the legal documents
-    const requiredLegalDocuments = await this.getApplicationLegalDocuments();
-    const requiredLegalDocumentIds = requiredLegalDocuments.map((doc) => doc._id);
+  private async validateAndFilterAcceptedLegalDocuments(
+    acceptedLegalDocuments: Types.ObjectId[] = [],
+  ): Promise<Types.ObjectId[]> {
+    // Get required documents
+    const requiredDocuments = await this.getApplicationLegalDocuments();
+    
+    // If no required documents, then return empty array (no documents required)
+    if (requiredDocuments.length === 0) {
+      return [];
+    }
 
-    const acceptedLegalDocumentIdStrings = acceptedLegalDocuments?.map(
-      (id) => id.toString(),
+    // If no accepted legal documents, then throw error (no documents accepted)
+    if (!acceptedLegalDocuments?.length) {
+      throw new BadRequestException('Legal documents acceptance is required');
+    }
+
+    const requiredLegalDocumentIds = requiredDocuments.map(doc => doc._id);
+
+    // Create Sets for O(1) lookups
+    const requiredDocSet = new Set(requiredLegalDocumentIds);
+    const acceptedDocSet = new Set(acceptedLegalDocuments);
+
+    // Find any missing required documents
+    const isMissingReqDocs = requiredDocuments.some(reqDoc => !acceptedDocSet.has(reqDoc._id));
+    
+    if (isMissingReqDocs) {
+      throw new BadRequestException(
+        `Missing acceptance for required legal documents`,
+      );
+    }
+
+    // Filter accepted documents to only include required ones (Ignore the accepted documents that are not required)
+    return acceptedLegalDocuments.filter(acceptedDocId => 
+      requiredDocSet.has(acceptedDocId)
     );
-
-    // Check if same length
-    if (
-      !acceptedLegalDocuments ||
-      acceptedLegalDocuments.length !== requiredLegalDocumentIds.length
-    ) {
-      throw new BadRequestException('Legal documents are required');
-    }
-
-    // Check if all the required legal documents are accepted
-    for (const requiredLegalDocumentId of requiredLegalDocumentIds) {
-      const stringifiedRequiredLegalDocumentId =
-        requiredLegalDocumentId.toString();
-
-      // Check if each of the required legal document is available in the accepted legal documents
-      if (
-        !acceptedLegalDocumentIdStrings.includes(
-          stringifiedRequiredLegalDocumentId,
-        )
-      ) {
-        throw new BadRequestException(
-          `Legal document ${stringifiedRequiredLegalDocumentId} is required`,
-        );
-      }
-    }
   }
 
   async getApplicationsAnalytics() {

@@ -33,7 +33,7 @@ export enum LegalDocumentStatus {
 export type LegalDocumentDocument = LegalDocument & Document<Types.ObjectId>;
 
 @Schema({ timestamps: true, collection: 'legal_documents' })
-export class LegalDocument extends PickType(Document, ['_id']) {
+export class LegalDocument extends PickType(Document<Types.ObjectId>, ['_id']) {
   @Prop({ required: true })
   title: string;
 

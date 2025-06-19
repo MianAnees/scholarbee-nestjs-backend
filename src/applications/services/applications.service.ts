@@ -20,6 +20,7 @@ import { LegalDocumentsService } from '../../legal-documents/legal-documents.ser
 import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { NotificationService } from 'src/notification/services/notfication.service';
+import { LegalDocumentStatus } from 'src/legal-documents/schemas/legal-document.schema';
 
 @Injectable()
 export class ApplicationsService {
@@ -510,18 +511,6 @@ export class ApplicationsService {
     };
   }
 
-  private async getLegalDocumentIdsForApplication() {
-    // Get the requirements for student program application action type
-    const requirements = await this.legalDocumentRequirementsService.findAll({
-      applicable_on: LegalActionType.STUDENT_PROGRAM_APPLICATION,
-    });
-
-    if (!requirements.length) {
-      return [];
-    }
-
-    return requirements.flatMap((req) => req.required_documents);
-  }
 
   /**
    * Get application associated legal documents
@@ -529,18 +518,23 @@ export class ApplicationsService {
    * and returns the actual legal documents required for the application
    */
   async getApplicationLegalDocuments() {
-    // Extract all required document IDs from the requirements
-    const associatedLogalDocumentIds =
-      await this.getLegalDocumentIdsForApplication();
 
-    if (!associatedLogalDocumentIds.length) {
+     // Get the requirements for student program application action type
+     const legalDocumentRequirementDoc = await this.legalDocumentRequirementsService.findByActionType(LegalActionType.STUDENT_PROGRAM_APPLICATION);
+    
+     if (!legalDocumentRequirementDoc) return [];
+ 
+     const allRequiredDocumentTypes = legalDocumentRequirementDoc.required_document_types;
+ 
+     // Find all the legal documents against the required document types that are active
+     const associatedLegalDocuments = await this.legalDocumentsService.findAll({
+       document_types: allRequiredDocumentTypes,
+       status: LegalDocumentStatus.ACTIVE,
+     });
+
+    if (!associatedLegalDocuments.length) {
       return [];
     }
-
-    // Fetch the actual legal documents using the extracted document IDs
-    const associatedLegalDocuments = await this.legalDocumentsService.findAll({
-      document_ids: associatedLogalDocumentIds,
-    });
 
     return associatedLegalDocuments;
   }
@@ -554,10 +548,10 @@ export class ApplicationsService {
     acceptedLegalDocuments?: Types.ObjectId[],
   ) {
     // Check if the applicant has accepted the legal documents
-    const requiredLegalDocumentIds =
-      await this.getLegalDocumentIdsForApplication();
+    const requiredLegalDocuments = await this.getApplicationLegalDocuments();
+    const requiredLegalDocumentIds = requiredLegalDocuments.map((doc) => doc._id);
 
-    const stringifiedAcceptedLegalDocumentIds = acceptedLegalDocuments?.map(
+    const acceptedLegalDocumentIdStrings = acceptedLegalDocuments?.map(
       (id) => id.toString(),
     );
 
@@ -576,7 +570,7 @@ export class ApplicationsService {
 
       // Check if each of the required legal document is available in the accepted legal documents
       if (
-        !stringifiedAcceptedLegalDocumentIds.includes(
+        !acceptedLegalDocumentIdStrings.includes(
           stringifiedRequiredLegalDocumentId,
         )
       ) {

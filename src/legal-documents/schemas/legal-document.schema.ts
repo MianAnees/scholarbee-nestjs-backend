@@ -39,6 +39,7 @@ export class LegalDocument {
   @Prop({
     required: true,
     enum: LegalDocumentType,
+    type: String,
   })
   document_type: LegalDocumentType;
 
@@ -55,6 +56,7 @@ export class LegalDocument {
     required: true,
     enum: LegalDocumentStatus,
     default: LegalDocumentStatus.DRAFT,
+    type: String,
   })
   status: LegalDocumentStatus;
 

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { LegalDocument } from 'src/legal-documents/schemas/legal-document.schema';
+import { Document } from 'mongoose';
+import { LegalDocumentType } from 'src/legal-documents/schemas/legal-document.schema';
 
 export type LegalDocumentRequirementDocument = LegalDocumentRequirement &
   Document;
@@ -17,8 +17,8 @@ export enum LegalActionType {
 interface ILegalDocumentRequirement {
   // What user wants to achieve
   applicable_on: LegalActionType;
-  // Should be an array of LegalDocument IDs Only referencing the legal documents
-  required_documents: Types.ObjectId[];
+  // Array of document types required for this action
+  required_document_types: LegalDocumentType[];
   // Optional description of why these documents are required
   description?: string;
 }
@@ -29,11 +29,11 @@ export class LegalDocumentRequirement implements ILegalDocumentRequirement {
   applicable_on: LegalActionType;
 
   @Prop({
-    type: [Types.ObjectId],
+    type: [String],
     required: true,
-    ref: LegalDocument.name,
+    enum: LegalDocumentType,
   })
-  required_documents: Types.ObjectId[]; // Array of document types required
+  required_document_types: LegalDocumentType[]; // Array of document types required
 
   @Prop()
   description?: string; // Optional description of why these documents are required

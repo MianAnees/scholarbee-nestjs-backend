@@ -10,7 +10,7 @@ export class LegalDocumentsController {
   @Get()
   async findAll(
     @Query() queryDto: QueryLegalDocumentsDto,
-  ): Promise<LegalDocument[]> {
+  ) {
     return this.legalDocumentsService.findAll(queryDto);
   }
 

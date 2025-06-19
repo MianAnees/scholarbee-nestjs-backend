@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import {
+  LegalActionType,
   LegalDocumentRequirement,
   LegalDocumentRequirementDocument,
 } from './schemas/legal-document-requirement.schema';
@@ -23,10 +24,14 @@ export class LegalDocumentRequirementsService {
       filter.applicable_on = queryDto.applicable_on;
     }
 
-    return this.legalDocumentRequirementModel.find(filter).exec();
+    return this.legalDocumentRequirementModel.find<LegalDocumentRequirement>(filter).exec();
   }
 
   async findById(id: string): Promise<LegalDocumentRequirement | null> {
     return this.legalDocumentRequirementModel.findById(id).exec();
+  }
+
+  async findByActionType(actionType: LegalActionType) {
+    return this.legalDocumentRequirementModel.findOne<LegalDocumentRequirement>({ applicable_on: actionType }).exec();
   }
 }

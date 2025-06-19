@@ -20,6 +20,7 @@ import { LegalDocumentsService } from '../../legal-documents/legal-documents.ser
 import { LegalActionType } from '../../legal-document-requirements/schemas/legal-document-requirement.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { NotificationService } from 'src/notification/services/notfication.service';
+import { LegalDocumentStatus } from 'src/legal-documents/schemas/legal-document.schema';
 
 @Injectable()
 export class ApplicationsService {
@@ -33,6 +34,139 @@ export class ApplicationsService {
     private readonly legalDocumentsService: LegalDocumentsService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  /**
+   * Creates an applicant snapshot by fetching user from database
+   * @param applicantId The applicant user ID
+   * @returns The applicant snapshot object
+   */
+  private async createApplicantSnapshot(applicantId: string) {
+    // Fetch the user data from database
+    const user = await this.userModel.findById(applicantId).exec();
+    if (!user) {
+      throw new NotFoundException('Applicant user not found');
+    }
+    const {
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      date_of_birth,
+      father_name,
+      father_profession,
+      father_status,
+      father_income,
+      mother_name,
+      mother_profession,
+      mother_status,
+      mother_income,
+      religion,
+      special_person,
+      gender,
+      nationality,
+      provinceOfDomicile,
+      districtOfDomicile,
+      stateOrProvince,
+      city,
+      postalCode,
+      streetAddress,
+      profile_image_url,
+      user_type,
+      educational_backgrounds,
+      national_id_card,
+    } = user;
+
+    return {
+      first_name: first_name || null,
+      last_name: last_name || null,
+      email: email || null,
+      phone_number: phone_number || null,
+      date_of_birth: date_of_birth || null,
+      father_name: father_name || null,
+      father_profession: father_profession || null,
+      father_status: father_status || null,
+      father_income: father_income || null,
+      mother_name: mother_name || null,
+      mother_profession: mother_profession || null,
+      mother_status: mother_status || null,
+      mother_income: mother_income || null,
+      religion: religion || null,
+      special_person: special_person || null,
+      gender: gender || null,
+      nationality: nationality || null,
+      provinceOfDomicile: provinceOfDomicile || null,
+      districtOfDomicile: districtOfDomicile || null,
+      stateOrProvince: stateOrProvince || null,
+      city: city || null,
+      postalCode: postalCode || null,
+      streetAddress: streetAddress || null,
+      profile_image_url: profile_image_url || null,
+      user_type: user_type || null,
+      educational_backgrounds:
+        educational_backgrounds?.map((edu) => ({
+          id: edu.id,
+          education_level: edu.education_level || null,
+          field_of_study: edu.field_of_study || null,
+          school_college_university: edu.school_college_university || null,
+          marks_gpa: {
+            total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
+            obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
+          },
+          year_of_passing: edu.year_of_passing || null,
+          board: edu.board || null,
+          transcript: edu.transcript || null,
+        })) || [],
+      national_id_card: {
+        front_side: national_id_card?.front_side || null,
+        back_side: national_id_card?.back_side || null,
+      },
+    };
+  }
+
+  /**
+   * Validates that the applicant has accepted all required legal documents and returns the filtered list
+   * of accepted documents that match the requirements.
+   * 
+   * @param acceptedLegalDocuments Array of accepted legal document IDs
+   * @returns Filtered array of accepted legal document IDs that match requirements
+   * @throws BadRequestException if any required document is not accepted
+   */
+  private async validateAndFilterAcceptedLegalDocuments(
+    acceptedLegalDocuments: Types.ObjectId[] = [],
+  ): Promise<Types.ObjectId[]> {
+    // Get required documents
+    const requiredDocuments = await this.getApplicationLegalDocuments();
+    
+    // If no required documents, then return empty array (no documents required)
+    if (requiredDocuments.length === 0) {
+      return [];
+    }
+
+    // If no accepted legal documents, then throw error (no documents accepted)
+    if (!acceptedLegalDocuments?.length) {
+      throw new BadRequestException('Legal documents acceptance is required');
+    }
+
+    const requiredLegalDocumentIds = requiredDocuments.map(doc => doc._id);
+
+    // Create Sets for O(1) lookups
+    const requiredDocSet = new Set(requiredLegalDocumentIds);
+    const acceptedDocSet = new Set(acceptedLegalDocuments);
+
+    // Find any missing required documents
+    const isMissingReqDocs = requiredDocuments.some(reqDoc => !acceptedDocSet.has(reqDoc._id));
+    
+    if (isMissingReqDocs) {
+      throw new BadRequestException(
+        `Missing acceptance for required legal documents`,
+      );
+    }
+
+    // Filter accepted documents to only include required ones (Ignore the accepted documents that are not required)
+    return acceptedLegalDocuments.filter(acceptedDocId => 
+      requiredDocSet.has(acceptedDocId)
+    );
+  }
 
   /**
    * @deprecated Use createWithUserSnapshot instead
@@ -190,9 +324,6 @@ export class ApplicationsService {
     updateApplicationDto: UpdateApplicationDto,
     user: AuthenticatedRequest['user'],
   ): Promise<ApplicationDocument> {
-    let updatedDocument: UpdateQuery<ApplicationDocument> =
-      updateApplicationDto; // includes the `accepted_legal_documents`
-
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid application ID');
     }
@@ -206,12 +337,16 @@ export class ApplicationsService {
     // Prevent updates to submitted applications (status other than DRAFT)
     if (existingApplication.status !== ApplicationStatus.DRAFT) {
       throw new BadRequestException(
-        `Cannot update application with status "${existingApplication.status}". Application modifications are only allowed for draft applications. Use status update endpoint for status changes.`,
+        `Cannot update application after submission.`,
       );
     }
 
+    const { accepted_legal_documents, ...restUpdateApplicationDto } = updateApplicationDto;
+    let updatedDocument: UpdateQuery<ApplicationDocument> = restUpdateApplicationDto;
+
     if (updateApplicationDto.is_submitted) {
-      await this.validateLegalDocumentAcceptance(
+      // Validate and filter the accepted_legal_documents
+     const validatedAndFilteredAcceptedLegalDocuments = await this.validateAndFilterAcceptedLegalDocuments(
         updateApplicationDto.accepted_legal_documents,
       );
 
@@ -220,6 +355,7 @@ export class ApplicationsService {
 
       updatedDocument.status = ApplicationStatus.PENDING; // "Pending" status is set when application is submitted
       updatedDocument.applicant_snapshot = applicant_snapshot;
+      updatedDocument.accepted_legal_documents = validatedAndFilteredAcceptedLegalDocuments;
     }
 
     const updatedApplication = await this.applicationModel
@@ -423,168 +559,30 @@ export class ApplicationsService {
   }
 
   /**
-   * Creates an applicant snapshot by fetching user from database
-   * @param applicantId The applicant user ID
-   * @returns The applicant snapshot object
-   */
-  private async createApplicantSnapshot(applicantId: string) {
-    // Fetch the user data from database
-    const user = await this.userModel.findById(applicantId).exec();
-    if (!user) {
-      throw new NotFoundException('Applicant user not found');
-    }
-    const {
-      first_name,
-      last_name,
-      email,
-      phone_number,
-      date_of_birth,
-      father_name,
-      father_profession,
-      father_status,
-      father_income,
-      mother_name,
-      mother_profession,
-      mother_status,
-      mother_income,
-      religion,
-      special_person,
-      gender,
-      nationality,
-      provinceOfDomicile,
-      districtOfDomicile,
-      stateOrProvince,
-      city,
-      postalCode,
-      streetAddress,
-      profile_image_url,
-      user_type,
-      educational_backgrounds,
-      national_id_card,
-    } = user;
-
-    return {
-      first_name: first_name || null,
-      last_name: last_name || null,
-      email: email || null,
-      phone_number: phone_number || null,
-      date_of_birth: date_of_birth || null,
-      father_name: father_name || null,
-      father_profession: father_profession || null,
-      father_status: father_status || null,
-      father_income: father_income || null,
-      mother_name: mother_name || null,
-      mother_profession: mother_profession || null,
-      mother_status: mother_status || null,
-      mother_income: mother_income || null,
-      religion: religion || null,
-      special_person: special_person || null,
-      gender: gender || null,
-      nationality: nationality || null,
-      provinceOfDomicile: provinceOfDomicile || null,
-      districtOfDomicile: districtOfDomicile || null,
-      stateOrProvince: stateOrProvince || null,
-      city: city || null,
-      postalCode: postalCode || null,
-      streetAddress: streetAddress || null,
-      profile_image_url: profile_image_url || null,
-      user_type: user_type || null,
-      educational_backgrounds:
-        educational_backgrounds?.map((edu) => ({
-          id: edu.id,
-          education_level: edu.education_level || null,
-          field_of_study: edu.field_of_study || null,
-          school_college_university: edu.school_college_university || null,
-          marks_gpa: {
-            total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
-            obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
-          },
-          year_of_passing: edu.year_of_passing || null,
-          board: edu.board || null,
-          transcript: edu.transcript || null,
-        })) || [],
-      national_id_card: {
-        front_side: national_id_card?.front_side || null,
-        back_side: national_id_card?.back_side || null,
-      },
-    };
-  }
-
-  private async getLegalDocumentIdsForApplication() {
-    // Get the requirements for student program application action type
-    const requirements = await this.legalDocumentRequirementsService.findAll({
-      applicable_on: LegalActionType.STUDENT_PROGRAM_APPLICATION,
-    });
-
-    if (!requirements.length) {
-      return [];
-    }
-
-    return requirements.flatMap((req) => req.required_documents);
-  }
-
-  /**
    * Get application associated legal documents
    * This method checks the legal document requirements for application action
    * and returns the actual legal documents required for the application
    */
   async getApplicationLegalDocuments() {
-    // Extract all required document IDs from the requirements
-    const associatedLogalDocumentIds =
-      await this.getLegalDocumentIdsForApplication();
 
-    if (!associatedLogalDocumentIds.length) {
+     // Get the requirements for student program application action type
+     const legalDocumentRequirementDoc = await this.legalDocumentRequirementsService.findByActionType(LegalActionType.STUDENT_PROGRAM_APPLICATION);
+    
+     if (!legalDocumentRequirementDoc) return [];
+ 
+     const allRequiredDocumentTypes = legalDocumentRequirementDoc.required_document_types;
+ 
+     // Find all the legal documents against the required document types that are active
+     const associatedLegalDocuments = await this.legalDocumentsService.findAll({
+       document_types: allRequiredDocumentTypes,
+       status: LegalDocumentStatus.ACTIVE,
+     });
+
+    if (!associatedLegalDocuments.length) {
       return [];
     }
 
-    // Fetch the actual legal documents using the extracted document IDs
-    const associatedLegalDocuments = await this.legalDocumentsService.findAll({
-      document_ids: associatedLogalDocumentIds,
-    });
-
     return associatedLegalDocuments;
-  }
-
-  /**
-   * Validate that all required legal documents have been accepted
-   * @param acceptedLegalDocuments Array of accepted legal document IDs
-   * @throws BadRequestException if validation fails
-   */
-  private async validateLegalDocumentAcceptance(
-    acceptedLegalDocuments?: Types.ObjectId[],
-  ) {
-    // Check if the applicant has accepted the legal documents
-    const requiredLegalDocumentIds =
-      await this.getLegalDocumentIdsForApplication();
-
-    const stringifiedAcceptedLegalDocumentIds = acceptedLegalDocuments?.map(
-      (id) => id.toString(),
-    );
-
-    // Check if same length
-    if (
-      !acceptedLegalDocuments ||
-      acceptedLegalDocuments.length !== requiredLegalDocumentIds.length
-    ) {
-      throw new BadRequestException('Legal documents are required');
-    }
-
-    // Check if all the required legal documents are accepted
-    for (const requiredLegalDocumentId of requiredLegalDocumentIds) {
-      const stringifiedRequiredLegalDocumentId =
-        requiredLegalDocumentId.toString();
-
-      // Check if each of the required legal document is available in the accepted legal documents
-      if (
-        !stringifiedAcceptedLegalDocumentIds.includes(
-          stringifiedRequiredLegalDocumentId,
-        )
-      ) {
-        throw new BadRequestException(
-          `Legal document ${stringifiedRequiredLegalDocumentId} is required`,
-        );
-      }
-    }
   }
 
   async getApplicationsAnalytics() {

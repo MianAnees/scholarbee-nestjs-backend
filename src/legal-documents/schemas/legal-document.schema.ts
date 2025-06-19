@@ -1,3 +1,4 @@
+import { PickType } from '@nestjs/mapped-types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
@@ -29,16 +30,17 @@ export enum LegalDocumentStatus {
   ARCHIVED = 'archived',
 }
 
-export type LegalDocumentDocument = LegalDocument & Document;
+export type LegalDocumentDocument = LegalDocument & Document<Types.ObjectId>;
 
 @Schema({ timestamps: true, collection: 'legal_documents' })
-export class LegalDocument {
+export class LegalDocument extends PickType(Document<Types.ObjectId>, ['_id']) {
   @Prop({ required: true })
   title: string;
 
   @Prop({
     required: true,
     enum: LegalDocumentType,
+    type: String,
   })
   document_type: LegalDocumentType;
 
@@ -55,6 +57,7 @@ export class LegalDocument {
     required: true,
     enum: LegalDocumentStatus,
     default: LegalDocumentStatus.DRAFT,
+    type: String,
   })
   status: LegalDocumentStatus;
 

@@ -11,6 +11,10 @@ export class QueryLegalDocumentsDto {
   @IsOptional()
   @IsEnum(LegalDocumentType)
   document_type?: LegalDocumentType;
+  @IsOptional()
+  @IsArray()
+  @IsEnum(LegalDocumentType, { each: true })
+  document_types?: LegalDocumentType[];
 
   @IsOptional()
   @IsEnum(LegalDocumentStatus)

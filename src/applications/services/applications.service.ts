@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, SortOrder, UpdateQuery } from 'mongoose';
 import {
+  ApplicantSnapshot,
   Application,
   ApplicationDocument,
   ApplicationStatus,
@@ -41,86 +42,44 @@ export class ApplicationsService {
    * @returns The applicant snapshot object
    */
   private async createApplicantSnapshot(applicantId: string) {
-    // Fetch the user data from database
-    const user = await this.userModel.findById(applicantId).exec();
+    // Fetch the user data as a plain object for efficiency
+    const user = await this.userModel.findById(applicantId).lean().exec();
     if (!user) {
       throw new NotFoundException('Applicant user not found');
     }
-    const {
-      first_name,
-      last_name,
-      email,
-      phone_number,
-      date_of_birth,
-      father_name,
-      father_profession,
-      father_status,
-      father_income,
-      mother_name,
-      mother_profession,
-      mother_status,
-      mother_income,
-      religion,
-      special_person,
-      gender,
-      nationality,
-      provinceOfDomicile,
-      districtOfDomicile,
-      stateOrProvince,
-      city,
-      postalCode,
-      streetAddress,
-      profile_image_url,
-      user_type,
-      educational_backgrounds,
-      national_id_card,
-    } = user;
 
-    return {
-      first_name: first_name || null,
-      last_name: last_name || null,
-      email: email || null,
-      phone_number: phone_number || null,
-      date_of_birth: date_of_birth || null,
-      father_name: father_name || null,
-      father_profession: father_profession || null,
-      father_status: father_status || null,
-      father_income: father_income || null,
-      mother_name: mother_name || null,
-      mother_profession: mother_profession || null,
-      mother_status: mother_status || null,
-      mother_income: mother_income || null,
-      religion: religion || null,
-      special_person: special_person || null,
-      gender: gender || null,
-      nationality: nationality || null,
-      provinceOfDomicile: provinceOfDomicile || null,
-      districtOfDomicile: districtOfDomicile || null,
-      stateOrProvince: stateOrProvince || null,
-      city: city || null,
-      postalCode: postalCode || null,
-      streetAddress: streetAddress || null,
-      profile_image_url: profile_image_url || null,
-      user_type: user_type || null,
-      educational_backgrounds:
-        educational_backgrounds?.map((edu) => ({
-          id: edu.id,
-          education_level: edu.education_level || null,
-          field_of_study: edu.field_of_study || null,
-          school_college_university: edu.school_college_university || null,
-          marks_gpa: {
-            total_marks_gpa: edu.marks_gpa?.total_marks_gpa || null,
-            obtained_marks_gpa: edu.marks_gpa?.obtained_marks_gpa || null,
-          },
-          year_of_passing: edu.year_of_passing || null,
-          board: edu.board || null,
-          transcript: edu.transcript || null,
-        })) || [],
-      national_id_card: {
-        front_side: national_id_card?.front_side || null,
-        back_side: national_id_card?.back_side || null,
-      },
-    };
+    // Get the sub-schema for ApplicantSnapshot from the main Application model
+    const applicantSnapshotSchema =
+      this.applicationModel.schema.path('applicant_snapshot').schema;
+
+    // Get required paths from the schema definition
+    const requiredPaths = applicantSnapshotSchema.requiredPaths();
+
+    // Check for missing required fields on the user object
+    const missingFields = requiredPaths.filter(
+      (path) => user[path] === null || user[path] === undefined,
+    );
+
+    if (missingFields.length > 0) {
+      throw new BadRequestException(
+        `Your profile is incomplete. Please update the following details before submitting an application: ${missingFields.join(
+          ', ',
+        )}`,
+      );
+    }
+
+    // Get all paths defined in the snapshot schema to build a clean object
+    const allSnapshotPaths = Object.keys(applicantSnapshotSchema.paths);
+    const snapshot = {};
+
+    // Construct a clean snapshot object containing only the fields defined in the schema
+    allSnapshotPaths.forEach((path) => {
+      if (user[path] !== undefined) {
+        snapshot[path] = user[path];
+      }
+    });
+
+    return snapshot;
   }
 
   /**

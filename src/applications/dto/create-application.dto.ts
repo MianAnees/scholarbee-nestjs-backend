@@ -12,6 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Types } from 'mongoose';
+import { ToObjectId } from 'src/common/transformers/object-id.transformer';
 import { IsObjectId } from 'src/common/validators/object-id.validator';
 
 class MarksGpaDto {
@@ -203,7 +204,7 @@ export class CreateApplicationDto {
   @IsOptional()
   @IsArray()
   @IsObjectId({ each: true })
-  // @Type(() => Types.ObjectId)
+  @ToObjectId()
   accepted_legal_documents?: Types.ObjectId[];
 
   @IsArray()

@@ -3,9 +3,19 @@ import { Transform, TransformFnParams } from 'class-transformer';
 import { Types } from 'mongoose';
 
 /**
- * Transforms a string to a MongoDB ObjectId
+ * Transforms a string or an array of strings to a MongoDB ObjectId or an array of ObjectIds.
  * @returns Decorator function
- * @example an example to use it for an array of object ids
+ * @example
+ *
+ * // To transform a single ID string:
+ * ```ts
+ * @IsOptional()
+ * @IsObjectId()
+ * @ToObjectId()
+ * document_id?: Types.ObjectId;
+ * ```
+ *
+ * // To transform an array of ID strings:
  * ```ts
  * @IsOptional()
  * @IsArray()

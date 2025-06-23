@@ -14,18 +14,18 @@ interface IApplicantSnapshot {
   last_name?: string;
   email: string;
   phone_number: string;
-  date_of_birth: Date;
+  date_of_birth?: Date;
   gender?: string;
-  nationality: string;
+  nationality?: string;
   cnic?: string;
-  profile_image_url: string;
-  city: string;
-  stateOrProvince: string;
-  streetAddress: string;
-  postalCode: string;
-  districtOfDomicile: string;
-  provinceOfDomicile: string;
-  father_name: string;
+  profile_image_url?: string;
+  city?: string;
+  stateOrProvince?: string;
+  streetAddress?: string;
+  postalCode?: string;
+  districtOfDomicile?: string;
+  provinceOfDomicile?: string;
+  father_name?: string;
   father_status?: string;
   father_profession?: string;
   father_income?: string;
@@ -36,13 +36,11 @@ interface IApplicantSnapshot {
   user_type: string;
 }
 
-type IApplicantSnapshotOptional = Partial<IApplicantSnapshot>;
-
 @Schema({
   timestamps: false,
   _id: false,
 })
-export class ApplicantSnapshot implements IApplicantSnapshotOptional {
+export class ApplicantSnapshot implements IApplicantSnapshot /* Optional */ {
   @Prop({ required: true })
   first_name: string;
 
@@ -55,8 +53,8 @@ export class ApplicantSnapshot implements IApplicantSnapshotOptional {
   @Prop({ required: true })
   phone_number: string;
 
-  @Prop({ required: true })
-  date_of_birth: Date;
+  @Prop({ required: false })
+  date_of_birth?: Date;
 
   @Prop({ required: false })
   father_name?: string;
@@ -95,29 +93,29 @@ export class ApplicantSnapshot implements IApplicantSnapshotOptional {
   @Prop({ enum: ['Male', 'Female', 'Other'], required: false })
   gender?: string;
 
-  @Prop({ required: true })
-  nationality: string;
+  @Prop({ required: false })
+  nationality?: string;
 
   @Prop({
     enum: ['khyber_pakhtunkhwa', 'punjab', 'sindh', 'balochistan'],
-    required: true,
+    required: false,
   })
-  provinceOfDomicile: string;
+  provinceOfDomicile?: string;
 
-  @Prop({ required: true })
-  districtOfDomicile: string;
+  @Prop({ required: false })
+  districtOfDomicile?: string;
 
-  @Prop({ required: true })
-  stateOrProvince: string;
+  @Prop({ required: false })
+  stateOrProvince?: string;
 
-  @Prop({ required: true })
-  city: string;
+  @Prop({ required: false })
+  city?: string;
 
-  @Prop({ required: true })
-  postalCode: string;
+  @Prop({ required: false })
+  postalCode?: string;
 
-  @Prop({ required: true })
-  streetAddress: string;
+  @Prop({ required: false })
+  streetAddress?: string;
 
   @Prop({ required: false })
   profile_image_url?: string;

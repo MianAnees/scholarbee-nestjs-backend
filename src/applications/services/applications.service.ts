@@ -126,7 +126,7 @@ export class ApplicationsService {
   /**
    * Validates that the applicant has accepted all required legal documents and returns the filtered list
    * of accepted documents that match the requirements.
-   * 
+   *
    * @param acceptedLegalDocuments Array of accepted legal document IDs
    * @returns Filtered array of accepted legal document IDs that match requirements
    * @throws BadRequestException if any required document is not accepted
@@ -136,7 +136,7 @@ export class ApplicationsService {
   ): Promise<Types.ObjectId[]> {
     // Get required documents
     const requiredDocuments = await this.getApplicationLegalDocuments();
-    
+
     // If no required documents, then return empty array (no documents required)
     if (requiredDocuments.length === 0) {
       return [];
@@ -147,15 +147,23 @@ export class ApplicationsService {
       throw new BadRequestException('Legal documents acceptance is required');
     }
 
-    const requiredLegalDocumentIds = requiredDocuments.map(doc => doc._id);
+    const requiredLegalDocumentIds = requiredDocuments.map((doc) =>
+      doc._id.toString(),
+    );
 
     // Create Sets for O(1) lookups
     const requiredDocSet = new Set(requiredLegalDocumentIds);
-    const acceptedDocSet = new Set(acceptedLegalDocuments);
+    const acceptedDocSet = new Set(
+      acceptedLegalDocuments.map((doc) => doc.toString()),
+    );
 
     // Find any missing required documents
-    const isMissingReqDocs = requiredDocuments.some(reqDoc => !acceptedDocSet.has(reqDoc._id));
-    
+    const isMissingReqDocs = requiredLegalDocumentIds.some((reqDocId) => {
+      const isAccepted = acceptedDocSet.has(reqDocId);
+      return !isAccepted;
+    });
+
+    // !BUG: Wrong error message. Even though the correct document is passed, it throws an error.
     if (isMissingReqDocs) {
       throw new BadRequestException(
         `Missing acceptance for required legal documents`,
@@ -163,8 +171,8 @@ export class ApplicationsService {
     }
 
     // Filter accepted documents to only include required ones (Ignore the accepted documents that are not required)
-    return acceptedLegalDocuments.filter(acceptedDocId => 
-      requiredDocSet.has(acceptedDocId)
+    return acceptedLegalDocuments.filter((acceptedDocId) =>
+      requiredDocSet.has(acceptedDocId.toString()),
     );
   }
 
@@ -341,21 +349,25 @@ export class ApplicationsService {
       );
     }
 
-    const { accepted_legal_documents, ...restUpdateApplicationDto } = updateApplicationDto;
-    let updatedDocument: UpdateQuery<ApplicationDocument> = restUpdateApplicationDto;
+    const { accepted_legal_documents, ...restUpdateApplicationDto } =
+      updateApplicationDto;
+    let updatedDocument: UpdateQuery<ApplicationDocument> =
+      restUpdateApplicationDto;
 
     if (updateApplicationDto.is_submitted) {
       // Validate and filter the accepted_legal_documents
-     const validatedAndFilteredAcceptedLegalDocuments = await this.validateAndFilterAcceptedLegalDocuments(
-        updateApplicationDto.accepted_legal_documents,
-      );
+      const validatedAndFilteredAcceptedLegalDocuments =
+        await this.validateAndFilterAcceptedLegalDocuments(
+          updateApplicationDto.accepted_legal_documents,
+        );
 
       // Create applicant snapshot on submission using authenticated user ID
       const applicant_snapshot = await this.createApplicantSnapshot(user._id);
 
       updatedDocument.status = ApplicationStatus.PENDING; // "Pending" status is set when application is submitted
       updatedDocument.applicant_snapshot = applicant_snapshot;
-      updatedDocument.accepted_legal_documents = validatedAndFilteredAcceptedLegalDocuments;
+      updatedDocument.accepted_legal_documents =
+        validatedAndFilteredAcceptedLegalDocuments;
     }
 
     const updatedApplication = await this.applicationModel
@@ -564,19 +576,22 @@ export class ApplicationsService {
    * and returns the actual legal documents required for the application
    */
   async getApplicationLegalDocuments() {
+    // Get the requirements for student program application action type
+    const legalDocumentRequirementDoc =
+      await this.legalDocumentRequirementsService.findByActionType(
+        LegalActionType.STUDENT_PROGRAM_APPLICATION,
+      );
 
-     // Get the requirements for student program application action type
-     const legalDocumentRequirementDoc = await this.legalDocumentRequirementsService.findByActionType(LegalActionType.STUDENT_PROGRAM_APPLICATION);
-    
-     if (!legalDocumentRequirementDoc) return [];
- 
-     const allRequiredDocumentTypes = legalDocumentRequirementDoc.required_document_types;
- 
-     // Find all the legal documents against the required document types that are active
-     const associatedLegalDocuments = await this.legalDocumentsService.findAll({
-       document_types: allRequiredDocumentTypes,
-       status: LegalDocumentStatus.ACTIVE,
-     });
+    if (!legalDocumentRequirementDoc) return [];
+
+    const allRequiredDocumentTypes =
+      legalDocumentRequirementDoc.required_document_types;
+
+    // Find all the legal documents against the required document types that are active
+    const associatedLegalDocuments = await this.legalDocumentsService.findAll({
+      document_types: allRequiredDocumentTypes,
+      status: LegalDocumentStatus.ACTIVE,
+    });
 
     if (!associatedLegalDocuments.length) {
       return [];

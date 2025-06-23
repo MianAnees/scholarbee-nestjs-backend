@@ -10,30 +10,29 @@ import {
 export type ApplicationDocument = Application & Document;
 
 interface IApplicantSnapshot {
-  first_name: string;
-  last_name?: string;
-  email: string;
-  phone_number: string;
-  date_of_birth?: Date;
-  gender?: string;
-  nationality?: string;
-  cnic?: string;
-  profile_image_url?: string;
-  city?: string;
-  stateOrProvince?: string;
-  streetAddress?: string;
-  postalCode?: string;
-  districtOfDomicile?: string;
-  provinceOfDomicile?: string;
+  first_name: string; // required
+  last_name: string; // required
+  email: string; // required
+  phone_number: string; // required
+  date_of_birth: Date; // required
+  gender: string; // required
+  nationality: string; // required
+  profile_image_url: string; // required
+  city: string; // required
+  stateOrProvince: string; // required
+  streetAddress: string; // required
+  postalCode: string; // required
+  districtOfDomicile: string; // required
+  provinceOfDomicile: string; // required
   father_name?: string;
   father_status?: string;
   father_profession?: string;
   father_income?: string;
   religion?: string;
-  special_person?: string;
-  educational_backgrounds: EducationalBackground[];
-  national_id_card: NationalIdCard;
-  user_type: string;
+  special_person: string; // required
+  educational_backgrounds: EducationalBackground[]; // required
+  national_id_card: NationalIdCard; // required
+  user_type: string; // required
 }
 
 @Schema({
@@ -44,8 +43,8 @@ export class ApplicantSnapshot implements IApplicantSnapshot /* Optional */ {
   @Prop({ required: true })
   first_name: string;
 
-  @Prop({ required: false })
-  last_name?: string;
+  @Prop({ required: true })
+  last_name: string;
 
   @Prop({ required: true })
   email: string;
@@ -53,8 +52,8 @@ export class ApplicantSnapshot implements IApplicantSnapshot /* Optional */ {
   @Prop({ required: true })
   phone_number: string;
 
-  @Prop({ required: false })
-  date_of_birth?: Date;
+  @Prop({ required: true })
+  date_of_birth: Date;
 
   @Prop({ required: false })
   father_name?: string;
@@ -73,57 +72,45 @@ export class ApplicantSnapshot implements IApplicantSnapshot /* Optional */ {
   father_income?: string;
 
   @Prop({ required: false })
-  mother_name?: string;
-
-  @Prop({ required: false })
-  mother_profession?: string;
-
-  @Prop({ enum: ['alive', 'deceased'], required: false })
-  mother_status?: string;
-
-  @Prop({ required: false })
-  mother_income?: string;
-
-  @Prop({ required: false })
   religion?: string;
 
-  @Prop({ enum: ['yes', 'no'], required: false })
-  special_person?: string;
+  @Prop({ enum: ['yes', 'no'], required: true })
+  special_person: string;
 
-  @Prop({ enum: ['Male', 'Female', 'Other'], required: false })
-  gender?: string;
+  @Prop({ enum: ['Male', 'Female', 'Other'], required: true })
+  gender: string;
 
-  @Prop({ required: false })
-  nationality?: string;
+  @Prop({ required: true })
+  nationality: string;
 
   @Prop({
     enum: ['khyber_pakhtunkhwa', 'punjab', 'sindh', 'balochistan'],
-    required: false,
+    required: true,
   })
-  provinceOfDomicile?: string;
+  provinceOfDomicile: string;
 
-  @Prop({ required: false })
-  districtOfDomicile?: string;
+  @Prop({ required: true })
+  districtOfDomicile: string;
 
-  @Prop({ required: false })
-  stateOrProvince?: string;
+  @Prop({ required: true })
+  stateOrProvince: string;
 
-  @Prop({ required: false })
-  city?: string;
+  @Prop({ required: true })
+  city: string;
 
-  @Prop({ required: false })
-  postalCode?: string;
+  @Prop({ required: true })
+  postalCode: string;
 
-  @Prop({ required: false })
-  streetAddress?: string;
+  @Prop({ required: true })
+  streetAddress: string;
 
-  @Prop({ required: false })
-  profile_image_url?: string;
+  @Prop({ required: true })
+  profile_image_url: string;
 
   @Prop({ required: true, enum: UserNS.UserType })
   user_type: UserNS.UserType;
 
-  @Prop({ type: [EducationalBackground], default: [] })
+  @Prop({ type: [EducationalBackground], required: true })
   educational_backgrounds: EducationalBackground[];
 
   @Prop({ type: NationalIdCard, required: true })

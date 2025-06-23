@@ -137,7 +137,6 @@ export class ChatService {
       throw error;
     }
   }
-
   async findAllConversationsForUser(userId: string) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException(`Invalid user ID: ${userId}`);
@@ -176,6 +175,7 @@ export class ChatService {
       .exec();
   }
 
+  // TODO: Add a flag in the response to indicate if there are any valid admin-recipients for the campus existing in the database
   async findConversation(id: string): Promise<PopulatedConversationAll> {
     const conversation = await this.conversationModel
       .findById(id)
@@ -378,17 +378,7 @@ export class ChatService {
           await this.campusAdminCacheService.getCampusAdminIdsForCampus(
             recipientCampusId,
           );
-        if (recipientCampusAdminIds.length === 0) {
-          throw new NotFoundException(
-            `No campus admins found for campus with ID ${recipientCampusId}`,
-          );
-        }
         recipientIds = recipientCampusAdminIds;
-        // Log the recipient admin IDs for debugging
-        console.log(
-          '🚀 ~ ChatService ~ User sending message to Campus Admins:',
-          recipientIds,
-        );
       } else {
         // If the sender is a campus admin, set senderId to the campus's ObjectId
         senderId = currentConversation.campus_id;
@@ -428,7 +418,6 @@ export class ChatService {
         is_read_by_campus: senderType === ConversationParticipantType.CAMPUS,
         ...sessionResult.conversationDocUpdate,
       });
-      this.logger.debug('🍎 Conversation updated');
 
       // TODO: Get the message recipients
 
@@ -444,11 +433,12 @@ export class ChatService {
       // This should decide if the message notification to the user against this speicific message based on the user's active conversation and conversationId
       // ! BUG: notificaiton should only be emitted to recipients (excludes the sender)
       // ! BUG: notification should only be emitted to recipients who are not in the conversation room
-      this.chatGateway.emitMessageNotificationToRecipients(
-        recipientIds,
-        savedMessage,
-      );
-      this.logger.debug('🍎 Message notification emitted');
+      if (recipientIds && recipientIds.length > 0) {
+        this.chatGateway.emitMessageNotificationToRecipients(
+          recipientIds,
+          savedMessage,
+        );
+      }
 
       // Then emit the event with the saved message
       // TODO: Restrict sending the message to the sender
@@ -457,11 +447,10 @@ export class ChatService {
         createMessageDto.conversation_id,
         savedMessage,
       );
-      this.logger.debug('🍎 Message emitted');
 
       return savedMessage;
     } catch (error) {
-      console.log('🚀 ~ ChatService ~ error:', error);
+      console.error('🚀 ~ ChatService ~ error:', error);
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException

@@ -28,6 +28,23 @@ export type SanitizedUser = BetterOmit<
   'hash' | 'salt' | 'password'
 >;
 
+type MinimalUserInfo = Pick<
+  SanitizedUser,
+  | 'first_name'
+  | 'last_name'
+  | 'email'
+  | '_id'
+  | 'user_type'
+  | 'campus_id'
+  | 'profile_image_url'
+  | 'special_person'
+  | 'current_stage'
+  | 'nationality'
+  | 'user_profile_id'
+  | 'university_id'
+  | 'phone_number'
+>;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -42,6 +59,40 @@ export class AuthService {
       userObject;
 
     return userObjectWithoutSensitiveData;
+  }
+
+  // TODO: Create a method to return MinimalUserInfo from a SanitizedUser
+  private getMinimalUserInfo(user: SanitizedUser): MinimalUserInfo {
+    const {
+      first_name,
+      last_name,
+      email,
+      _id,
+      user_type,
+      campus_id,
+      profile_image_url,
+      special_person,
+      current_stage,
+      nationality,
+      user_profile_id,
+      university_id,
+      phone_number,
+    } = user;
+    return {
+      first_name,
+      last_name,
+      email,
+      _id,
+      user_type,
+      campus_id,
+      profile_image_url,
+      special_person,
+      current_stage,
+      nationality,
+      user_profile_id,
+      university_id,
+      phone_number,
+    };
   }
 
   /**
@@ -142,10 +193,14 @@ export class AuthService {
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.update(user._id, { refreshTokenHash });
 
+    const minimalUserInfo = this.getMinimalUserInfo(user);
+
     return {
-      token: accessToken, // for backward compatibility
+      user: minimalUserInfo,
       accessToken,
       refreshToken,
+      // For Backward compatibility. Frontend should not use these fields
+      token: accessToken,
       userId: user._id,
       username: user.email,
     };

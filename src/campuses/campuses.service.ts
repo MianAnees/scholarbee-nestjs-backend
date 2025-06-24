@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Model,
@@ -13,12 +13,15 @@ import { QueryCampusDto } from './dto/query-campus.dto';
 import { Campus, CampusDocument } from './schemas/campus.schema';
 import { AdmissionStatusEnum } from '../admissions/schemas/admission.schema';
 import { getDataAndCountAggPipeline, getSortOrder } from '../utils/db.utils';
+import { User, UserDocument, UserNS } from '../users/schemas/user.schema';
 
 @Injectable()
 export class CampusesService {
   constructor(
     @InjectModel(Campus.name)
     private campusModel: Model<CampusDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
   ) {}
 
   private buildAdmissionStatusAggStages(
@@ -244,4 +247,21 @@ export class CampusesService {
   async remove(id: string) {
     return await this.campusModel.findByIdAndDelete(id);
   }
-} 
+
+  /**
+   * Checks if a campus has any valid admins.
+   * @param campusId - The campus ID as a string
+   * @returns Promise<boolean> - true if at least one admin exists, false otherwise
+   */
+  async hasValidAdmins(campusId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(campusId)) {
+      // throw error
+      throw new BadRequestException('Invalid campus ID');
+    }
+    const count = await this.userModel.countDocuments({
+      campus_id: campusId,
+      user_type: UserNS.UserType.Campus_Admin,
+    });
+    return count > 0;
+  }
+}

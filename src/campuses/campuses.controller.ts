@@ -1,14 +1,14 @@
 import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    Query,
-    UseGuards,
-    Req,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CampusesService } from './campuses.service';
 import { CreateCampusDto } from './dto/create-campus.dto';
@@ -56,4 +56,11 @@ export class CampusesController {
   remove(@Param('id') id: string) {
     return this.campusesService.remove(id);
   }
-} 
+
+  @UseGuards(ResourceProtectionGuard)
+  @Get(':id/has-admins')
+  async hasValidAdmins(@Param('id') id: string) {
+    const hasAdmins = await this.campusesService.hasValidAdmins(id);
+    return { hasAdmins };
+  }
+}

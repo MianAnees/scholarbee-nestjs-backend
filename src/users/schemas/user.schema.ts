@@ -49,7 +49,6 @@ export class MarksGPA implements UserNS.IMarksGPA {
 // Schema Class for educational background
 @Schema({
   timestamps: false,
-  _id: false,
 })
 export class EducationalBackground implements UserNS.IEducationalBackground {
   @Prop({ required: false })
@@ -80,7 +79,6 @@ export class EducationalBackground implements UserNS.IEducationalBackground {
 // Schema Class for national id card
 @Schema({
   timestamps: false,
-  _id: false,
 })
 export class NationalIdCard implements UserNS.INationalIdCard {
   @Prop({ required: false })

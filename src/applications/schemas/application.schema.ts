@@ -214,5 +214,6 @@ export class Application {
   })
   departments: Department[];
 }
+// TODO: Make a combo id based on the applicant + admission_program_id
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);

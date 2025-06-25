@@ -26,7 +26,7 @@ jobs:
         env:
           AWS_REGION: us-east-1
           AWS_ACCOUNT_ID: 975050309581
-          APP_NAME: nestjs-backend
+          APP_NAME: nestjs-staging
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
           docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_NAME:latest .

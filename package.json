@@ -34,7 +34,10 @@
     "db:get-distinct-program-degree-levels": "ts-node scripts/get-distinct-program-degree-levels.ts",
     "db:map-gen": "ts-node scripts/map-gen.ts",
     "db:replace-degree-level": "ts-node scripts/replace-degree-level.ts",
-    "db:update-program-degree-level": "ts-node scripts/update-program-degree-level.ts"
+    "db:update-program-degree-level": "ts-node scripts/update-program-degree-level.ts",
+    "test:personalized-feed": "ts-node scripts/test-personalized-feed.ts",
+    "generate:mock-programs": "ts-node scripts/generate-mock-programs-json.ts",
+    "load:mock-programs": "ts-node scripts/load-mock-programs-from-json.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.804.0",

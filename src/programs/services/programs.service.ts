@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery, SortOrder, Types } from 'mongoose';
 import { SearchHistoryAnalyticsService } from 'src/analytics/services/search-history.analytics.service';
@@ -13,6 +17,10 @@ import { QueryProgramDto } from '../dto/query-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
 import { Program, ProgramDocument } from '../schemas/program.schema';
 import { DegreeLevelEnum } from 'src/common/constants/shared.constants';
+import { PersonalizedFeedDto } from '../dto/personalized-feed.dto';
+import * as fs from 'fs';
+import * as path from 'path';
+import { MockProgram } from '../constants/mock-programs.data';
 
 @Injectable()
 export class ProgramsService {
@@ -610,4 +618,125 @@ export class ProgramsService {
       skip: queryDto.skip,
     });
   }
-} 
+
+  // Cache for loaded mock programs
+  private static mockProgramsCache: MockProgram[] | null = null;
+
+  private async loadMockProgramsFromJson(): Promise<MockProgram[]> {
+    if (ProgramsService.mockProgramsCache) {
+      return ProgramsService.mockProgramsCache;
+    }
+    const jsonPath = path.join(__dirname, '../../../data/mock-programs.json');
+    if (!fs.existsSync(jsonPath)) {
+      throw new Error(
+        'Mock programs JSON file not found. Please run "npm run generate:mock-programs".',
+      );
+    }
+    const jsonContent = fs.readFileSync(jsonPath, 'utf8');
+    const parsed = JSON.parse(jsonContent);
+    ProgramsService.mockProgramsCache = parsed.programs;
+    return parsed.programs;
+  }
+
+  /**
+   * Get personalized feed of programs based on weighted scoring
+   * This is a sandbox/demo implementation using mock data from JSON
+   */
+  async getPersonalizedFeed(personalizedFeedDto: PersonalizedFeedDto): Promise<{
+    programs: (MockProgram & { relevance_score: number })[];
+    total: number;
+    userCity: string;
+    appliedWeights: {
+      nearMe: boolean;
+      trending: boolean;
+      deadlineClose: boolean;
+    };
+  }> {
+    const {
+      userCity,
+      nearMe,
+      trending,
+      deadlineClose,
+      limit = '20',
+    } = personalizedFeedDto;
+    const limitNum = parseInt(limit, 10);
+
+    // Load programs from JSON file
+    const MOCK_PROGRAMS = await this.loadMockProgramsFromJson();
+
+    // Calculate relevance scores for each program
+    const programsWithScores = MOCK_PROGRAMS.map((program) => {
+      let relevanceScore = 0;
+
+      // Location weight (nearMe)
+      if (nearMe && program.city.toLowerCase() === userCity.toLowerCase()) {
+        relevanceScore += 10;
+      }
+
+      // Deadline weight (deadlineClose)
+      if (deadlineClose) {
+        const deadlineDate = new Date(program.deadline);
+        const now = new Date();
+        const daysUntilDeadline = Math.ceil(
+          (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        if (daysUntilDeadline <= 7) {
+          relevanceScore += 15; // High priority for very close deadlines
+        } else if (daysUntilDeadline <= 30) {
+          relevanceScore += 10; // Medium priority for close deadlines
+        } else if (daysUntilDeadline <= 90) {
+          relevanceScore += 5; // Low priority for moderate deadlines
+        }
+      }
+
+      // Trending weight (trending)
+      if (trending) {
+        relevanceScore += program.trend_score * 0.2; // Scale trend score (0-100) to 0-20
+      }
+
+      // Base score for all programs (ensures some ordering even without toggles)
+      if (!nearMe && !trending && !deadlineClose) {
+        // Default scoring: mix of deadline proximity and trend score
+        const deadlineDate = new Date(program.deadline);
+        const now = new Date();
+        const daysUntilDeadline = Math.ceil(
+          (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        // Inverse relationship: closer deadlines get higher scores
+        const deadlineScore = Math.max(
+          0,
+          10 - Math.floor(daysUntilDeadline / 30),
+        );
+        const trendScore = program.trend_score * 0.1; // Scale trend score to 0-10
+
+        relevanceScore = deadlineScore + trendScore;
+      }
+
+      return {
+        ...program,
+        relevance_score: Math.round(relevanceScore * 100) / 100, // Round to 2 decimal places
+      };
+    });
+
+    // Sort by relevance score (descending)
+    const sortedPrograms = programsWithScores.sort(
+      (a, b) => b.relevance_score - a.relevance_score,
+    );
+
+    // Return top N programs
+    const topPrograms = sortedPrograms.slice(0, limitNum);
+
+    return {
+      programs: topPrograms,
+      total: MOCK_PROGRAMS.length,
+      userCity,
+      appliedWeights: {
+        nearMe: nearMe || false,
+        trending: trending || false,
+        deadlineClose: deadlineClose || false,
+      },
+    };
+  }
+}

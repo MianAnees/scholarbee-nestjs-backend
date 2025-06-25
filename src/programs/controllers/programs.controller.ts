@@ -19,13 +19,12 @@ import { CompareProgramsDto } from '../dto/compare-programs.dto';
 import { CreateProgramDto } from '../dto/create-program.dto';
 import { QueryProgramDto } from '../dto/query-program.dto';
 import { UpdateProgramDto } from '../dto/update-program.dto';
+import { PersonalizedFeedDto } from '../dto/personalized-feed.dto';
 import { ProgramsService } from '../services/programs.service';
 
 @Controller('programs')
 export class ProgramsController {
-  constructor(
-    private readonly programsService: ProgramsService,
-  ) {}
+  constructor(private readonly programsService: ProgramsService) {}
 
   @UseGuards(ResourceProtectionGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -36,7 +35,10 @@ export class ProgramsController {
 
   @Get()
   async findAll(@Query() queryDto: QueryProgramDto, @Req() req: Request) {
-    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(
+      req.user?.['sub'],
+      queryDto,
+    );
     const result = await this.programsService.findAll(queryDto);
     return result;
   }
@@ -52,7 +54,10 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(
+      req.user?.['sub'],
+      queryDto,
+    );
     const result = await this.programsService.findByCampus(campusId, queryDto);
     return result;
   }
@@ -63,7 +68,10 @@ export class ProgramsController {
     @Query() queryDto: QueryProgramDto,
     @Req() req: Request,
   ) {
-    await this.programsService.indexProgramSearchHistory(req.user?.['sub'], queryDto);
+    await this.programsService.indexProgramSearchHistory(
+      req.user?.['sub'],
+      queryDto,
+    );
     const result = await this.programsService.findAllByUniversity(
       universityId,
       queryDto,
@@ -108,8 +116,13 @@ export class ProgramsController {
     return this.programsService.remove(id);
   }
 
+  @Get('personalized-feed')
+  async getPersonalizedFeed(@Query() personalizedFeedDto: PersonalizedFeedDto) {
+    return this.programsService.getPersonalizedFeed(personalizedFeedDto);
+  }
+
   @Post('compare')
   comparePrograms(@Body() compareProgramsDto: CompareProgramsDto) {
     return this.programsService.comparePrograms(compareProgramsDto);
   }
-} 
+}

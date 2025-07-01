@@ -234,6 +234,17 @@ export class AuthService {
     };
   }
 
+  /**
+   * @deprecated Frontend should construct the reset password URL from the token itself
+   * Generate a reset password URL for the user
+   * @param token - The reset password token
+   * @returns The reset password URL
+   */
+  private async generateResetPasswordUrl(token: string) {
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    return resetUrl;
+  }
+
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
@@ -257,7 +268,7 @@ export class AuthService {
     });
 
     // Create reset URL
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetUrl = await this.generateResetPasswordUrl(resetToken);
 
     // Send email
     try {

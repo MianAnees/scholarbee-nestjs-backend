@@ -24,6 +24,7 @@ import {
 } from '../schemas/admission-program.schema';
 import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 import { QueryAdmissionProgramByIdDto } from '../dto/query-admission-program.dto';
+import { escapeRegex } from 'src/utils/db.utils';
 
 @Injectable()
 export class AdmissionProgramsService {
@@ -816,8 +817,14 @@ export class AdmissionProgramsService {
       });
     if (programName)
       pipeline.push({
-        $match: { 'program.name': { $regex: programName, $options: 'i' } },
+        $match: {
+          'program.name': {
+            $regex: escapeRegex(programName),
+            $options: 'i',
+          },
+        },
       });
+
     if (university)
       pipeline.push({
         $match: { 'admission.university_id': { $eq: university } },

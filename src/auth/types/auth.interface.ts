@@ -1,10 +1,37 @@
 import { Request } from 'express';
-import { SanitizedUser } from '../auth.service'; // adjust path as needed
 import { ResourceProtectionStrategy } from 'src/auth/strategies/resource-protection.strategy';
 import { LocalAuthenticationStrategy } from '../strategies/local-authentication.strategy';
 import { Socket } from 'socket.io';
+import { BetterOmit } from 'src/utils/typescript.utils';
+import { User } from 'src/users/schemas/user.schema';
 
-export interface AccessTokenPayload extends SanitizedUser {
+export type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
+  _id: string;
+};
+export type SanitizedUser = BetterOmit<
+  UserWithoutComparePassword,
+  'hash' | 'salt' | 'password'
+>;
+
+export type MinimalUserInfo = Pick<
+  SanitizedUser,
+  | 'first_name'
+  | 'first_name'
+  | 'last_name'
+  | 'email'
+  | '_id'
+  | 'user_type'
+  | 'campus_id'
+  | 'profile_image_url'
+  | 'special_person'
+  | 'current_stage'
+  | 'nationality'
+  | 'user_profile_id'
+  | 'university_id'
+  | 'phone_number'
+>;
+
+export interface AccessTokenPayload extends MinimalUserInfo {
   sub: string;
   userId: string;
 }

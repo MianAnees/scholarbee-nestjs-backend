@@ -7,7 +7,6 @@ import {
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { AuthService } from '../auth.service';
-import { AccessTokenPayload } from '../types/auth.interface';
 
 /**
  * This guard is used to authenticate a WebSocket connection using a JWT token.

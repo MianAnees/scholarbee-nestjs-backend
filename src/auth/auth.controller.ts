@@ -1,16 +1,26 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { RefreshAuthenticationGuard } from 'src/auth/guards/refresh-authentication.guard';
 import { UsersService } from '../users/users.service';
-import { AuthService, SanitizedUser } from './auth.service';
+import { AuthService } from './auth.service';
+import { AuthReq, LoginReq } from './decorators/auth-req.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignupDto } from './dto/signup.dto';
 import { LocalAuthenticationGuard } from './guards/local-authentication.guard';
 import { ResourceProtectionGuard } from './guards/resource-protection.guard';
-import { RefreshAuthenticationGuard } from 'src/auth/guards/refresh-authentication.guard';
 import { AuthenticatedRequest, LoginRequest } from './types/auth.interface';
-import { AuthReq, LoginReq } from './decorators/auth-req.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -94,4 +104,4 @@ export class AuthController {
       saltType: user.salt ? user.salt.substring(0, 10) + '...' : 'none',
     };
   }
-} 
+}

@@ -562,7 +562,9 @@ export class ApplicationsService {
   // Make generic to get the analytics for all users as well as for a specific user
   async getApplicationsAnalytics(user: AuthenticatedRequest['user']) {
     // Get total count of applications
-    const totalApplications = await this.applicationModel.countDocuments();
+    const totalApplications = await this.applicationModel.countDocuments({
+      applicant: user._id,
+    });
 
     // Get breakdown by status using aggregation
     const statusBreakdown = await this.applicationModel.aggregate([

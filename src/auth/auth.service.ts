@@ -17,33 +17,11 @@ import { sendEmail } from '../utils/mail.config';
 import {
   AccessTokenPayload,
   AuthenticatedRequest,
+  MinimalUserInfo,
+  SanitizedUser,
+  UserWithoutComparePassword,
 } from 'src/auth/types/auth.interface';
 import { RefreshTokenPayload } from 'src/auth/types/auth.interface';
-
-type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
-  _id: string;
-};
-export type SanitizedUser = BetterOmit<
-  UserWithoutComparePassword,
-  'hash' | 'salt' | 'password'
->;
-
-type MinimalUserInfo = Pick<
-  SanitizedUser,
-  | 'first_name'
-  | 'last_name'
-  | 'email'
-  | '_id'
-  | 'user_type'
-  | 'campus_id'
-  | 'profile_image_url'
-  | 'special_person'
-  | 'current_stage'
-  | 'nationality'
-  | 'user_profile_id'
-  | 'university_id'
-  | 'phone_number'
->;
 
 @Injectable()
 export class AuthService {
@@ -133,7 +111,7 @@ export class AuthService {
   /**
    * Tokenize the received user object and create a JWT token based on JWT standard
    */
-  async generateTokens(user: SanitizedUser) {
+  async generateTokens(user: MinimalUserInfo) {
     const accessTokenPayload: AccessTokenPayload = {
       sub: user._id,
       userId: user._id,
@@ -185,15 +163,16 @@ export class AuthService {
    * Receives the validated user and transforms it into a token
    */
   async login(user: SanitizedUser) {
+    const minimalUserInfo = this.getMinimalUserInfo(user);
+
     // Tokenize user
-    const { accessToken, refreshToken } = await this.generateTokens(user);
+    const { accessToken, refreshToken } =
+      await this.generateTokens(minimalUserInfo);
 
     // hash and save refresh token
     // const refreshTokenHash = await argon2.hash(refreshToken);
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.update(user._id, { refreshTokenHash });
-
-    const minimalUserInfo = this.getMinimalUserInfo(user);
 
     return {
       user: minimalUserInfo,

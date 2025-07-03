@@ -15,6 +15,8 @@ import {
   AdmissionProgram,
   AdmissionProgramDocument,
 } from '../admission-programs/schemas/admission-program.schema';
+import { UsersService } from 'src/users/users.service';
+import { UserDocument } from 'src/users/schemas/user.schema';
 
 interface FindAllOptions {
   page: number;
@@ -33,6 +35,7 @@ export class ExternalApplicationsService {
     private admissionProgramModel: Model<AdmissionProgramDocument>,
     @InjectConnection()
     private connection: Connection,
+    private userService: UsersService,
   ) {}
   /**
    * TODO: Check if this method can be integrated with the user service/ user model to make it reusable
@@ -40,7 +43,7 @@ export class ExternalApplicationsService {
    * @param user The user document to create snapshot from
    * @returns The applicant snapshot object
    */
-  private createApplicantSnapshot(user: AuthenticatedRequest['user']) {
+  private createApplicantSnapshot(user: UserDocument) {
     const {
       first_name,
       last_name,
@@ -125,7 +128,10 @@ export class ExternalApplicationsService {
     const { program, admission, admission_program, campus, university } =
       createExternalApplicationDto;
 
-    const applicant_snapshot = this.createApplicantSnapshot(user);
+    // TODO: Make a get request to the user service to get the user data
+    const userData = await this.userService.findById(user._id);
+
+    const applicant_snapshot = this.createApplicantSnapshot(userData);
 
     const applicationData: ExternalApplication = {
       applicant: stringToObjectId(user._id),

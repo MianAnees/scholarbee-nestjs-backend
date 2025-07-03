@@ -143,12 +143,16 @@ export class AnalyticsController {
   }
 
   @Get('program-applications')
-  async getApplicationsAnalytics() {
-    return this.applicationsService.getApplicationsAnalytics();
+  async getApplicationsAnalytics(@AuthReq() authReq: AuthenticatedRequest) {
+    return this.applicationsService.getApplicationsAnalytics(authReq.user);
   }
 
   @Get('scholarship-applications')
-  async getScholarshipApplicationsAnalytics() {
-    return this.studentScholarshipsService.getScholarshipApplicationsAnalytics();
+  async getScholarshipApplicationsAnalytics(
+    @AuthReq() authReq: AuthenticatedRequest,
+  ) {
+    return this.studentScholarshipsService.getScholarshipApplicationsAnalytics(
+      authReq.user,
+    );
   }
 }

@@ -559,12 +559,18 @@ export class ApplicationsService {
     return associatedLegalDocuments;
   }
 
-  async getApplicationsAnalytics() {
+  // Make generic to get the analytics for all users as well as for a specific user
+  async getApplicationsAnalytics(user: AuthenticatedRequest['user']) {
     // Get total count of applications
     const totalApplications = await this.applicationModel.countDocuments();
 
     // Get breakdown by status using aggregation
     const statusBreakdown = await this.applicationModel.aggregate([
+      {
+        $match: {
+          applicant: user._id,
+        },
+      },
       {
         $group: {
           _id: '$status',

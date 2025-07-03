@@ -1,24 +1,22 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ConflictException,
-  Inject,
-  forwardRef,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, UpdateQuery } from 'mongoose';
-import { User, UserDocument, UserNS } from './schemas/user.schema';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import { sendEmail } from '../utils/mail.config';
-import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
-import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
-import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
-import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
+import { Model, Types, UpdateQuery } from 'mongoose';
 import { CampusAdminCacheService } from 'src/common/services/campus-admin-cache.service';
+import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
+import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
+import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
+import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
+import { sendEmail } from '../utils/mail.config';
+import { CreateUserDto } from './dto/create-user.dto';
+import { User, UserDocument, UserNS } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -288,7 +286,7 @@ export class UsersService {
   async addEducationalBackground(
     userId: string,
     payload: CreateEducationalBackgroundDto,
-  ): Promise<User> {
+  ) {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
@@ -307,11 +305,19 @@ export class UsersService {
       user.educational_backgrounds = [];
     }
 
-    // Generate a unique ID for this educational background
-    payload.id = crypto.randomBytes(12).toString('hex');
+    const educationalBackgroundDoc = {
+      _id: new Types.ObjectId(),
+      ...payload,
+    };
 
-    user.educational_backgrounds.push(payload);
-    return user.save();
+    user.educational_backgrounds.push(educationalBackgroundDoc);
+    const savedUser = await user.save();
+    const savedEducationBackgroundDocument =
+      savedUser.educational_backgrounds[
+        savedUser.educational_backgrounds.length - 1
+      ];
+
+    return savedEducationBackgroundDocument;
   }
 
   async addNationalIdCard(
@@ -336,52 +342,61 @@ export class UsersService {
     userId: string,
     backgroundId: string,
     payload: UpdateEducationalBackgroundDto,
-  ): Promise<User> {
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
+  ) {
+    try {
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
 
-    if (!user.educational_backgrounds) {
-      throw new NotFoundException('No educational backgrounds found');
-    }
+      if (!user.educational_backgrounds) {
+        throw new NotFoundException('No educational backgrounds found');
+      }
 
-    const index = user.educational_backgrounds.findIndex(
-      (bg) => bg.id === backgroundId,
-    );
-    if (index === -1) {
-      throw new NotFoundException(
-        `Educational background with ID ${backgroundId} not found`,
+      const edu_bg_index = user.educational_backgrounds.findIndex(
+        (bg) => bg._id?.toString() === backgroundId,
       );
-    }
 
-    // Validate marks_gpa if being updated
-    if (payload.marks_gpa) {
-      const updatedMarksGpa = {
-        ...user.educational_backgrounds[index].marks_gpa,
-        ...payload.marks_gpa,
-      };
-
-      if (
-        !updatedMarksGpa.total_marks_gpa ||
-        !updatedMarksGpa.obtained_marks_gpa
-      ) {
-        throw new BadRequestException(
-          'total_marks_gpa and obtained_marks_gpa are required in marks_gpa',
+      if (edu_bg_index === -1) {
+        throw new NotFoundException(
+          `Educational background with ID ${backgroundId} not found`,
         );
       }
+
+      // Schema validation will handle marks_gpa validation automatically
+
+      // Build dynamic update query for nested document fields
+      const updateQuery: any = {};
+
+      Object.keys(payload).forEach((key) => {
+        if (key === 'marks_gpa' && payload.marks_gpa) {
+          // Update each key in the marks_gpa object separately ONLY IF the matching key is present in the payload
+          Object.keys(payload.marks_gpa).forEach((gpaKey) => {
+            updateQuery[
+              `educational_backgrounds.${edu_bg_index}.marks_gpa.${gpaKey}`
+            ] = payload.marks_gpa[gpaKey];
+          });
+        } else {
+          updateQuery[`educational_backgrounds.${edu_bg_index}.${key}`] =
+            payload[key];
+        }
+      });
+
+      const result = await this.userModel.updateOne(
+        { _id: userId },
+        { $set: updateQuery },
+        { runValidators: true },
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new NotFoundException('Failed to update educational background');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating educational background:', error);
+      throw new InternalServerErrorException(error.message);
     }
-
-    user.educational_backgrounds[index] = {
-      ...user.educational_backgrounds[index],
-      ...payload,
-      marks_gpa: {
-        ...user.educational_backgrounds[index].marks_gpa,
-        ...payload.marks_gpa,
-      },
-    };
-
-    return user.save();
   }
 
   async removeEducationalBackground(
@@ -399,7 +414,7 @@ export class UsersService {
 
     const initialLength = user.educational_backgrounds.length;
     user.educational_backgrounds = user.educational_backgrounds.filter(
-      (bg) => bg.id !== backgroundId,
+      (bg) => bg._id?.toString() !== backgroundId,
     );
 
     if (user.educational_backgrounds.length === initialLength) {

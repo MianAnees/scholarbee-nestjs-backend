@@ -5,6 +5,7 @@ import {
   IsString,
   IsUrl,
 } from 'class-validator';
+import { IsValidObjectId } from 'src/common/validators/object-id.validator';
 
 export class MarksGPADto {
   @IsNotEmpty()
@@ -17,12 +18,6 @@ export class MarksGPADto {
 }
 
 export class CreateEducationalBackgroundDto {
-  // REVIEW: This should not be received from the client but the type of educational background should allow the server to generate the id and attach it to the educational background
-  // id - should be a unique identifier for the educational background
-  @IsOptional()
-  @IsString()
-  id: string;
-
   // education_level - REQUIRED
   @IsNotEmpty()
   @IsString()

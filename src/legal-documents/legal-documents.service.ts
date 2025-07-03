@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { BetterOmit } from 'src/utils/typescript.utils';
 import { QueryLegalDocumentsDto } from './dto/query-legal-documents.dto';
 import {
   LegalDocument,
-  LegalDocumentDocument
+  LegalDocumentDocument,
 } from './schemas/legal-document.schema';
 
 @Injectable()
@@ -15,12 +19,16 @@ export class LegalDocumentsService {
     private legalDocumentModel: Model<LegalDocumentDocument>,
   ) {}
 
-  async findAll(queryDto: QueryLegalDocumentsDto): Promise<BetterOmit<LegalDocument, 'content'>[]> {
+  async findAll(
+    queryDto: QueryLegalDocumentsDto,
+  ): Promise<BetterOmit<LegalDocument, 'content'>[]> {
     const filter: RootFilterQuery<LegalDocument> = {};
 
     // throw error if both document_type and document_types are provided
     if (queryDto.document_type && queryDto.document_types) {
-      throw new BadRequestException('Cannot provide both document_type and document_types');
+      throw new BadRequestException(
+        'Cannot provide both document_type and document_types',
+      );
     }
     // Filter by document type if provided
     else if (queryDto.document_type) {
@@ -50,6 +58,11 @@ export class LegalDocumentsService {
   }
 
   async findById(id: string): Promise<LegalDocument | null> {
-    return this.legalDocumentModel.findById(id).exec();
+    const document = await this.legalDocumentModel.findById(id).exec();
+    console.log('🚀 ~ LegalDocumentsService ~ findById ~ document:', document);
+    if (!document) {
+      throw new NotFoundException('Legal document not found');
+    }
+    return document;
   }
 }

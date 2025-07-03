@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -43,12 +54,12 @@ export class UsersController {
   }
 
   @UseGuards(ResourceProtectionGuard)
-  @Post(':id/educational-backgrounds')
+  @Post(':userId/educational-backgrounds')
   addEducationalBackground(
-    @Param('id') id: string,
+    @Param('userId') userId: string,
     @Body() payload: CreateEducationalBackgroundDto,
   ) {
-    return this.usersService.addEducationalBackground(id, payload);
+    return this.usersService.addEducationalBackground(userId, payload);
   }
 
   @UseGuards(ResourceProtectionGuard)
@@ -97,4 +108,4 @@ export class UsersController {
   getProfile(@Req() req: any) {
     return this.usersService.findOne(req.user.sub);
   }
-} 
+}

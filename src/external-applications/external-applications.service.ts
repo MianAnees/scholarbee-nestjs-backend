@@ -99,7 +99,7 @@ export class ExternalApplicationsService {
       user_type: user_type || null,
       educational_backgrounds:
         educational_backgrounds?.map((edu) => ({
-          id: edu.id,
+          _id: edu._id,
           education_level: edu.education_level || null,
           field_of_study: edu.field_of_study || null,
           school_college_university: edu.school_college_university || null,

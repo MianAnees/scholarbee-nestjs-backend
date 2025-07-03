@@ -1,8 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { IsOptional } from 'class-validator';
 import { Types } from 'mongoose';
 import { Document } from 'mongoose';
 import { LivingStatusEnum } from 'src/common/constants/shared.constants';
+import { IsValidObjectId } from 'src/common/validators/object-id.validator';
 
 // typescript namespace with all the user type enums
 export namespace UserNS {
@@ -18,7 +20,7 @@ export namespace UserNS {
   }
 
   export interface IEducationalBackground {
-    id?: string;
+    _id: Types.ObjectId;
     board?: string; // Optional
     education_level: string; // Required
     field_of_study?: string; // Optional
@@ -48,11 +50,12 @@ export class MarksGPA implements UserNS.IMarksGPA {
 
 // Schema Class for educational background
 @Schema({
+  _id: true,
   timestamps: false,
 })
 export class EducationalBackground implements UserNS.IEducationalBackground {
-  @Prop({ required: false })
-  id?: string;
+  @Prop({ required: true, type: Types.ObjectId })
+  _id: Types.ObjectId;
 
   @Prop({ required: true })
   education_level: string;
@@ -189,7 +192,7 @@ export class User {
   streetAddress?: string;
 
   @Prop()
-  address_id?: string;
+  address_id?: Types.ObjectId;
 
   @Prop({ required: true, enum: UserNS.UserType })
   user_type: UserNS.UserType;

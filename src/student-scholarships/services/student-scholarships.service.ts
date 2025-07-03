@@ -30,6 +30,7 @@ import {
   StudentScholarshipDocument,
 } from '../schemas/student-scholarship.schema';
 import { LivingStatusEnum } from 'src/common/constants/shared.constants';
+import { AuthenticatedRequest } from 'src/auth/types/auth.interface';
 
 @Injectable()
 export class StudentScholarshipsService {
@@ -572,7 +573,9 @@ export class StudentScholarshipsService {
     return await scholarship.save();
   }
 
-  async getScholarshipApplicationsAnalytics() {
+  async getScholarshipApplicationsAnalytics(
+    user: AuthenticatedRequest['user'],
+  ) {
     // Get total count of scholarship applications
     const totalScholarshipApplications =
       await this.studentScholarshipModel.countDocuments();
@@ -580,6 +583,11 @@ export class StudentScholarshipsService {
     // Get breakdown by approval_status using aggregation
     const approvalStatusBreakdown =
       await this.studentScholarshipModel.aggregate([
+        {
+          $match: {
+            student_id: user._id,
+          },
+        },
         {
           $group: {
             _id: '$approval_status',

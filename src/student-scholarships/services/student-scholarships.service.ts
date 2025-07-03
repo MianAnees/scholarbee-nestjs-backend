@@ -578,7 +578,9 @@ export class StudentScholarshipsService {
   ) {
     // Get total count of scholarship applications
     const totalScholarshipApplications =
-      await this.studentScholarshipModel.countDocuments();
+      await this.studentScholarshipModel.countDocuments({
+        student_id: user._id,
+      });
 
     // Get breakdown by approval_status using aggregation
     const approvalStatusBreakdown =

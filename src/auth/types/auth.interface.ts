@@ -1,9 +1,9 @@
 import { Request } from 'express';
-import { ResourceProtectionStrategy } from 'src/auth/strategies/resource-protection.strategy';
-import { LocalAuthenticationStrategy } from '../strategies/local-authentication.strategy';
 import { Socket } from 'socket.io';
-import { BetterOmit } from 'src/utils/typescript.utils';
+import { ResourceProtectionStrategy } from 'src/auth/strategies/resource-protection.strategy';
 import { User } from 'src/users/schemas/user.schema';
+import { BetterOmit } from 'src/utils/typescript.utils';
+import { LocalAuthenticationStrategy } from '../strategies/local-authentication.strategy';
 
 export type UserWithoutComparePassword = BetterOmit<User, 'comparePassword'> & {
   _id: string;
@@ -15,7 +15,6 @@ export type SanitizedUser = BetterOmit<
 
 export type MinimalUserInfo = Pick<
   SanitizedUser,
-  | 'first_name'
   | 'first_name'
   | 'last_name'
   | 'email'

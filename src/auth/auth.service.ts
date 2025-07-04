@@ -193,9 +193,10 @@ export class AuthService {
 
   async refreshToken(user: UserDocument) {
     const sanitizedUser = await this.sanitizeUser(user);
+    const minimalUserInfo = this.getMinimalUserInfo(sanitizedUser);
 
     const { accessToken, refreshToken } =
-      await this.generateTokens(sanitizedUser);
+      await this.generateTokens(minimalUserInfo);
 
     // BUG: Using bcrypt was giving unexpected results
     // const refreshTokenHash = await argon2.hash(refreshToken);

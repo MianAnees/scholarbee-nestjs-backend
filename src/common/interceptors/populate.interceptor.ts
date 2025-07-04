@@ -7,6 +7,8 @@ import { ModuleRef } from '@nestjs/core';
 import { University } from '../../universities/schemas/university.schema';
 import { Campus } from '../../campuses/schemas/campus.schema';
 
+// Review: Isn't there any way of infer types of only defined models in the modelMaps, and then in PopulationMap, only allow fields which are added as keys in the ModelMap?
+
 @Injectable()
 export class PopulateInterceptor implements NestInterceptor {
     private readonly populationMap = {
@@ -28,6 +30,7 @@ export class PopulateInterceptor implements NestInterceptor {
         @InjectModel(Campus.name) private campusModel: Model<Campus>
     ) { }
 
+    // TODO: Add Documentation
     async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
         const request = context.switchToHttp().getRequest();
         const depth = parseInt(request.query.depth) || 0;
@@ -37,11 +40,14 @@ export class PopulateInterceptor implements NestInterceptor {
         }
 
         return next.handle().pipe(
+            // TODO: Explain this map function from rxjs
             map(async (data) => {
                 if (!data) return data;
 
                 // Handle both single items and collections
+                // REVIEW: Since the check is 1 level deep `data` property, does that mean that the max depth is 2?
                 if (data.data && Array.isArray(data.data)) {
+                    // REVIEW: Shouldn't there be a decrement in depth before calling populateData on a nested `data` property? As without the decrement, the depth > 0 will be able to populate the any level of nested `data` property
                     data.data = await this.populateData(data.data, depth, request.path);
                     return data;
                 } else if (Array.isArray(data)) {
@@ -53,6 +59,7 @@ export class PopulateInterceptor implements NestInterceptor {
         );
     }
 
+    // TODO: Add Documentation
     private async populateData(items: any[], depth: number, path: string): Promise<any[]> {
         if (!items.length) return items;
 
@@ -63,6 +70,12 @@ export class PopulateInterceptor implements NestInterceptor {
         return populatedItems;
     }
 
+    // TODO: Add Documentation
+    // REVIEW: Isn't this approach of transforming the response by calling populateItem on each item in the array too much of a performance hit?
+    // ! - What if we have a large array of items and it takes a long time to populate the items?
+    // ! - What if after populating some items, the population-request doesn't succeed?
+    // ! - Shouldn't this code run in some transaction to ensure that either all items are populated or none are populated?
+    // ? - Is it possible to generate a aggregation query based on the request parameters before the first request to the database is made?
     private async populateItem(item: any, depth: number, path: string): Promise<any> {
         if (!item || depth <= 0) return item;
 

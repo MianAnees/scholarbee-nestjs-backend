@@ -1,83 +1,111 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ResourceProtectionGuard } from '../auth/guards/resource-protection.guard';
+import { CreateEducationalBackgroundDto } from 'src/users/dto/create-educational-bg.dto';
+import { CreateNationalIdCardDto } from 'src/users/dto/create-nic.dto';
+import { UpdateNationalIdCardDto } from 'src/users/dto/update-nic.dto';
+import { UpdateEducationalBackgroundDto } from 'src/users/dto/update-educational-bg.dto';
 
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
-    @UseGuards(JwtAuthGuard)
-    @Post()
-    create(@Body() createUserDto: CreateUserDto) {
-        return this.usersService.create(createUserDto);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Get()
-    findAll(@Query() query: any) {
-        return this.usersService.findAll(query);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Get()
+  findAll(@Query() query: any) {
+    return this.usersService.findAll(query);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.usersService.findOne(id);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Patch(':id')
-    update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-        return this.usersService.update(id, updateUserDto);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.usersService.remove(id);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Post(':id/educational-backgrounds')
-    addEducationalBackground(
-        @Param('id') id: string,
-        @Body() educationalBackground: any,
-    ) {
-        return this.usersService.addEducationalBackground(id, educationalBackground);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Post(':userId/educational-backgrounds')
+  addEducationalBackground(
+    @Param('userId') userId: string,
+    @Body() payload: CreateEducationalBackgroundDto,
+  ) {
+    return this.usersService.addEducationalBackground(userId, payload);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Patch(':id/educational-backgrounds/:backgroundId')
-    updateEducationalBackground(
-        @Param('id') id: string,
-        @Param('backgroundId') backgroundId: string,
-        @Body() updatedData: any,
-    ) {
-        return this.usersService.updateEducationalBackground(id, backgroundId, updatedData);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Post(':id/national-id-card')
+  addNationalIdCard(
+    @Param('id') id: string,
+    @Body() payload: CreateNationalIdCardDto,
+  ) {
+    return this.usersService.addNationalIdCard(id, payload);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Delete(':id/educational-backgrounds/:backgroundId')
-    removeEducationalBackground(
-        @Param('id') id: string,
-        @Param('backgroundId') backgroundId: string,
-    ) {
-        return this.usersService.removeEducationalBackground(id, backgroundId);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Patch(':id/educational-backgrounds/:backgroundId')
+  updateEducationalBackground(
+    @Param('id') id: string,
+    @Param('backgroundId') backgroundId: string,
+    @Body() payload: UpdateEducationalBackgroundDto,
+  ) {
+    return this.usersService.updateEducationalBackground(
+      id,
+      backgroundId,
+      payload,
+    );
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Patch(':id/national-id-card')
-    updateNationalIdCard(
-        @Param('id') id: string,
-        @Body() nationalIdCard: any,
-    ) {
-        return this.usersService.updateNationalIdCard(id, nationalIdCard);
-    }
+  @UseGuards(ResourceProtectionGuard)
+  @Delete(':id/educational-backgrounds/:backgroundId')
+  removeEducationalBackground(
+    @Param('id') id: string,
+    @Param('backgroundId') backgroundId: string,
+  ) {
+    return this.usersService.removeEducationalBackground(id, backgroundId);
+  }
 
-    @UseGuards(JwtAuthGuard)
-    @Get('profile/me')
-    getProfile(@Req() req: any) {
-        return this.usersService.findOne(req.user.userId);
-    }
-} 
+  @UseGuards(ResourceProtectionGuard)
+  @Patch(':id/national-id-card')
+  updateNationalIdCard(
+    @Param('id') id: string,
+    @Body() payload: UpdateNationalIdCardDto,
+  ) {
+    return this.usersService.updateNationalIdCard(id, payload);
+  }
+
+  @UseGuards(ResourceProtectionGuard)
+  @Get('profile/me')
+  getProfile(@Req() req: any) {
+    return this.usersService.findOne(req.user.sub);
+  }
+}

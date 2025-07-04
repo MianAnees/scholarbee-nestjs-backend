@@ -10,19 +10,22 @@ services:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     ports:
-      - "3000:3000"
+      - "3000:3000" 
     command: npm run start:dev
     environment:
+      - PORT=3000
       - NODE_ENV=development
-      - MONGODB_URI=${MONGODB_URI}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - RESEND_API_KEY=${RESEND_API_KEY}
+      # - MONGODB_URI=${MONGODB_URI}
+      # - JWT_SECRET=${JWT_SECRET}
+      # - JWT_EXPIRATION=${JWT_EXPIRATION}
+      # - FRONTEND_URL=${FRONTEND_URL}
+      # - RESEND_API_KEY=${RESEND_API_KEY}
     networks:
       - scholarbee-network
     restart: unless-stopped
+    env_file:
+      - .env
 
 networks:
   scholarbee-network:
-    driver: bridge 
+    driver: bridge

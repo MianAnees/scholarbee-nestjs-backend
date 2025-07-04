@@ -5,43 +5,51 @@ export type MessageDocument = Message & Document;
 
 @Schema({ timestamps: true })
 export class Message {
-    _id?: Types.ObjectId;
+  _id?: Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Conversation', required: true })
-    conversation_id: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Conversation',
+    required: true,
+  })
+  conversation_id: Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
-    sender_id: Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
+  sender_id: Types.ObjectId;
 
-    @Prop({ type: String, enum: ['user', 'campus'], required: true })
-    sender_type: string;
+  @Prop({ type: String, enum: ['user', 'campus'], required: true })
+  sender_type: string;
 
-    @Prop({ type: String, enum: ['User', 'Campus'], required: true })
-    sender_type_ref: string;
+  @Prop({ type: String, enum: ['User', 'Campus'], required: true })
+  sender_type_ref: string;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-    replied_by_user_id: Types.ObjectId;
+  // Keep a track of which user replied on behalf of the campus
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  replied_by_user_id: Types.ObjectId;
 
-    @Prop({ type: MongooseSchema.Types.Mixed })
-    replied_by_user: any;
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  replied_by_user: any;
 
-    @Prop({ required: true })
-    content: string;
+  @Prop({ required: true })
+  content: string;
 
-    @Prop({ default: false })
-    is_read_by_user: boolean;
+  @Prop({ default: false })
+  is_read_by_user: boolean;
 
-    @Prop({ default: false })
-    is_read_by_campus: boolean;
+  @Prop({ default: false })
+  is_read_by_campus: boolean;
 
-    @Prop({ type: [String], default: [] })
-    attachments: string[];
+  @Prop({ type: [String], default: [] })
+  attachments: string[];
 
-    @Prop({ default: new Date() })
-    created_at: Date;
+  @Prop({ default: new Date() })
+  created_at: Date;
 
-    @Prop({ type: MongooseSchema.Types.Mixed })
-    sender: any;
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  sender: any;
+
+  @Prop({ type: String, default: null })
+  sessionId: string;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message); 
